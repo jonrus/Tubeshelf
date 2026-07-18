@@ -58,7 +58,7 @@
 ## 3. Technical Architecture
 - **Frontend:** HTMX + Tailwind CSS. Server-rendered HTML with small partial updates fits this app's shape (queue list, status toggles, watching page) well, and pairs naturally with BunJS serving HTML directly. Deliberately chosen over React/TS (the user's day-job stack) as a low-stakes chance to learn HTMX; Tailwind kept since it's already familiar-ish from work even though not deeply known
 - **Backend:** BunJS Full Stack - Pretty firm on this as I'd like to learn but I'd be willing to look at other platforms if they fit better
-- **Database:** SQLite - BunJS SQLite built in support and/or an ORM. Use **WAL mode** (`PRAGMA journal_mode=WAL`) to avoid `SQLITE_BUSY` contention between the scheduled RSS-fetch job and concurrent web requests - `bun:sqlite` is a direct binding to the SQLite C library, so this works the same as anywhere else. Migration tooling (ORM-provided vs. bespoke versioned SQL) is TBD, to be decided during implementation.
+- **Database:** SQLite - BunJS SQLite built in support and/or an ORM. Use **WAL mode** (`PRAGMA journal_mode=WAL`) to avoid `SQLITE_BUSY` contention between the scheduled RSS-fetch job and concurrent web requests - `bun:sqlite` is a direct binding to the SQLite C library, so this works the same as anywhere else. Migration tooling (ORM-provided vs. bespoke versioned SQL) is TBD, to be decided during implementation (resolved in docs/specs/001-bootstrap-repo-scaffold.md — Drizzle ORM).
 - **Infrastructure:** Self-hosted via a Docker container via a compose file
 - **Third-Party APIs:** Ideally zero APIs
 
