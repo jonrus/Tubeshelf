@@ -1,4 +1,4 @@
-# 🚀 Project Name: YouTube Watcher
+# 🚀 Project Name: Tubeshelf
 
 ## 1. Core Concept & Value Proposition
 > A self-hosted YouTube "subscription" tracker - tracks watched and unwatched videos in a queue system with tags and/or categories for improved UX over the real YouTube Subscription page. Videos are still viewed on YouTube itself to allow Brave browser to block ads and full SponsorBlock support
@@ -101,4 +101,4 @@
 - **Maintenance Plan:** As the deployment pattern is via Docker users should be able to backup the SQLite DB and be good.
 
 ---
-*Created: 07/18/2026* | *Status: Brainstorming*   
+*Created: 07/18/2026* | *Status: Brainstorming*
