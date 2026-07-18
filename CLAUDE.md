@@ -14,8 +14,11 @@ implementation, and decisions live in tracked files instead of conversation hist
 
 1. `/new-spec` — write a spec to `docs/specs/NNN-name.md` (committed, versioned, the single
    source of truth for that scope of work).
-2. `/spec-tasks` — derive an execution checklist at `docs/specs/tasks/name.md` (gitignored,
-   disposable — expected to go stale once its spec is implemented).
+2. `/spec-tasks` — derive an execution checklist at `docs/specs/tasks/name.md`. Committed
+   while the spec is `in-progress` — that's what makes it possible to resume work from a
+   different machine, not just a different session. Deleted (and that deletion committed)
+   once every step is checked off and the spec reaches `implemented`; the spec is the
+   durable record after that point, not the checklist that got you there.
 3. `/work-task` — resume the checklist in a **fresh session**, execute only the next
    unchecked step, check it off, stop. One step per session, deliberately, to avoid context
    drift across a long-running conversation.
