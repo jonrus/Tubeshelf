@@ -85,7 +85,7 @@ attempting any other `bun` command.
   both are staged for commit (this migration output is the one part of `drizzle/` that
   *is* version-controlled, per the spec's repo layout).
 
-- [ ] 9. Create `src/db/migrate.ts`: a thin wrapper that imports `migrate` from
+- [x] 9. Create `src/db/migrate.ts`: a thin wrapper that imports `migrate` from
   `drizzle-orm/bun-sqlite/migrator`, calls it with the `db` client from `src/db/client.ts`
   and `{ migrationsFolder: "./drizzle" }`, and exports a `runMigrations()` function. Done
   when: calling `runMigrations()` against a fresh empty `data/tubeshelf.db` creates all
