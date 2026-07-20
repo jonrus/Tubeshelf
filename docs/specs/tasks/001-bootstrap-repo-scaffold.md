@@ -121,7 +121,7 @@ attempting any other `bun` command.
   -d name=Podcasts` returns 200 with HTML containing "Podcasts" and no error; the same
   request with `name=uncategorized` or `name=` returns an inline error string, not a 500.
 
-- [ ] 14. Create `src/index.ts`: on startup, calls `runMigrations()` then `seed(db)`, mounts
+- [x] 14. Create `src/index.ts`: on startup, calls `runMigrations()` then `seed(db)`, mounts
   `serveStatic` (`hono/bun`) at `/css/*` pointing at `public/css`, mounts the categories
   routes, and starts listening on port 3000. Done when: `bun run dev:server` logs
   migration/seed completion and listens on port 3000 without throwing.
