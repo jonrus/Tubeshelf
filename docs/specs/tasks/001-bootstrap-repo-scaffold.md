@@ -93,7 +93,7 @@ attempting any other `bun` command.
   calling it a second time against the same file is a no-op (no error, no duplicate
   tables).
 
-- [ ] 10. Create `src/db/seed.ts` with the exact `seed()` function from the spec's Design →
+- [x] 10. Create `src/db/seed.ts` with the exact `seed()` function from the spec's Design →
   Seed strategy section (checks for an existing "Uncategorized" category and any user row
   before inserting either). Done when: calling `seed(db)` twice in a row against the same
   DB results in exactly one `isSystem` category named "Uncategorized" and exactly one row
