@@ -65,7 +65,7 @@ attempting any other `bun` command.
   file exists and `bunx drizzle-kit generate --help` runs without a config-parsing error
   (schema.ts doesn't exist yet — that's fine for this step).
 
-- [ ] 6. Create `src/db/schema.ts` with the exact table definitions from the spec's Design
+- [x] 6. Create `src/db/schema.ts` with the exact table definitions from the spec's Design
   → Database schema section: `users`, `categories`, `channels`, `videos` (with the two
   `check()` CHECK constraints), `ignoreRules`. If the installed Drizzle version's
   `check()`/callback syntax differs from the spec's snippet (`(t) => [check(...), ...]`),
