@@ -126,7 +126,7 @@ attempting any other `bun` command.
   routes, and starts listening on port 3000. Done when: `bun run dev:server` logs
   migration/seed completion and listens on port 3000 without throwing.
 
-- [ ] 15. Create `test/smoke.test.ts` per the spec's Design → Testing section: spins up an
+- [x] 15. Create `test/smoke.test.ts` per the spec's Design → Testing section: spins up an
   isolated in-memory `bun:sqlite` database (not `./data/tubeshelf.db`), runs the real
   committed migrations from `./drizzle` against it, calls `seed()` twice, and asserts
   exactly one `isSystem` category named "Uncategorized" and exactly one user row. Done
