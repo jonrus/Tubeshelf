@@ -133,7 +133,7 @@ attempting any other `bun` command.
   when: `bun test` passes, and passes again after manually corrupting/deleting
   `data/tubeshelf.db` (proving the test doesn't depend on dev-time DB state).
 
-- [ ] 16. Create `.env.example` (empty or a single comment noting no env vars are required
+- [x] 16. Create `.env.example` (empty or a single comment noting no env vars are required
   for MVP, per `docs/app_idea.md` §6) and a minimal `README.md` covering: opening the repo
   in the devcontainer, `bun install`, `bun run dev`, and `bun test`. Include a one-line note
   that the devcontainer is used with **podman** rather than Docker on this project's dev
