@@ -59,7 +59,7 @@ attempting any other `bun` command.
   when: `bun run lint` and `bun run format` both execute without error against the
   currently-empty `src/` (no files to flag yet, but the commands must not crash on config).
 
-- [ ] 5. Create `drizzle.config.ts` with the exact content from the spec's Design section
+- [x] 5. Create `drizzle.config.ts` with the exact content from the spec's Design section
   (`dialect: "sqlite"`, `schema: "./src/db/schema.ts"`, `out: "./drizzle"`,
   `dbCredentials.url` from `DB_FILE_NAME` env var or `./data/tubeshelf.db`). Done when: the
   file exists and `bunx drizzle-kit generate --help` runs without a config-parsing error
