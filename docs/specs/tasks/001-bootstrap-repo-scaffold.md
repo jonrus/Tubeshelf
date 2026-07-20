@@ -102,7 +102,7 @@ attempting any other `bun` command.
 - [x] 11. Create `src/styles/input.css` containing `@import "tailwindcss";`. Done when:
   `bun run css:build` produces a non-empty `public/css/tailwind.css`.
 
-- [ ] 12. Create `src/views/layout.tsx` (HTML shell linking `/css/tailwind.css` and the
+- [x] 12. Create `src/views/layout.tsx` (HTML shell linking `/css/tailwind.css` and the
   pinned htmx CDN script `https://unpkg.com/htmx.org@2.0.4`), `src/views/categories-list.tsx`
   (a `<div id="category-list">` partial: `<ul>` of categories — system row first tagged
   `[system]`, then the rest alphabetically — plus an add-category `<form>` with
