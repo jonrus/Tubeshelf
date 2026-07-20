@@ -99,7 +99,7 @@ attempting any other `bun` command.
   DB results in exactly one `isSystem` category named "Uncategorized" and exactly one row
   in `users`.
 
-- [ ] 11. Create `src/styles/input.css` containing `@import "tailwindcss";`. Done when:
+- [x] 11. Create `src/styles/input.css` containing `@import "tailwindcss";`. Done when:
   `bun run css:build` produces a non-empty `public/css/tailwind.css`.
 
 - [ ] 12. Create `src/views/layout.tsx` (HTML shell linking `/css/tailwind.css` and the
