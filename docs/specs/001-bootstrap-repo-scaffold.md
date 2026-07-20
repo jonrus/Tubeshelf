@@ -82,7 +82,7 @@ Tubeshelf/
 │   │   ├── schema.ts              # users, categories, channels, videos, ignore_rules
 │   │   ├── migrate.ts             # programmatic migrator wrapper
 │   │   └── seed.ts                # idempotent seed: Uncategorized category + default user
-│   ├── routes/categories.ts       # GET / (full page), POST /categories (partial swap)
+│   ├── routes/categories.tsx      # GET / (full page), POST /categories (partial swap)
 │   ├── views/
 │   │   ├── layout.tsx             # <html> shell, Tailwind link, htmx script tag
 │   │   ├── categories-page.tsx    # full-page JSX wrapping the list partial
@@ -212,7 +212,7 @@ HTMX → Hono → Drizzle → SQLite → JSX round trip.
   renders a `<ul>` (Uncategorized tagged `[system]`) plus an add-category `<form>`, wrapped
   in `<div id="category-list">…</div>`.
 - Form: `hx-post="/categories" hx-target="#category-list" hx-swap="outerHTML"`.
-- `POST /categories` (`src/routes/categories.ts`): trims the name; rejects empty and
+- `POST /categories` (`src/routes/categories.tsx`): trims the name; rejects empty and
   rejects case-insensitive `"uncategorized"` (reserved) with an inline error instead of a
   500; catches the unique-constraint violation for duplicate names the same way; on
   success, re-queries the list and returns just the list partial (including the form again,

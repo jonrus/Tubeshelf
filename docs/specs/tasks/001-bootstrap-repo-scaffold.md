@@ -110,7 +110,9 @@ attempting any other `bun` command.
   `src/views/categories-page.tsx` (full page wrapping the list partial in `layout.tsx`).
   Done when: `bunx tsc --noEmit` reports no type errors across these three files.
 
-- [ ] 13. Create `src/routes/categories.ts`: `GET /` renders `categories-page.tsx` with all
+- [x] 13. Create `src/routes/categories.tsx` (`.tsx`, not `.ts` — the route renders JSX
+  directly via `c.html(<Component .../>)`, which requires JSX syntax and therefore the
+  `.tsx` extension): `GET /` renders `categories-page.tsx` with all
   categories queried via Drizzle (system row first, then alphabetical); `POST /categories`
   trims the submitted name, rejects empty and case-insensitive `"uncategorized"` with an
   inline error (not a 500), catches the unique-constraint violation on duplicate names the
