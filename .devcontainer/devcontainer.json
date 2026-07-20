@@ -8,7 +8,11 @@
   },
   "customizations": {
     "vscode": {
-      "extensions": ["biomejs.biome", "bradlc.vscode-tailwindcss", "eamodio.gitlens"],
+      "extensions": [
+        "biomejs.biome",
+        "bradlc.vscode-tailwindcss",
+        "eamodio.gitlens"
+      ],
       "settings": {
         "editor.defaultFormatter": "biomejs.biome",
         "editor.formatOnSave": true,

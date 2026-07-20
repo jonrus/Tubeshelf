@@ -54,7 +54,7 @@ attempting any other `bun` command.
   a "cannot find tsconfig" error (type errors are expected/fine — no source files exist
   yet).
 
-- [ ] 4. Create `biome.json`: `recommended` preset only, 2-space indent, double quotes,
+- [x] 4. Create `biome.json`: `recommended` preset only, 2-space indent, double quotes,
   semicolons, with `drizzle/**` and `public/css/**` excluded from formatting/linting. Done
   when: `bun run lint` and `bun run format` both execute without error against the
   currently-empty `src/` (no files to flag yet, but the commands must not crash on config).
