@@ -73,7 +73,7 @@ attempting any other `bun` command.
   in a one-line comment — this resolves the spec's second Open Question. Done when:
   `bunx tsc --noEmit` reports no type errors in this file.
 
-- [ ] 7. Create `src/db/client.ts` with the exact content from the spec (opens
+- [x] 7. Create `src/db/client.ts` with the exact content from the spec (opens
   `./data/tubeshelf.db` or `$DB_FILE_NAME`, sets `PRAGMA journal_mode = WAL` and
   `PRAGMA foreign_keys = ON`, exports `db` via `drizzle(sqlite)` and `sqlite`). Done when:
   running `bun -e "import './src/db/client'; console.log('ok')"` prints `ok` and creates
