@@ -79,7 +79,7 @@ attempting any other `bun` command.
   running `bun -e "import './src/db/client'; console.log('ok')"` prints `ok` and creates
   `data/tubeshelf.db`, `data/tubeshelf.db-wal`, `data/tubeshelf.db-shm` on disk.
 
-- [ ] 8. Run `bun run db:generate`. Done when: `drizzle/0000_*.sql` exists and contains
+- [x] 8. Run `bun run db:generate`. Done when: `drizzle/0000_*.sql` exists and contains
   `CREATE TABLE` statements for all five tables, including both CHECK constraints on
   `videos` (`status_check`, `ignore_method_check`); `drizzle/meta/_journal.json` exists;
   both are staged for commit (this migration output is the one part of `drizzle/` that
