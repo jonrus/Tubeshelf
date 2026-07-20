@@ -3,7 +3,9 @@ import type { categories } from "../db/schema";
 
 type Category = typeof categories.$inferSelect;
 
-export const CategoriesList: FC<{ categories: Category[]; error?: string }> = (props) => {
+export const CategoriesList: FC<{ categories: Category[]; error?: string }> = (
+  props,
+) => {
   return (
     <div id="category-list">
       <ul>
@@ -15,7 +17,11 @@ export const CategoriesList: FC<{ categories: Category[]; error?: string }> = (p
         ))}
       </ul>
       {props.error ? <p class="text-red-600">{props.error}</p> : null}
-      <form hx-post="/categories" hx-target="#category-list" hx-swap="outerHTML">
+      <form
+        hx-post="/categories"
+        hx-target="#category-list"
+        hx-swap="outerHTML"
+      >
         <input type="text" name="name" placeholder="New category" />
         <button type="submit">Add</button>
       </form>

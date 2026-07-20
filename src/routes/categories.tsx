@@ -6,7 +6,11 @@ import { CategoriesList } from "../views/categories-list";
 import { CategoriesPage } from "../views/categories-page";
 
 function listCategories() {
-  return db.select().from(categories).orderBy(desc(categories.isSystem), asc(categories.name)).all();
+  return db
+    .select()
+    .from(categories)
+    .orderBy(desc(categories.isSystem), asc(categories.name))
+    .all();
 }
 
 export const categoriesRoute = new Hono();
@@ -20,10 +24,20 @@ categoriesRoute.post("/categories", async (c) => {
   const name = typeof body.name === "string" ? body.name.trim() : "";
 
   if (!name) {
-    return c.html(<CategoriesList categories={listCategories()} error="Category name is required." />);
+    return c.html(
+      <CategoriesList
+        categories={listCategories()}
+        error="Category name is required."
+      />,
+    );
   }
   if (name.toLowerCase() === "uncategorized") {
-    return c.html(<CategoriesList categories={listCategories()} error='"Uncategorized" is a reserved name.' />);
+    return c.html(
+      <CategoriesList
+        categories={listCategories()}
+        error='"Uncategorized" is a reserved name.'
+      />,
+    );
   }
 
   try {
@@ -32,7 +46,10 @@ categoriesRoute.post("/categories", async (c) => {
     const message = err instanceof Error ? err.message : String(err);
     if (message.includes("UNIQUE constraint failed")) {
       return c.html(
-        <CategoriesList categories={listCategories()} error="A category with that name already exists." />,
+        <CategoriesList
+          categories={listCategories()}
+          error="A category with that name already exists."
+        />,
       );
     }
     throw err;

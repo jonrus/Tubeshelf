@@ -15,8 +15,6 @@
         "concurrently": "^10.0.3",
         "drizzle-kit": "^0.31.10",
         "tailwindcss": "^4.3.3",
-      },
-      "peerDependencies": {
         "typescript": "^7.0.2",
       },
     },
