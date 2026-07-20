@@ -13,7 +13,7 @@ attempting any `bun` command and open/rebuild the devcontainer first if it fails
   reorder what's already there) — done when: `git check-ignore -v node_modules/x data/tubeshelf.db public/css/tailwind.css .env`
   reports all four as ignored, and `git diff .gitignore` shows only additions.
 
-- [ ] 2. Create `.devcontainer/devcontainer.json` with the exact content specified in the
+- [x] 2. Create `.devcontainer/devcontainer.json` with the exact content specified in the
   spec's Design → Devcontainer section (`image: oven/bun:1`, `git`/`github-cli` features,
   vscode customizations/extensions/settings, `postCreateCommand: "bun install && bun run css:build"`,
   `forwardPorts: [3000]`). Before finalizing, check whether the `oven/bun:1` image has a
