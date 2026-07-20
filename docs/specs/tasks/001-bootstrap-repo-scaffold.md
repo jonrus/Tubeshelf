@@ -42,7 +42,7 @@ attempting any other `bun` command.
   Containers extension (already configured to use podman as its backend on this machine)
   with a `bun --version` check passing inside it.
 
-- [ ] 3. Inside the devcontainer, run `bun init -y` if no `package.json` exists yet, then
+- [x] 3. Inside the devcontainer, run `bun init -y` if no `package.json` exists yet, then
   `bun add hono drizzle-orm` and `bun add -D drizzle-kit tailwindcss @tailwindcss/cli
   concurrently @biomejs/biome @types/bun typescript`. Set `package.json`'s `scripts` block
   to exactly match the spec's Design → package.json scripts section (`dev`, `dev:server`,
