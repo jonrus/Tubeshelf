@@ -2,11 +2,27 @@
 Spec: docs/specs/001-bootstrap-repo-scaffold.md
 Generated: 2026-07-18
 
-**Environment note:** `bun` is not installed on the host. Step 2 (devcontainer config)
-can run on the host. Steps 3 onward assume you're working inside the devcontainer once
-it exists (open the repo in the devcontainer, or otherwise run in an environment with
-`bun` available) — a cold `/work-task` session should check `bun --version` before
-attempting any `bun` command and open/rebuild the devcontainer first if it fails.
+**Environment note:** `bun` is not installed on the host, and Claude Code itself always
+runs on the host — there's no way to launch a `/work-task` session from inside an
+editor-integrated devcontainer for this workflow. Step 2 (devcontainer config) runs
+directly on the host. Steps 3 onward need `bun`, reached via the `devcontainer` CLI
+(`@devcontainers/cli`, installed on this host via `brew install devcontainer`, which pulls
+in `node`) pointed at podman:
+
+- Bring the container up (idempotent, safe to rerun every session):
+  `devcontainer up --docker-path podman --workspace-folder .`
+- Run any command inside it: `devcontainer exec --docker-path podman --workspace-folder . <command>`,
+  e.g. `devcontainer exec --docker-path podman --workspace-folder . bun --version` (expect `1.3.14`).
+
+Known quirk: `devcontainer up` exits non-zero if `postCreateCommand`
+(`bun install && bun run css:build`) fails — which it will on every `up` until step 3
+creates `package.json`. That failure is expected pre-step-3 and does **not** mean the
+container failed to start; it stays running (confirm with
+`podman ps --filter "label=devcontainer.local_folder=$(pwd)"` if unsure) and `exec` still
+works. A cold `/work-task` session should run `devcontainer up` first, tolerate that
+exit-code-1 while `package.json` doesn't exist yet, then confirm access with
+`devcontainer exec --docker-path podman --workspace-folder . bun --version` before
+attempting any other `bun` command.
 
 - [x] 1. Extend `.gitignore` with `node_modules/`, `data/*.db*`, `public/css/tailwind.css`,
   and `.env`, on new lines below the existing `docs/specs/tasks/` entry (don't remove or

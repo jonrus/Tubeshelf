@@ -259,6 +259,15 @@ At implementation time, check whether `oven/bun:1` has a non-root user to set vi
 
 `.gitignore`: `node_modules/`, `data/*.db*`, `public/css/tailwind.css`, `.env`.
 
+**Operational note — accessing `bun` from Claude Code sessions:** Claude Code runs on the
+host, not inside an editor-integrated devcontainer, so `/work-task` sessions reach `bun`
+via the `devcontainer` CLI (`@devcontainers/cli`, installed via `brew install devcontainer`
+on this host — pulls in `node`) pointed at podman: `devcontainer up --docker-path podman
+--workspace-folder .` to build/start (idempotent, safe to rerun), then `devcontainer exec
+--docker-path podman --workspace-folder . <command>` to run anything inside it. `up` exits
+non-zero whenever `postCreateCommand` fails (e.g. before `package.json` exists) but the
+container keeps running regardless, so `exec` still works.
+
 ### Tailwind wiring (no bundler)
 
 Tailwind v4, CSS-first config (no `tailwind.config.js` needed for this simple case).
