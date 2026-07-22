@@ -7,6 +7,24 @@ feature scope, architecture, data model. It changes rarely. When a spec below re
 supersedes something in it, that gets a small inline pointer there (e.g.
 `(refined in docs/specs/003-ignore-rules-v2.md)`) rather than rewriting its content.
 
+## Running commands
+
+Claude Code runs on the host, not inside the editor-integrated devcontainer, and `bun`
+isn't installed on the host — every `bun`/project command (`bun test`, `bun run lint`,
+`bun run db:generate`, etc.) must go through the devcontainer via podman:
+
+```
+devcontainer up --docker-path podman --workspace-folder .    # idempotent, safe to rerun
+devcontainer exec --docker-path podman --workspace-folder . <command>
+```
+
+`up` exits non-zero if `postCreateCommand` fails (e.g. before `package.json` exists) but
+the container keeps running regardless, so `exec` still works. This applies in every
+session, including `/work-task` — task files list bare commands (`bun test`, etc.) for
+readability, but they mean "run via `devcontainer exec` as above," not "run directly on
+host." See `.devcontainer/devcontainer.json` and `README.md` for the container setup
+itself.
+
 ## Development pattern: Spec-Driven Development
 
 This project does not vibe-code. Every scoped piece of work gets a spec before
