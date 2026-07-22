@@ -16,9 +16,9 @@ implementation, and decisions live in tracked files instead of conversation hist
    source of truth for that scope of work).
 2. `/spec-tasks` — derive an execution checklist at `docs/specs/tasks/name.md`. Committed
    while the spec is `in-progress` — that's what makes it possible to resume work from a
-   different machine, not just a different session. Deleted (and that deletion committed)
-   once every step is checked off and the spec reaches `implemented`; the spec is the
-   durable record after that point, not the checklist that got you there.
+   different machine, not just a different session. Kept in the repo once every step is
+   checked off and the spec reaches `implemented`; the spec is the durable record of what
+   and why, but the task file remains as a record of how the work was broken down.
 3. `/work-task` — resume the checklist in a **fresh session**, execute only the next
    unchecked step, check it off, stop. One step per session, deliberately, to avoid context
    drift across a long-running conversation.
