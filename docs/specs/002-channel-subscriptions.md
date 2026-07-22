@@ -1,5 +1,5 @@
 ---
-status: draft
+status: in-progress
 created: 2026-07-20
 ---
 
@@ -243,29 +243,39 @@ Returns the updated (now-filtered) active-subscriptions list partial. Re-subscri
 - Ordering: alphabetical by channel name (category grouping/sorting can wait for a UI
   polish pass — not core to this vertical).
 
-### Testing (`test/`)
+### Testing (`test/lib/`, `test/routes/`)
 
-- Unit tests for `parseChannelInput` covering all three input forms plus invalid input,
-  and confirming ID/`/channel/` URL/RSS URL for the *same* channel all normalize to an
-  identical `{ channelId, rssUrl }`.
-- Route-level test for the subscribe→unsubscribe→resubscribe cycle against an in-memory
-  DB, with `fetch` mocked (Bun's `mock.module` or `spyOn(globalThis, "fetch")` — confirm
-  which actually intercepts a bare `fetch()` call at implementation time) to avoid a real
-  network call in tests.
-- Test the category resolution: blank `categoryId` lands on the system category; an
-  explicit system-category id is rejected inline.
-- Test the concurrent-insert race path directly against `upsertYoutubeChannel` and
-  `upsertSubscription` (`src/lib/subscribe.ts`) in isolation: pre-insert the conflicting
-  row, then call the function and assert it recovers by re-querying rather than throwing.
-- Test unsubscribe ownership scoping: insert a second `users` row directly via the DB
-  (distinct `username` from `"default"`, so the deterministic lookup above still resolves
-  the real "current" user unambiguously), create a subscription owned by that second user,
-  and assert `DELETE /subscriptions/:id` from the default user's context 404s and leaves
-  that row untouched.
-- Since spec003's ingestion job doesn't exist yet, there's no real way to end-to-end prove
-  "unsubscribe never touches videos" against actual ingested data. Cover it directly
-  instead: manually insert a `videos` row for a subscribed channel, unsubscribe, assert
-  the video row is unchanged and still present.
+Starting with this spec, unit/route test files mirror the directory of the `src/` file they
+cover — `src/lib/foo.ts` → `test/lib/foo.test.ts`, `src/routes/foo.tsx` →
+`test/routes/foo.test.ts` — rather than everything living flat under `test/`. (Spec001's
+`test/smoke.test.ts` predates this convention and stays flat, since it's a cross-cutting
+migration+seed integration test rather than a unit test of one module.)
+
+- `test/lib/channel-input.test.ts`: unit tests for `parseChannelInput` covering all three
+  input forms plus invalid input, and confirming ID/`/channel/` URL/RSS URL for the *same*
+  channel all normalize to an identical `{ channelId, rssUrl }`.
+- `test/routes/channels.test.ts`: route-level test for the subscribe→unsubscribe→resubscribe
+  cycle against an in-memory DB, with `fetch` mocked (Bun's `mock.module` or
+  `spyOn(globalThis, "fetch")` — confirm which actually intercepts a bare `fetch()` call at
+  implementation time) to avoid a real network call in tests.
+- `test/routes/channels.test.ts`: test the category resolution: blank `categoryId` lands on
+  the system category; an explicit system-category id is rejected inline.
+- `test/lib/subscribe.test.ts`: test the concurrent-insert race path directly against
+  `upsertYoutubeChannel` and `upsertSubscription` (`src/lib/subscribe.ts`) in isolation:
+  pre-insert the conflicting row, then call the function and assert it recovers by
+  re-querying rather than throwing.
+- `test/routes/channels.test.ts`: test unsubscribe ownership scoping: insert a second
+  `users` row directly via the DB (distinct `username` from `"default"`, so the
+  deterministic lookup above still resolves the real "current" user unambiguously), create
+  a subscription owned by that second user, and assert `DELETE /subscriptions/:id` from the
+  default user's context 404s and leaves that row untouched.
+- `test/routes/channels.test.ts`: since spec003's ingestion job doesn't exist yet, there's
+  no real way to end-to-end prove "unsubscribe never touches videos" against actual
+  ingested data. Cover it directly instead: manually insert a `videos` row for a subscribed
+  channel, unsubscribe, assert the video row is unchanged and still present.
+- `test/lib/rss.test.ts`: unit tests for `fetchChannelTitle` (see RSS title lookup section)
+  covering success, network error, timeout, non-OK response, and missing-title, all
+  collapsing to `null`, with `fetch` mocked the same way as above.
 
 ### Verification (manual, end-to-end)
 
