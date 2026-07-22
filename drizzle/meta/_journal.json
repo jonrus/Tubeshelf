@@ -8,6 +8,13 @@
       "when": 1784585698424,
       "tag": "0000_steady_wild_pack",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1784759504472,
+      "tag": "0001_next_moon_knight",
+      "breakpoints": true
     }
   ]
 }
