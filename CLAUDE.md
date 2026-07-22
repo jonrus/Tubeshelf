@@ -39,6 +39,20 @@ workflow, only to a Claude Code session using the CLI directly:
   the container, find its PID by scanning `/proc/[0-9]*/cmdline` for the matching command
   (`grep -l src/index.ts /proc/[0-9]*/cmdline`) and `kill <pid>` directly — `kill` itself is
   a shell builtin and works fine, it's just `ps`/`pkill` that are missing.
+- **If the container gets into a weird state** (e.g. an orphaned/stuck process left behind
+  by a killed `devcontainer exec` — confirmed with a `drizzle-kit generate` process wedged
+  waiting on a TTY prompt that would never come, 2026-07-22), don't chase it down inside the
+  container. It's disposable: `podman stop <container-id>` (find it with `podman ps`) then
+  rerun `devcontainer up --docker-path podman --workspace-folder .`, which restarts the same
+  container cleanly. No data-loss concern — this is the dev environment, not a data volume.
+- **Some commands need a real interactive TTY** (confirmed with `drizzle-kit generate`,
+  which prompts to disambiguate "renamed table" vs. "new table" when the schema diff is
+  ambiguous — e.g. spec002's `channels` → `youtube_channels` split). `devcontainer exec`
+  run from a Claude Code session has no TTY to answer that with, and piping input doesn't
+  substitute for one (the prompt library checks `stdin.isTTY` directly). Don't try to work
+  around this with `script`, a pty wrapper, etc. — that risks leaving an orphaned process
+  waiting on a pty nothing is attached to (see the gotcha above). Instead, hand the user the
+  exact command to run in their own terminal and wait for them to report the result back.
 
 ## Development pattern: Spec-Driven Development
 
