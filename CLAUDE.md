@@ -25,6 +25,21 @@ readability, but they mean "run via `devcontainer exec` as above," not "run dire
 host." See `.devcontainer/devcontainer.json` and `README.md` for the container setup
 itself.
 
+Two more gotchas specific to driving the container this way (confirmed still true
+2026-07-22), neither of which apply to the human's normal editor-integrated Dev Containers
+workflow, only to a Claude Code session using the CLI directly:
+
+- **No port forwarding.** `forwardPorts`/`portsAttributes` in `devcontainer.json` only take
+  effect through an editor's Dev Containers extension proxy — there's no such proxy here.
+  `curl http://localhost:3000` from the host hangs/fails even while `bun run dev` is
+  running fine inside the container. To check the running app, `curl` (or similar) from
+  *inside* the container: `devcontainer exec --docker-path podman --workspace-folder . curl
+  http://localhost:3000/...`.
+- **No `ps`/`pkill` in the `oven/bun:1` base image.** To stop a dev server started inside
+  the container, find its PID by scanning `/proc/[0-9]*/cmdline` for the matching command
+  (`grep -l src/index.ts /proc/[0-9]*/cmdline`) and `kill <pid>` directly — `kill` itself is
+  a shell builtin and works fine, it's just `ps`/`pkill` that are missing.
+
 ## Development pattern: Spec-Driven Development
 
 This project does not vibe-code. Every scoped piece of work gets a spec before
