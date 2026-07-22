@@ -1,0 +1,155 @@
+import { expect, spyOn, test } from "bun:test";
+import { eq } from "drizzle-orm";
+
+// upsertYoutubeChannel/upsertSubscription operate against the module-level `db`
+// singleton in src/db/client.ts, which reads DB_FILE_NAME at import time — so it
+// must be set before that module (or anything importing it) is first loaded.
+process.env.DB_FILE_NAME = ":memory:";
+
+const { db } = await import("../../src/db/client");
+const { migrate } = await import("drizzle-orm/bun-sqlite/migrator");
+const { categories, subscriptions, users, youtubeChannels } = await import(
+  "../../src/db/schema"
+);
+const { seed } = await import("../../src/db/seed");
+const { upsertSubscription, upsertYoutubeChannel } = await import(
+  "../../src/lib/subscribe"
+);
+
+migrate(db, { migrationsFolder: "./drizzle" });
+seed(db);
+
+const user = db.select().from(users).where(eq(users.username, "default")).get();
+if (!user) throw new Error("seed did not create the default user");
+
+const category = db
+  .select()
+  .from(categories)
+  .where(eq(categories.isSystem, true))
+  .get();
+if (!category) throw new Error("seed did not create the system category");
+
+test("upsertYoutubeChannel recovers when a concurrent insert wins the race", async () => {
+  const channelId = "UCraceRaceRaceRaceRace01";
+  const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+  const xml = `<?xml version="1.0" encoding="UTF-8"?><feed><title>Slow Fetcher</title></feed>`;
+
+  // fetchChannelTitle's await is the only yield point in upsertYoutubeChannel;
+  // simulate a second request's insert landing during that window.
+  const fetchSpy = spyOn(globalThis, "fetch").mockImplementation(async () => {
+    db.insert(youtubeChannels)
+      .values({
+        youtubeChannelId: channelId,
+        name: "Concurrent Insert",
+        rssUrl,
+      })
+      .run();
+    return new Response(xml, { status: 200 });
+  });
+
+  const result = await upsertYoutubeChannel(channelId, rssUrl);
+  fetchSpy.mockRestore();
+
+  expect(result?.name).toBe("Concurrent Insert");
+
+  const rows = db
+    .select()
+    .from(youtubeChannels)
+    .where(eq(youtubeChannels.youtubeChannelId, channelId))
+    .all();
+  expect(rows).toHaveLength(1);
+});
+
+test("upsertSubscription recovers by reactivating when a concurrent insert wins the race", () => {
+  const channel = db
+    .insert(youtubeChannels)
+    .values({
+      youtubeChannelId: "UCraceRaceRaceRaceRace02",
+      name: "Sub Race Channel",
+      rssUrl:
+        "https://www.youtube.com/feeds/videos.xml?channel_id=UCraceRaceRaceRaceRace02",
+    })
+    .returning()
+    .get();
+
+  // Pre-insert the row a "concurrent" request would have created, inactive so
+  // the recovery path exercises reactivation (not just already-subscribed).
+  const conflicting = db
+    .insert(subscriptions)
+    .values({
+      userId: user.id,
+      youtubeChannelId: channel.id,
+      categoryId: category.id,
+      unsubscribedAt: new Date(0),
+    })
+    .returning()
+    .get();
+
+  // upsertSubscription is fully synchronous, so there's no natural await gap to
+  // race through — stub away only the *first* existence check so the function
+  // proceeds to INSERT and hits the real UNIQUE constraint, then falls through
+  // to its catch-and-requery recovery path (the second db.select call, which
+  // this mock leaves untouched).
+  const selectSpy = spyOn(db, "select").mockImplementationOnce(
+    () =>
+      ({
+        from: () => ({ where: () => ({ get: () => undefined }) }),
+      }) as unknown as ReturnType<typeof db.select>,
+  );
+
+  const result = upsertSubscription(user.id, channel.id, category.id);
+  selectSpy.mockRestore();
+
+  expect(result.outcome).toBe("reactivated");
+  if (result.outcome === "reactivated") {
+    expect(result.subscription.id).toBe(conflicting.id);
+    expect(result.subscription.unsubscribedAt).toBeNull();
+  }
+
+  const rows = db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.youtubeChannelId, channel.id))
+    .all();
+  expect(rows).toHaveLength(1);
+});
+
+test("upsertSubscription returns already-subscribed when the recovered row is still active", () => {
+  const channel = db
+    .insert(youtubeChannels)
+    .values({
+      youtubeChannelId: "UCraceRaceRaceRaceRace03",
+      name: "Active Race Channel",
+      rssUrl:
+        "https://www.youtube.com/feeds/videos.xml?channel_id=UCraceRaceRaceRaceRace03",
+    })
+    .returning()
+    .get();
+
+  db.insert(subscriptions)
+    .values({
+      userId: user.id,
+      youtubeChannelId: channel.id,
+      categoryId: category.id,
+    })
+    .run();
+
+  const selectSpy = spyOn(db, "select").mockImplementationOnce(
+    () =>
+      ({
+        from: () => ({ where: () => ({ get: () => undefined }) }),
+      }) as unknown as ReturnType<typeof db.select>,
+  );
+
+  const result = upsertSubscription(user.id, channel.id, category.id);
+  selectSpy.mockRestore();
+
+  expect(result.outcome).toBe("already-subscribed");
+
+  const rows = db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.youtubeChannelId, channel.id))
+    .all();
+  expect(rows).toHaveLength(1);
+});
