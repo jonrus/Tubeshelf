@@ -1,5 +1,11 @@
 import { sql } from "drizzle-orm";
-import { check, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  check,
+  integer,
+  sqliteTable,
+  text,
+  unique,
+} from "drizzle-orm/sqlite-core";
 
 // check() array-callback syntax `(t) => [check(...), ...]` matches installed
 // drizzle-orm@0.45.2 (see SQLiteTableExtraConfigValue[] in sqlite-core/table.d.ts).
@@ -22,14 +28,8 @@ export const categories = sqliteTable("categories", {
     .default(sql`(unixepoch())`),
 });
 
-export const channels = sqliteTable("channels", {
+export const youtubeChannels = sqliteTable("youtube_channels", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: integer("user_id")
-    .notNull()
-    .references(() => users.id),
-  categoryId: integer("category_id")
-    .notNull()
-    .references(() => categories.id),
   youtubeChannelId: text("youtube_channel_id").notNull().unique(),
   name: text("name").notNull(),
   rssUrl: text("rss_url").notNull(),
@@ -41,13 +41,39 @@ export const channels = sqliteTable("channels", {
     .default(sql`(unixepoch())`),
 });
 
+export const subscriptions = sqliteTable(
+  "subscriptions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id),
+    youtubeChannelId: integer("youtube_channel_id")
+      .notNull()
+      .references(() => youtubeChannels.id),
+    categoryId: integer("category_id")
+      .notNull()
+      .references(() => categories.id),
+    unsubscribedAt: integer("unsubscribed_at", { mode: "timestamp" }), // null = active
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    unique("subscriptions_user_channel_unique").on(
+      t.userId,
+      t.youtubeChannelId,
+    ),
+  ],
+);
+
 export const videos = sqliteTable(
   "videos",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     channelId: integer("channel_id")
       .notNull()
-      .references(() => channels.id),
+      .references(() => youtubeChannels.id),
     youtubeVideoId: text("youtube_video_id").notNull().unique(), // upsert key
     title: text("title").notNull(),
     description: text("description"),
