@@ -14,8 +14,9 @@ export function parseChannelInput(
   }
 
   const pathMatch = trimmed.match(/\/channel\/(UC[a-zA-Z0-9_-]{22})/);
-  if (pathMatch) {
-    return { channelId: pathMatch[1], rssUrl: rssUrlFor(pathMatch[1]) };
+  const pathChannelId = pathMatch?.[1];
+  if (pathChannelId) {
+    return { channelId: pathChannelId, rssUrl: rssUrlFor(pathChannelId) };
   }
 
   try {
