@@ -298,6 +298,18 @@ migration+seed integration test rather than a unit test of one module.)
    untouched.
 8. `bun test` and `bun run lint` clean.
 
+Verified 2026-07-22 against a real channel (`UCqTVbsEw73sR26xyJQMmceQ`, "Drain Addict"):
+subscribed via `/channel/<id>` URL (blank category → Uncategorized, real name confirmed
+via DB, not a placeholder); duplicate-subscribe inline error with no new row; unsubscribe
+confirmed as a soft delete (`unsubscribedAt` set, row untouched); resubscribed via the raw
+channel ID with an explicit category (`Tech`) and confirmed via DB it reactivated the
+*same* `subscriptions.id` and `youtube_channels.id` rather than inserting new rows; garbage
+input (`not a channel`) produced an inline error with nothing inserted; the
+`youtube_channels` row was confirmed untouched across the whole cycle (the `videos`-survival
+case is covered by the automated test instead, per the Testing section's note that no real
+ingested data exists yet to exercise it by hand); `bun test` (19 pass) and `bun run lint`
+both clean.
+
 ## Open Questions
 
 - `CHANNEL_ID_PATTERN` (`UC` + 22 chars) covers current YouTube channel IDs but not
