@@ -7,7 +7,7 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["**", "!drizzle", "!public/css"]
+    "includes": ["**", "!drizzle", "!public/css", "!.claude"]
   },
   "formatter": {
     "enabled": true,
