@@ -234,6 +234,10 @@ next attempt -- `onConflictDoUpdate` makes re-applying an already-upserted entry
 no-op, so no wrapping transaction is needed, consistent with this spec's existing
 no-backoff/no-retry-sophistication posture for fetch failures.
 
+Confirmed at implementation time (task 6): `.onConflictDoUpdate({ target, set })` as
+sketched above compiles cleanly (`tsc --noEmit`) against the installed
+`drizzle-orm@0.45.2`, no adjustment needed.
+
 ### Scheduler (`src/lib/scheduler.ts`)
 
 ```ts
@@ -442,10 +446,10 @@ spec002's un-authed MVP routes generally.
   for two or more — see the note in RSS feed parsing above.
 - Two more Drizzle patterns appear in this spec for the first time in the codebase and
   aren't confirmed against the installed `drizzle-orm` version either, same risk class
-  as the point above: `.onConflictDoUpdate({ target, set })` for the video upsert in
-  `applyFeedToChannel`, and comparing a `timestamp`-mode column against a plain JS
-  `Date` inside `lte(...)`/`or(isNull(...), ...)` in `dueChannels`. Verify both compile
-  and behave as expected at implementation time.
+  as the point above: ~~`.onConflictDoUpdate({ target, set })` for the video upsert in
+  `applyFeedToChannel`~~ (confirmed at implementation time, task 6 — see Core ingestion
+  above), and comparing a `timestamp`-mode column against a plain JS `Date` inside
+  `lte(...)`/`or(isNull(...), ...)` in `dueChannels` (still open — that's task 10).
 - `BASE_INTERVAL_MS`/`JITTER_MS`/`TICK_INTERVAL_MS`/`BATCH_SIZE` are reasonable
   starting constants, not empirically tuned — fine to adjust once real usage (a modest
   personal channel list) shows the cadence is too aggressive or too slow.
