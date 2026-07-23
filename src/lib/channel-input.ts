@@ -1,6 +1,6 @@
-const CHANNEL_ID_PATTERN = /^UC[a-zA-Z0-9_-]{22}$/;
+export const CHANNEL_ID_PATTERN = /^UC[a-zA-Z0-9_-]{22}$/;
 
-function rssUrlFor(channelId: string): string {
+export function rssUrlFor(channelId: string): string {
   return `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
 }
 
