@@ -36,6 +36,8 @@ export const youtubeChannels = sqliteTable("youtube_channels", {
   possibleMissedVideos: integer("possible_missed_videos", { mode: "boolean" })
     .notNull()
     .default(false),
+  lastFetchedAt: integer("last_fetched_at", { mode: "timestamp" }), // last *successful* fetch; null = never
+  nextFetchDueAt: integer("next_fetch_due_at", { mode: "timestamp" }), // null = due immediately
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`(unixepoch())`),
