@@ -1,7 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../db/client";
 import { subscriptions, youtubeChannels } from "../db/schema";
-import { fetchChannelTitle } from "./rss";
+import type { ChannelFeed } from "./rss";
+import { fetchChannelFeed } from "./rss";
 
 type YoutubeChannelRow = typeof youtubeChannels.$inferSelect;
 type SubscriptionRow = typeof subscriptions.$inferSelect;
@@ -19,23 +20,24 @@ function isUniqueConstraintError(err: unknown): boolean {
 export async function upsertYoutubeChannel(
   channelId: string,
   rssUrl: string,
-): Promise<YoutubeChannelRow | null> {
+): Promise<{ channel: YoutubeChannelRow; feed: ChannelFeed | null } | null> {
   const existing = db
     .select()
     .from(youtubeChannels)
     .where(eq(youtubeChannels.youtubeChannelId, channelId))
     .get();
-  if (existing) return existing;
+  if (existing) return { channel: existing, feed: null };
 
-  const title = await fetchChannelTitle(rssUrl);
-  if (title === null) return null;
+  const feed = await fetchChannelFeed(rssUrl);
+  if (feed === null) return null;
 
   try {
-    return db
+    const channel = db
       .insert(youtubeChannels)
-      .values({ youtubeChannelId: channelId, name: title, rssUrl })
+      .values({ youtubeChannelId: channelId, name: feed.title, rssUrl })
       .returning()
       .get();
+    return { channel, feed };
   } catch (err) {
     if (!isUniqueConstraintError(err)) throw err;
     const row = db
@@ -44,7 +46,7 @@ export async function upsertYoutubeChannel(
       .where(eq(youtubeChannels.youtubeChannelId, channelId))
       .get();
     if (!row) throw err;
-    return row;
+    return { channel: row, feed: null };
   }
 }
 
