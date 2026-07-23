@@ -36,7 +36,11 @@ videos.
   nothing is written to `youtube_channels`/`subscriptions`/`videos`, once the user has
   seen and confirmed the real channel name. On confirm, the now-subscribed channel is
   eagerly ingested immediately (not left to wait for its next scheduled slot), reusing
-  `src/lib/ingest.ts`'s core logic rather than duplicating it.
+  `src/lib/ingest.ts`'s core logic rather than duplicating it. Only `channelId` (plus
+  `categoryId`) is carried forward as a hidden field between the two requests — `rssUrl`
+  is re-derived server-side from `channelId` at confirm time rather than trusted from
+  the client (see Design). `rssUrlFor` moves from a private helper in
+  `src/lib/channel-input.ts` to an exported one so both routes can share it.
 - Gap-detection flag (`possibleMissedVideos`) is computed and persisted on every
   ingest, per *Ingestion Notes*' "oldest feed entry newer than newest stored video"
   check. It is set but never auto-cleared by ingestion (matches
@@ -146,8 +150,13 @@ export function applyFeedToChannel(channelId: number, feed: ChannelFeed): void {
     ? feed.entries.reduce((a, b) => (a.publishedAt < b.publishedAt ? a : b))
     : null;
   // Only meaningful once there's a prior baseline to compare against; a brand-new
-  // channel's first ingest has nothing to have "missed" yet.
-  const gapDetected = previousNewest !== undefined && oldestInFeed !== null
+  // channel's first ingest has nothing to have "missed" yet. `publishedAt` is
+  // nullable in the videos table schema (even though every RSS-ingested row populates
+  // it), so an explicit null check guards against relying on `Date > null`'s JS
+  // coercion if a non-RSS insert path (e.g. a test fixture) ever leaves it unset.
+  const gapDetected = previousNewest !== undefined
+    && previousNewest.publishedAt !== null
+    && oldestInFeed !== null
     && oldestInFeed.publishedAt > previousNewest.publishedAt;
 
   const now = new Date();
@@ -205,9 +214,23 @@ export async function tick(): Promise<void> {
 }
 
 export function startScheduler(): Timer {
-  return setInterval(() => { tick().catch((err) => console.error("ingestion tick failed", err)); }, TICK_INTERVAL_MS);
+  let running = false;
+  return setInterval(() => {
+    if (running) return; // previous tick still in flight -- skip rather than overlap
+    running = true;
+    tick()
+      .catch((err) => console.error("ingestion tick failed", err))
+      .finally(() => { running = false; });
+  }, TICK_INTERVAL_MS);
 }
 ```
+
+The `running` guard matters because `tick()` awaits each due channel's fetch
+sequentially (worst case `BATCH_SIZE * FETCH_TIMEOUT_MS` = 25s, under the 60s tick
+interval today, but not guaranteed forever). Without it, a slow patch of network could
+let two ticks overlap and pick the same due channel twice — each ingest is individually
+idempotent (upsert-keyed), so it wouldn't corrupt data, just waste a redundant fetch —
+but skipping is free and avoids the overlap growing unbounded under sustained slowness.
 
 `src/index.ts` calls `startScheduler()` once, after `seed()`, alongside `Bun.serve`.
 The interval lives for the process's lifetime — no explicit shutdown handling needed
@@ -232,24 +255,37 @@ any table until confirm.
    - Not found: `fetchChannelFeed(rssUrl)`, use `.title`; `null` -> inline error
      ("couldn't fetch that channel's feed"), stop.
 3. Render a confirmation partial: the resolved channel name, plus hidden fields
-   (`channelId`, `rssUrl`, `categoryId`) carrying the now-validated values forward, a
-   "Confirm Subscribe" button (`hx-post="/subscriptions"`), and a "Cancel" action that
-   swaps back to the blank subscribe form.
+   (`channelId`, `categoryId` — **not** `rssUrl`; see confirm step below for why)
+   carrying the now-validated values forward, a "Confirm Subscribe" button
+   (`hx-post="/subscriptions"`), and a "Cancel" action that swaps back to the blank
+   subscribe form.
 
-**`POST /subscriptions`** (confirm) — body: `{ channelId, rssUrl, categoryId }`.
+**`POST /subscriptions`** (confirm) — body: `{ channelId, categoryId }`.
 1. Re-validate `categoryId` (defense in depth, same reasoning as spec002's original
    route — form data is client-controlled regardless of what the preview step showed).
-2. Look up `youtube_channels` by `channelId`.
-   - Not found: `fetchChannelFeed(rssUrl)` (one fetch — the preview step's fetch, if
-     any, isn't reused/trusted across requests). `null` -> inline error into the
-     confirm panel. Otherwise insert the row (same unique-constraint race recovery as
-     spec002's `upsertYoutubeChannel`), then `applyFeedToChannel(newRow.id, feed)`
-     using the feed already in hand — no second fetch for a brand-new channel.
-   - Found: reuse the row, then `ingestChannel(row)` (fetches fresh — refreshes videos
-     for a reactivated or already-known channel rather than showing a possibly-stale
-     queue right after subscribing).
-3. `upsertSubscription` as spec002.
-4. Response: the blank subscribe form back into the confirm panel's slot, plus the
+2. Re-validate `channelId` against `CHANNEL_ID_PATTERN` (exported from
+   `channel-input.ts` alongside `rssUrlFor`) and derive `rssUrl` from it via
+   `rssUrlFor(channelId)` — **never** accept `rssUrl` as a hidden field. The preview
+   step already round-tripped `channelId` through `parseChannelInput`, so it's
+   trustworthy to re-derive from, whereas an `rssUrl` hidden field would be an
+   independent, unvalidated value the client could point anywhere — the server would
+   then fetch it on the client's behalf (SSRF shape), which matters here since
+   `docs/app_idea.md` allows this app to be exposed past the LAN via a tunnel.
+   A malformed `channelId` at this point (hand-crafted request, never went through
+   preview) is an inline error, same as spec002's original single-step validation.
+3. Look up `youtube_channels` by `channelId`.
+   - Not found: `fetchChannelFeed(rssUrl)` (one fetch, using the just-derived `rssUrl`
+     — the preview step's fetch, if any, isn't reused/trusted across requests). `null`
+     -> inline error into the confirm panel. Otherwise insert the row (same
+     unique-constraint race recovery as spec002's `upsertYoutubeChannel`), then
+     `applyFeedToChannel(newRow.id, feed)` using the feed already in hand — no second
+     fetch for a brand-new channel.
+   - Found: reuse the row (its stored `rssUrl`, not the freshly-derived one, is what
+     `ingestChannel` actually fetches — see below), then `ingestChannel(row)` (fetches
+     fresh — refreshes videos for a reactivated or already-known channel rather than
+     showing a possibly-stale queue right after subscribing).
+4. `upsertSubscription` as spec002.
+5. Response: the blank subscribe form back into the confirm panel's slot, plus the
    updated `#subscription-list` as an out-of-band swap (`hx-swap-oob="true"`) so one
    response updates both regions HTMX targets separately.
 
@@ -275,12 +311,19 @@ a security boundary, same posture as spec002's un-authed MVP routes generally.
 - `test/lib/scheduler.test.ts`: `dueChannels` — only returns channels with >=1 active
   subscription; excludes channels with a future `nextFetchDueAt`; includes null
   `nextFetchDueAt`; respects the batch limit and oldest-overdue-first ordering.
+  `startScheduler`'s re-entrancy guard — a `tick()` that hasn't resolved yet causes the
+  next timer firing to skip rather than run a second overlapping `tick()` (fake/mocked
+  timers, not real 60s waits).
 - `test/routes/channels.test.ts`: extend for the preview/confirm split — preview
   renders a confirmation with the real fetched/stored name and writes nothing to any
   table; confirm creates the subscription *and* populates `videos` for that channel in
   one round trip; confirming against an already-known channel does not attempt a
   channel-title fetch (only the ingest fetch) — assert via the existing `fetch` mock's
-  call count.
+  call count; a confirm request carrying a mismatched/malformed `channelId` (simulating
+  a hand-crafted request that skipped preview) is rejected inline rather than inserted;
+  a confirm request cannot influence which URL the server fetches by any means other
+  than `channelId` — assert the mocked `fetch`'s call argument always equals
+  `rssUrlFor(channelId)` regardless of what else is in the request body.
 
 ### Verification (manual, end-to-end)
 
@@ -311,6 +354,12 @@ a security boundary, same posture as spec002's un-authed MVP routes generally.
   live feed yet — same category of risk spec001/002 flagged for other library-shape
   assumptions (Drizzle's `check()`/`unique()` builders). Verify at implementation time
   and adjust the parsing logic if the real shape differs from what's sketched above.
+- Two more Drizzle patterns appear in this spec for the first time in the codebase and
+  aren't confirmed against the installed `drizzle-orm` version either, same risk class
+  as the point above: `.onConflictDoUpdate({ target, set })` for the video upsert in
+  `applyFeedToChannel`, and comparing a `timestamp`-mode column against a plain JS
+  `Date` inside `lte(...)`/`or(isNull(...), ...)` in `dueChannels`. Verify both compile
+  and behave as expected at implementation time.
 - `BASE_INTERVAL_MS`/`JITTER_MS`/`TICK_INTERVAL_MS`/`BATCH_SIZE` are reasonable
   starting constants, not empirically tuned — fine to adjust once real usage (a modest
   personal channel list) shows the cadence is too aggressive or too slow.
