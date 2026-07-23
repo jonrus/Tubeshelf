@@ -34,7 +34,7 @@ test("upsertYoutubeChannel recovers when a concurrent insert wins the race", asy
   const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
   const xml = `<?xml version="1.0" encoding="UTF-8"?><feed><title>Slow Fetcher</title></feed>`;
 
-  // fetchChannelTitle's await is the only yield point in upsertYoutubeChannel;
+  // fetchChannelFeed's await is the only yield point in upsertYoutubeChannel;
   // simulate a second request's insert landing during that window.
   const fetchSpy = spyOn(globalThis, "fetch").mockImplementation(async () => {
     db.insert(youtubeChannels)
@@ -50,7 +50,8 @@ test("upsertYoutubeChannel recovers when a concurrent insert wins the race", asy
   const result = await upsertYoutubeChannel(channelId, rssUrl);
   fetchSpy.mockRestore();
 
-  expect(result?.name).toBe("Concurrent Insert");
+  expect(result?.channel.name).toBe("Concurrent Insert");
+  expect(result?.feed).toBeNull();
 
   const rows = db
     .select()
@@ -58,6 +59,43 @@ test("upsertYoutubeChannel recovers when a concurrent insert wins the race", asy
     .where(eq(youtubeChannels.youtubeChannelId, channelId))
     .all();
   expect(rows).toHaveLength(1);
+});
+
+test("upsertYoutubeChannel returns the fetched feed for a brand-new channel", async () => {
+  const channelId = "UCbrandNewChannel0000001";
+  const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+  const xml = `<?xml version="1.0" encoding="UTF-8"?><feed><title>Brand New Channel</title></feed>`;
+
+  const fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response(xml, { status: 200 }),
+  );
+
+  const result = await upsertYoutubeChannel(channelId, rssUrl);
+
+  expect(fetchSpy).toHaveBeenCalledTimes(1);
+  fetchSpy.mockRestore();
+
+  expect(result?.channel.name).toBe("Brand New Channel");
+  expect(result?.feed).toEqual({ title: "Brand New Channel", entries: [] });
+});
+
+test("upsertYoutubeChannel returns a null feed and skips the fetch for an existing channel", async () => {
+  const channelId = "UCalreadyKnownChannel001";
+  const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+
+  db.insert(youtubeChannels)
+    .values({ youtubeChannelId: channelId, name: "Already Known", rssUrl })
+    .run();
+
+  const fetchSpy = spyOn(globalThis, "fetch");
+
+  const result = await upsertYoutubeChannel(channelId, rssUrl);
+
+  expect(fetchSpy).not.toHaveBeenCalled();
+  fetchSpy.mockRestore();
+
+  expect(result?.channel.name).toBe("Already Known");
+  expect(result?.feed).toBeNull();
 });
 
 test("upsertSubscription recovers by reactivating when a concurrent insert wins the race", () => {
