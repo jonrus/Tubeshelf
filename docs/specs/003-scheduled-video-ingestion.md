@@ -180,7 +180,27 @@ export function applyFeedToChannel(channelId: number, feed: ChannelFeed): void {
 // permanently first-in-line, and tick()'s loop has no per-channel error isolation --
 // an uncaught throw here would abort the rest of that tick's batch, every tick,
 // forever, starving every other channel behind the one that's broken.
+// Swallows its own failure -- used for the reschedule-on-failure paths below, which
+// must never throw themselves. If even a single-row UPDATE fails here (DB genuinely
+// unavailable, not just busy-and-retried), there's nothing further this cycle can do;
+// log it and leave the channel's nextFetchDueAt as-is rather than propagate and
+// re-trigger the exact starvation this whole error-handling structure exists to
+// prevent. It'll be retried (and most likely reschedule successfully) on a later tick.
+function safeReschedule(channelId: number, now: Date): void {
+  try {
+    db.update(youtubeChannels).set({ nextFetchDueAt: nextDueAt(now) })
+      .where(eq(youtubeChannels.id, channelId)).run();
+  } catch (err) {
+    console.error(`failed to reschedule channel ${channelId} after ingestion error`, err);
+  }
+}
+
 export async function ingestChannel(channel: YoutubeChannelRow): Promise<{ ok: boolean }> {
+  // Captured once, before the fetch, rather than freshly per-branch -- one consistent
+  // timestamp for the whole call. The only cost is nextFetchDueAt being computed from
+  // "start of this attempt" rather than "when we knew the outcome," i.e. up to
+  // FETCH_TIMEOUT_MS of drift -- negligible against a 1-hour cadence with a 5-minute
+  // jitter window.
   const now = new Date();
   try {
     const feed = await fetchChannelFeed(channel.rssUrl);
@@ -188,16 +208,14 @@ export async function ingestChannel(channel: YoutubeChannelRow): Promise<{ ok: b
       // Reschedule on the same cadence even on failure -- otherwise a channel with a
       // persistently broken feed stays permanently "due" and monopolizes every
       // scheduler tick's batch slots forever. No backoff/alerting for MVP (see Scope).
-      db.update(youtubeChannels).set({ nextFetchDueAt: nextDueAt(now) })
-        .where(eq(youtubeChannels.id, channel.id)).run();
+      safeReschedule(channel.id, now);
       return { ok: false };
     }
     applyFeedToChannel(channel.id, feed);
     return { ok: true };
   } catch (err) {
     console.error(`ingestion failed for channel ${channel.id}`, err);
-    db.update(youtubeChannels).set({ nextFetchDueAt: nextDueAt(now) })
-      .where(eq(youtubeChannels.id, channel.id)).run();
+    safeReschedule(channel.id, now);
     return { ok: false };
   }
 }
@@ -354,6 +372,9 @@ spec002's un-authed MVP routes generally.
   thrown from inside `applyFeedToChannel` (mock it to throw) is caught, still advances
   `nextFetchDueAt`, and `ingestChannel` resolves to `{ ok: false }` rather than
   rejecting — this is the case that otherwise starves the scheduler (see Design).
+  `safeReschedule` — a failing update (mock the DB call to throw) is caught and logged
+  rather than propagating, so `ingestChannel` still resolves to `{ ok: false }` even
+  when its own recovery write fails.
 - `test/lib/subscribe.test.ts`: extend for `upsertYoutubeChannel`'s new return shape —
   a brand-new channel returns `{ channel, feed }` with `feed` populated from the fetch
   it just made; an already-existing channel returns `{ channel, feed: null }` with no
@@ -365,7 +386,11 @@ spec002's un-authed MVP routes generally.
   `runGuardedTick`'s re-entrancy guard — calling it a second time while a mocked `tick()`
   is still pending is a no-op (doesn't invoke `tick()` again); once the pending call
   resolves, a subsequent `runGuardedTick()` call runs normally. Directly testable now
-  that the guard is its own exported function, no real timers needed.
+  that the guard is its own exported function, no real timers needed. Note: the guard's
+  `ticking` flag is shared module state that only resets once the pending call settles
+  (the `finally`) — a test exercising this must let its mocked `tick()` actually
+  resolve/reject before the test ends, or `ticking` leaks `true` into later test cases
+  in the same file.
 - `test/routes/channels.test.ts`: extend for the preview/confirm split — preview
   renders a confirmation with the real fetched/stored name and writes nothing to any
   table; confirm creates the subscription *and* populates `videos` for that channel in
