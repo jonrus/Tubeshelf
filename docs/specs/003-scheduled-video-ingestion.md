@@ -41,6 +41,8 @@ videos.
   is re-derived server-side from `channelId` at confirm time rather than trusted from
   the client (see Design). `rssUrlFor` moves from a private helper in
   `src/lib/channel-input.ts` to an exported one so both routes can share it.
+  `src/lib/subscribe.ts`'s `upsertYoutubeChannel` return type changes so its caller can
+  reuse the fetch it already did instead of fetching a second time (see Design).
 - Gap-detection flag (`possibleMissedVideos`) is computed and persisted on every
   ingest, per *Ingestion Notes*' "oldest feed entry newer than newest stored video"
   check. It is set but never auto-cleared by ingestion (matches
@@ -171,21 +173,41 @@ export function applyFeedToChannel(channelId: number, feed: ChannelFeed): void {
 
 // Fetches fresh and applies. Used by the scheduler, and by the subscribe-confirm
 // route's "channel already existed" path (no feed already in hand there).
+// Never throws -- both the fetch and the apply step are covered by one try/catch, so
+// a DB-layer error (not just a fetch failure) still reschedules rather than leaving
+// nextFetchDueAt stuck in the past. That matters more than it looks: dueChannels()
+// orders oldest-overdue-first, so a channel that never gets rescheduled becomes
+// permanently first-in-line, and tick()'s loop has no per-channel error isolation --
+// an uncaught throw here would abort the rest of that tick's batch, every tick,
+// forever, starving every other channel behind the one that's broken.
 export async function ingestChannel(channel: YoutubeChannelRow): Promise<{ ok: boolean }> {
-  const feed = await fetchChannelFeed(channel.rssUrl);
-  if (!feed) {
-    // Reschedule on the same cadence even on failure -- otherwise a channel with a
-    // persistently broken feed stays permanently "due" and monopolizes every
-    // scheduler tick's batch slots forever. No backoff/alerting for MVP (see Scope).
-    const now = new Date();
+  const now = new Date();
+  try {
+    const feed = await fetchChannelFeed(channel.rssUrl);
+    if (!feed) {
+      // Reschedule on the same cadence even on failure -- otherwise a channel with a
+      // persistently broken feed stays permanently "due" and monopolizes every
+      // scheduler tick's batch slots forever. No backoff/alerting for MVP (see Scope).
+      db.update(youtubeChannels).set({ nextFetchDueAt: nextDueAt(now) })
+        .where(eq(youtubeChannels.id, channel.id)).run();
+      return { ok: false };
+    }
+    applyFeedToChannel(channel.id, feed);
+    return { ok: true };
+  } catch (err) {
+    console.error(`ingestion failed for channel ${channel.id}`, err);
     db.update(youtubeChannels).set({ nextFetchDueAt: nextDueAt(now) })
       .where(eq(youtubeChannels.id, channel.id)).run();
     return { ok: false };
   }
-  applyFeedToChannel(channel.id, feed);
-  return { ok: true };
 }
 ```
+
+A partial video-upsert batch left behind by a mid-loop failure in `applyFeedToChannel`
+(some entries inserted before the error, some not) is harmless and self-heals on the
+next attempt -- `onConflictDoUpdate` makes re-applying an already-upserted entry a
+no-op, so no wrapping transaction is needed, consistent with this spec's existing
+no-backoff/no-retry-sophistication posture for fetch failures.
 
 ### Scheduler (`src/lib/scheduler.ts`)
 
@@ -209,28 +231,38 @@ export function dueChannels(now: Date, limit = BATCH_SIZE): YoutubeChannelRow[] 
 
 export async function tick(): Promise<void> {
   for (const channel of dueChannels(new Date())) {
-    await ingestChannel(channel);
+    await ingestChannel(channel); // never throws -- see ingestChannel's try/catch
+  }
+}
+
+// Wraps tick() with the re-entrancy guard, factored out from startScheduler's
+// setInterval wiring specifically so it's directly callable from a test (invoke it
+// twice back-to-back with a slow/pending tick() and assert the second call is a
+// no-op) without needing real 60s timers.
+let ticking = false;
+export async function runGuardedTick(): Promise<void> {
+  if (ticking) return; // previous tick still in flight -- skip rather than overlap
+  ticking = true;
+  try {
+    await tick();
+  } catch (err) {
+    console.error("ingestion tick failed", err);
+  } finally {
+    ticking = false;
   }
 }
 
 export function startScheduler(): Timer {
-  let running = false;
-  return setInterval(() => {
-    if (running) return; // previous tick still in flight -- skip rather than overlap
-    running = true;
-    tick()
-      .catch((err) => console.error("ingestion tick failed", err))
-      .finally(() => { running = false; });
-  }, TICK_INTERVAL_MS);
+  return setInterval(() => { void runGuardedTick(); }, TICK_INTERVAL_MS);
 }
 ```
 
-The `running` guard matters because `tick()` awaits each due channel's fetch
-sequentially (worst case `BATCH_SIZE * FETCH_TIMEOUT_MS` = 25s, under the 60s tick
-interval today, but not guaranteed forever). Without it, a slow patch of network could
-let two ticks overlap and pick the same due channel twice — each ingest is individually
-idempotent (upsert-keyed), so it wouldn't corrupt data, just waste a redundant fetch —
-but skipping is free and avoids the overlap growing unbounded under sustained slowness.
+The guard matters because `tick()` awaits each due channel's fetch sequentially (worst
+case `BATCH_SIZE * FETCH_TIMEOUT_MS` = 25s, under the 60s tick interval today, but not
+guaranteed forever). Without it, a slow patch of network could let two ticks overlap and
+pick the same due channel twice — each ingest is individually idempotent
+(upsert-keyed), so it wouldn't corrupt data, just waste a redundant fetch — but skipping
+is free and avoids the overlap growing unbounded under sustained slowness.
 
 `src/index.ts` calls `startScheduler()` once, after `seed()`, alongside `Bun.serve`.
 The interval lives for the process's lifetime — no explicit shutdown handling needed
@@ -273,27 +305,38 @@ any table until confirm.
    `docs/app_idea.md` allows this app to be exposed past the LAN via a tunnel.
    A malformed `channelId` at this point (hand-crafted request, never went through
    preview) is an inline error, same as spec002's original single-step validation.
-3. Look up `youtube_channels` by `channelId`.
-   - Not found: `fetchChannelFeed(rssUrl)` (one fetch, using the just-derived `rssUrl`
-     — the preview step's fetch, if any, isn't reused/trusted across requests). `null`
-     -> inline error into the confirm panel. Otherwise insert the row (same
-     unique-constraint race recovery as spec002's `upsertYoutubeChannel`), then
-     `applyFeedToChannel(newRow.id, feed)` using the feed already in hand — no second
-     fetch for a brand-new channel.
-   - Found: reuse the row (its stored `rssUrl`, not the freshly-derived one, is what
-     `ingestChannel` actually fetches — see below), then `ingestChannel(row)` (fetches
-     fresh — refreshes videos for a reactivated or already-known channel rather than
-     showing a possibly-stale queue right after subscribing).
+3. `upsertYoutubeChannel(channelId, rssUrl)` — **signature change from spec002**: now
+   returns `Promise<{ channel: YoutubeChannelRow; feed: ChannelFeed | null } | null>`
+   instead of `Promise<YoutubeChannelRow | null>`. `feed` is populated only on the
+   branch where the function did its own fetch (a brand-new row it just inserted); it's
+   `null` when it found an existing row immediately, or when it fetched but then lost
+   the insert race to a concurrent request (its own fetched feed is simply discarded in
+   that case — rare path, not worth threading through). Internally unchanged otherwise:
+   same not-found → fetch → insert-with-unique-constraint-race-recovery logic spec002
+   already had and already has tests for; this only changes what it hands back to the
+   caller. `null` overall return -> inline error into the confirm panel (fetch failed
+   for a genuinely new channel).
+   - If `feed` came back: `applyFeedToChannel(channel.id, feed)` — reuses the fetch
+     `upsertYoutubeChannel` already did, no second fetch for a brand-new channel.
+   - If `feed` is `null` (channel already existed): `ingestChannel(channel)` — fetches
+     fresh, to refresh videos for a reactivated or already-known channel rather than
+     showing a possibly-stale queue right after subscribing. Unlike the brand-new-channel
+     case above, a failure here (`ingestChannel` returns `{ ok: false }`, per its
+     try/catch — see Core ingestion) does **not** block the subscription from being
+     created — the channel's identity is already established, so there's no reason to
+     fail the whole confirm over a refresh attempt that can just wait for the channel's
+     next scheduled slot.
 4. `upsertSubscription` as spec002.
 5. Response: the blank subscribe form back into the confirm panel's slot, plus the
    updated `#subscription-list` as an out-of-band swap (`hx-swap-oob="true"`) so one
    response updates both regions HTMX targets separately.
 
 This means: brand-new channel = 1 fetch at preview + 1 at confirm (2 total, feed reused
-for both title and entries at confirm). Already-known channel = 0 fetches at preview +
-1 at confirm (entries only, name already trusted). Confirming without ever having
-called preview (e.g. a hand-crafted request) still works — preview is a UX nicety, not
-a security boundary, same posture as spec002's un-authed MVP routes generally.
+for both title and entries at confirm via `upsertYoutubeChannel`'s returned `feed`).
+Already-known channel = 0 fetches at preview + 1 at confirm (entries only, name already
+trusted). Confirming without ever having called preview (e.g. a hand-crafted request)
+still works — preview is a UX nicety, not a security boundary, same posture as
+spec002's un-authed MVP routes generally.
 
 ### Testing (`test/lib/`, `test/routes/`)
 
@@ -307,13 +350,22 @@ a security boundary, same posture as spec002's un-authed MVP routes generally.
   the feed's oldest entry postdates the previously-newest stored video, does *not* fire
   on a channel's first-ever ingest (nothing to compare against), and does not clear an
   already-true flag on a subsequent gap-free ingest. `ingestChannel` — a failed fetch
-  still advances `nextFetchDueAt` (doesn't get stuck permanently due).
+  still advances `nextFetchDueAt` (doesn't get stuck permanently due); a DB-layer error
+  thrown from inside `applyFeedToChannel` (mock it to throw) is caught, still advances
+  `nextFetchDueAt`, and `ingestChannel` resolves to `{ ok: false }` rather than
+  rejecting — this is the case that otherwise starves the scheduler (see Design).
+- `test/lib/subscribe.test.ts`: extend for `upsertYoutubeChannel`'s new return shape —
+  a brand-new channel returns `{ channel, feed }` with `feed` populated from the fetch
+  it just made; an already-existing channel returns `{ channel, feed: null }` with no
+  fetch attempted; the existing race-recovery test (pre-insert a conflicting row, call
+  the function, assert it recovers) still passes with `feed: null` on that path.
 - `test/lib/scheduler.test.ts`: `dueChannels` — only returns channels with >=1 active
   subscription; excludes channels with a future `nextFetchDueAt`; includes null
   `nextFetchDueAt`; respects the batch limit and oldest-overdue-first ordering.
-  `startScheduler`'s re-entrancy guard — a `tick()` that hasn't resolved yet causes the
-  next timer firing to skip rather than run a second overlapping `tick()` (fake/mocked
-  timers, not real 60s waits).
+  `runGuardedTick`'s re-entrancy guard — calling it a second time while a mocked `tick()`
+  is still pending is a no-op (doesn't invoke `tick()` again); once the pending call
+  resolves, a subsequent `runGuardedTick()` call runs normally. Directly testable now
+  that the guard is its own exported function, no real timers needed.
 - `test/routes/channels.test.ts`: extend for the preview/confirm split — preview
   renders a confirmation with the real fetched/stored name and writes nothing to any
   table; confirm creates the subscription *and* populates `videos` for that channel in
