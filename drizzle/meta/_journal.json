@@ -15,6 +15,13 @@
       "when": 1784759504472,
       "tag": "0001_next_moon_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1784833477365,
+      "tag": "0002_past_yellowjacket",
+      "breakpoints": true
     }
   ]
 }
