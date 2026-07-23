@@ -448,8 +448,10 @@ spec002's un-authed MVP routes generally.
   aren't confirmed against the installed `drizzle-orm` version either, same risk class
   as the point above: ~~`.onConflictDoUpdate({ target, set })` for the video upsert in
   `applyFeedToChannel`~~ (confirmed at implementation time, task 6 — see Core ingestion
-  above), and comparing a `timestamp`-mode column against a plain JS `Date` inside
-  `lte(...)`/`or(isNull(...), ...)` in `dueChannels` (still open — that's task 10).
+  above), and ~~comparing a `timestamp`-mode column against a plain JS `Date` inside
+  `lte(...)`/`or(isNull(...), ...)` in `dueChannels`~~ (confirmed at implementation
+  time, task 10: `dueChannels` in `src/lib/scheduler.ts` compiles and filters as
+  expected against the installed `drizzle-orm@0.45.2` — no adjustment needed).
 - `BASE_INTERVAL_MS`/`JITTER_MS`/`TICK_INTERVAL_MS`/`BATCH_SIZE` are reasonable
   starting constants, not empirically tuned — fine to adjust once real usage (a modest
   personal channel list) shows the cadence is too aggressive or too slow.
