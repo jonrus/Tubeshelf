@@ -7,10 +7,104 @@ import {
   users,
   youtubeChannels,
 } from "../db/schema";
-import { parseChannelInput } from "../lib/channel-input";
+import {
+  CHANNEL_ID_PATTERN,
+  parseChannelInput,
+  rssUrlFor,
+} from "../lib/channel-input";
+import { applyFeedToChannel, ingestChannel } from "../lib/ingest";
+import { fetchChannelFeed } from "../lib/rss";
 import { upsertSubscription, upsertYoutubeChannel } from "../lib/subscribe";
 import { ChannelsPage } from "../views/channels-page";
 import { SubscriptionList } from "../views/subscription-list";
+
+type Category = typeof categories.$inferSelect;
+
+type CategoryResolution =
+  | { ok: true; categoryId: number }
+  | { ok: false; error: string };
+
+function resolveCategoryId(categoryIdRaw: string): CategoryResolution {
+  if (categoryIdRaw === "") {
+    const systemCategory = db
+      .select()
+      .from(categories)
+      .where(eq(categories.isSystem, true))
+      .get();
+    if (!systemCategory)
+      throw new Error("seed did not create the system category");
+    return { ok: true, categoryId: systemCategory.id };
+  }
+  const category = db
+    .select()
+    .from(categories)
+    .where(eq(categories.id, Number(categoryIdRaw)))
+    .get();
+  if (!category || category.isSystem) {
+    return { ok: false, error: "Invalid category." };
+  }
+  return { ok: true, categoryId: category.id };
+}
+
+// Local, unexported partials for the preview/confirm panel -- these render into the
+// same `#confirm-panel` slot the (not-yet-updated, see task 13) subscribe form will
+// target. Kept inline here rather than in src/views/ since extracting a shared,
+// properly wired-up view is task 13's job once channels-page.tsx itself is updated.
+function ConfirmError(props: { message: string }) {
+  return (
+    <div id="confirm-panel">
+      <p class="text-red-600">{props.message}</p>
+    </div>
+  );
+}
+
+function ConfirmPanel(props: {
+  channelId: string;
+  categoryId: number;
+  channelName: string;
+}) {
+  return (
+    <div id="confirm-panel">
+      <p>Subscribe to {props.channelName}?</p>
+      <form
+        hx-post="/subscriptions"
+        hx-target="#confirm-panel"
+        hx-swap="outerHTML"
+      >
+        <input type="hidden" name="channelId" value={props.channelId} />
+        <input type="hidden" name="categoryId" value={props.categoryId} />
+        <button type="submit">Confirm Subscribe</button>
+      </form>
+    </div>
+  );
+}
+
+function BlankSubscribeForm(props: { categories: Category[] }) {
+  return (
+    <div id="confirm-panel">
+      <form
+        hx-post="/subscriptions/preview"
+        hx-target="#confirm-panel"
+        hx-swap="outerHTML"
+      >
+        <input
+          type="text"
+          name="channelInput"
+          placeholder="Channel ID or URL"
+        />
+        <select name="categoryId">
+          <option value="">Uncategorized</option>
+          {props.categories.map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.name}
+            </option>
+          ))}
+        </select>
+        <button type="submit">Subscribe</button>
+      </form>
+    </div>
+  );
+}
 
 function getCurrentUser() {
   const user = db
@@ -66,8 +160,7 @@ channelsRoute.get("/channels", (c) => {
   );
 });
 
-channelsRoute.post("/subscriptions", async (c) => {
-  const user = getCurrentUser();
+channelsRoute.post("/subscriptions/preview", async (c) => {
   const body = await c.req.parseBody();
   const channelInput =
     typeof body.channelInput === "string" ? body.channelInput : "";
@@ -77,62 +170,90 @@ channelsRoute.post("/subscriptions", async (c) => {
   const parsed = parseChannelInput(channelInput);
   if (!parsed) {
     return c.html(
-      <SubscriptionList
-        subscriptions={listActiveSubscriptions(user.id)}
-        error="Couldn't parse that as a channel ID or URL."
-      />,
+      <ConfirmError message="Couldn't parse that as a channel ID or URL." />,
     );
   }
 
-  let categoryId: number;
-  if (categoryIdRaw === "") {
-    const systemCategory = db
-      .select()
-      .from(categories)
-      .where(eq(categories.isSystem, true))
-      .get();
-    if (!systemCategory)
-      throw new Error("seed did not create the system category");
-    categoryId = systemCategory.id;
+  const resolvedCategory = resolveCategoryId(categoryIdRaw);
+  if (!resolvedCategory.ok) {
+    return c.html(<ConfirmError message={resolvedCategory.error} />);
+  }
+
+  const existing = db
+    .select()
+    .from(youtubeChannels)
+    .where(eq(youtubeChannels.youtubeChannelId, parsed.channelId))
+    .get();
+
+  let channelName: string;
+  if (existing) {
+    channelName = existing.name;
   } else {
-    const category = db
-      .select()
-      .from(categories)
-      .where(eq(categories.id, Number(categoryIdRaw)))
-      .get();
-    if (!category || category.isSystem) {
+    const feed = await fetchChannelFeed(parsed.rssUrl);
+    if (!feed) {
       return c.html(
-        <SubscriptionList
-          subscriptions={listActiveSubscriptions(user.id)}
-          error="Invalid category."
-        />,
+        <ConfirmError message="Couldn't fetch that channel's feed." />,
       );
     }
-    categoryId = category.id;
+    channelName = feed.title;
   }
 
-  const channel = await upsertYoutubeChannel(parsed.channelId, parsed.rssUrl);
-  if (!channel) {
+  return c.html(
+    <ConfirmPanel
+      channelId={parsed.channelId}
+      categoryId={resolvedCategory.categoryId}
+      channelName={channelName}
+    />,
+  );
+});
+
+channelsRoute.post("/subscriptions", async (c) => {
+  const user = getCurrentUser();
+  const body = await c.req.parseBody();
+  const channelId = typeof body.channelId === "string" ? body.channelId : "";
+  const categoryIdRaw =
+    typeof body.categoryId === "string" ? body.categoryId : "";
+
+  if (!CHANNEL_ID_PATTERN.test(channelId)) {
+    return c.html(<ConfirmError message="Invalid channel." />);
+  }
+
+  const resolvedCategory = resolveCategoryId(categoryIdRaw);
+  if (!resolvedCategory.ok) {
+    return c.html(<ConfirmError message={resolvedCategory.error} />);
+  }
+
+  const rssUrl = rssUrlFor(channelId);
+  const result = await upsertYoutubeChannel(channelId, rssUrl);
+  if (!result) {
     return c.html(
-      <SubscriptionList
-        subscriptions={listActiveSubscriptions(user.id)}
-        error="Couldn't fetch that channel's feed."
-      />,
+      <ConfirmError message="Couldn't fetch that channel's feed." />,
     );
   }
 
-  const result = upsertSubscription(user.id, channel.id, categoryId);
-  if (result.outcome === "already-subscribed") {
+  const { channel, feed } = result;
+  if (feed) {
+    applyFeedToChannel(channel.id, feed);
+  } else {
+    await ingestChannel(channel);
+  }
+
+  const subscribeResult = upsertSubscription(
+    user.id,
+    channel.id,
+    resolvedCategory.categoryId,
+  );
+  if (subscribeResult.outcome === "already-subscribed") {
     return c.html(
-      <SubscriptionList
-        subscriptions={listActiveSubscriptions(user.id)}
-        error="Already subscribed to that channel."
-      />,
+      <ConfirmError message="Already subscribed to that channel." />,
     );
   }
 
   return c.html(
-    <SubscriptionList subscriptions={listActiveSubscriptions(user.id)} />,
+    <>
+      <BlankSubscribeForm categories={listNonSystemCategories()} />
+      <SubscriptionList subscriptions={listActiveSubscriptions(user.id)} oob />
+    </>,
   );
 });
 

@@ -9,9 +9,10 @@ export type Subscription = {
 export const SubscriptionList: FC<{
   subscriptions: Subscription[];
   error?: string;
+  oob?: boolean;
 }> = (props) => {
   return (
-    <div id="subscription-list">
+    <div id="subscription-list" hx-swap-oob={props.oob ? "true" : undefined}>
       <ul>
         {props.subscriptions.map((subscription) => (
           <li key={subscription.id}>
