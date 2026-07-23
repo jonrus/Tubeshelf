@@ -110,6 +110,13 @@ export async function fetchChannelFeed(rssUrl: string): Promise<ChannelFeed | nu
 }
 ```
 
+Confirmed against `fast-xml-parser@5.10.1`'s actual output (see Open Questions): `id`,
+`title`, `published`, and `media:group.media:description` all parse as the plain strings
+sketched above, with one quirk not obvious from the sketch — `feed.entry` is a bare object
+when the feed has exactly one `<entry>`, and only becomes an array once there are two or
+more. `fetchChannelFeed` normalizes both shapes into `entries: FeedEntry[]` before
+returning.
+
 Existing callers of `fetchChannelTitle` (spec002's `upsertYoutubeChannel`) switch to
 `fetchChannelFeed(...)?.title`.
 
@@ -426,11 +433,13 @@ spec002's un-authed MVP routes generally.
 
 ## Open Questions
 
-- The exact shape `fast-xml-parser` produces for `<entry>`/`media:group`/
+- ~~The exact shape `fast-xml-parser` produces for `<entry>`/`media:group`/
   `media:description`/the `yt:videoId`-bearing `<id>` element isn't confirmed against a
-  live feed yet — same category of risk spec001/002 flagged for other library-shape
-  assumptions (Drizzle's `check()`/`unique()` builders). Verify at implementation time
-  and adjust the parsing logic if the real shape differs from what's sketched above.
+  live feed yet~~ — confirmed at implementation time (task 3) against
+  `fast-xml-parser@5.10.1` with representative Atom fixtures: `id`/`title`/`published`/
+  `media:group.media:description` all parse as plain strings as sketched, but
+  `feed.entry` parses as a bare object for a single `<entry>` and only becomes an array
+  for two or more — see the note in RSS feed parsing above.
 - Two more Drizzle patterns appear in this spec for the first time in the codebase and
   aren't confirmed against the installed `drizzle-orm` version either, same risk class
   as the point above: `.onConflictDoUpdate({ target, set })` for the video upsert in
