@@ -68,7 +68,7 @@ ${entryXml}
 // a shared Response instance's body can only be read once.
 function mockFetch(xml: string, status = 200) {
   return spyOn(globalThis, "fetch").mockImplementation(
-    async () => new Response(xml, { status }),
+    (async () => new Response(xml, { status })) as unknown as typeof fetch,
   );
 }
 

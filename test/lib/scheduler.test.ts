@@ -17,15 +17,21 @@ const { dueChannels, runGuardedTick } = await import("../../src/lib/scheduler");
 migrate(db, { migrationsFolder: "./drizzle" });
 seed(db);
 
-const user = db.select().from(users).where(eq(users.username, "default")).get();
-if (!user) throw new Error("seed did not create the default user");
+const userRow = db
+  .select()
+  .from(users)
+  .where(eq(users.username, "default"))
+  .get();
+if (!userRow) throw new Error("seed did not create the default user");
+const user = userRow;
 
-const category = db
+const categoryRow = db
   .select()
   .from(categories)
   .where(eq(categories.isSystem, true))
   .get();
-if (!category) throw new Error("seed did not create the system category");
+if (!categoryRow) throw new Error("seed did not create the system category");
+const category = categoryRow;
 
 let channelCounter = 0;
 function makeChannel(overrides: { nextFetchDueAt?: Date | null } = {}) {
@@ -154,7 +160,7 @@ test("runGuardedTick's re-entrancy guard skips a call made while a tick is still
     resolveFetch = resolve;
   });
   const fetchSpy = spyOn(globalThis, "fetch").mockImplementation(
-    () => pendingFetch,
+    (() => pendingFetch) as unknown as typeof fetch,
   );
 
   // runGuardedTick's synchronous prefix (the ticking guard check/set, plus
@@ -183,7 +189,7 @@ test("runGuardedTick runs normally again once the pending tick resolves", async 
     resolveFetch = resolve;
   });
   const fetchSpy = spyOn(globalThis, "fetch").mockImplementation(
-    () => pendingFetch,
+    (() => pendingFetch) as unknown as typeof fetch,
   );
 
   const firstCall = runGuardedTick();

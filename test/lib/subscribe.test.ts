@@ -36,7 +36,7 @@ test("upsertYoutubeChannel recovers when a concurrent insert wins the race", asy
 
   // fetchChannelFeed's await is the only yield point in upsertYoutubeChannel;
   // simulate a second request's insert landing during that window.
-  const fetchSpy = spyOn(globalThis, "fetch").mockImplementation(async () => {
+  const fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async () => {
     db.insert(youtubeChannels)
       .values({
         youtubeChannelId: channelId,
@@ -45,7 +45,7 @@ test("upsertYoutubeChannel recovers when a concurrent insert wins the race", asy
       })
       .run();
     return new Response(xml, { status: 200 });
-  });
+  }) as unknown as typeof fetch);
 
   const result = await upsertYoutubeChannel(channelId, rssUrl);
   fetchSpy.mockRestore();

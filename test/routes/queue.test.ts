@@ -16,12 +16,13 @@ const { queueRoute } = await import("../../src/routes/queue");
 migrate(db, { migrationsFolder: "./drizzle" });
 seed(db);
 
-const defaultUser = db
+const defaultUserRow = db
   .select()
   .from(users)
   .where(eq(users.username, "default"))
   .get();
-if (!defaultUser) throw new Error("seed did not create the default user");
+if (!defaultUserRow) throw new Error("seed did not create the default user");
+const defaultUser = defaultUserRow;
 
 const category = db
   .insert(categories)
