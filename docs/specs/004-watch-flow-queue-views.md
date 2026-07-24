@@ -308,6 +308,12 @@ function watchedVideos(userId: number) {
 }
 ```
 
+Confirmed at implementation time (task 6): `inArray(videos.status, [...])` as sketched
+above compiles cleanly (`tsc --noEmit`) against the installed `drizzle-orm@0.45.2` and
+filters as expected — verified directly against an in-memory DB seeded with one video of
+each of the four `status` values, where the query returned exactly the `unwatched` and
+`watching` rows.
+
 Since both queue views only ever show `unwatched`/`watching` videos, a queue row's
 toggle button (backed by `toggleQueueStatus`) only ever needs two labels: **"Mark
 Watched"** (unwatched rows) or **"Clear to Unwatched"** (watching rows) — `watched`
@@ -661,13 +667,14 @@ treat those as required, not optional, when validating this spec's implementatio
   Watching, Watched) is explicitly deferred to a future "endless scroll queue"-shaped
   spec rather than being added piecemeal here, even though Watched in particular has no
   natural size cap.
-- `inArray(videos.status, ["unwatched", "watching"])` in `queueVideos` is a
+- ~~`inArray(videos.status, ["unwatched", "watching"])` in `queueVideos` is a
   literal-array-against-enum-column shape not previously used in this codebase
   (`scheduler.ts`'s existing `inArray` usage takes a subquery, not a literal array) —
   low-risk, but per this project's established pattern of confirming novel Drizzle API
   shapes against the installed `drizzle-orm` version (specs 002/003 both flagged and
   later confirmed several), verify this one compiles/filters as expected at
-  implementation time too.
+  implementation time too.~~ (confirmed at implementation time, task 6 — see Queue
+  queries above).
 - `src/lib/rss.ts`'s entry parsing extracts `videoId` (stripped from the `yt:video:`-
   prefixed `<id>` element) with no pattern validation, unlike `CHANNEL_ID_PATTERN` for
   channel IDs. Traced through this spec's design and not currently exploitable (the
