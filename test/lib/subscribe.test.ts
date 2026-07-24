@@ -128,12 +128,9 @@ test("upsertSubscription recovers by reactivating when a concurrent insert wins 
   // proceeds to INSERT and hits the real UNIQUE constraint, then falls through
   // to its catch-and-requery recovery path (the second db.select call, which
   // this mock leaves untouched).
-  const selectSpy = spyOn(db, "select").mockImplementationOnce(
-    () =>
-      ({
-        from: () => ({ where: () => ({ get: () => undefined }) }),
-      }) as unknown as ReturnType<typeof db.select>,
-  );
+  const selectSpy = spyOn(db, "select").mockImplementationOnce((() => ({
+    from: () => ({ where: () => ({ get: () => undefined }) }),
+  })) as unknown as typeof db.select);
 
   const result = upsertSubscription(user.id, channel.id, category.id);
   selectSpy.mockRestore();
@@ -172,12 +169,9 @@ test("upsertSubscription returns already-subscribed when the recovered row is st
     })
     .run();
 
-  const selectSpy = spyOn(db, "select").mockImplementationOnce(
-    () =>
-      ({
-        from: () => ({ where: () => ({ get: () => undefined }) }),
-      }) as unknown as ReturnType<typeof db.select>,
-  );
+  const selectSpy = spyOn(db, "select").mockImplementationOnce((() => ({
+    from: () => ({ where: () => ({ get: () => undefined }) }),
+  })) as unknown as typeof db.select);
 
   const result = upsertSubscription(user.id, channel.id, category.id);
   selectSpy.mockRestore();
