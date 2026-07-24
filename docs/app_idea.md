@@ -5,7 +5,7 @@
 
 - **Problem Statement:** The YouTube Subscription page is clusmy/busy and does not allow sorting by categories/tags - making it hard to view at a glance what is un-watched
 - **Target Audience:** Myself - Users with many subscriptions but very different categories (Podcasts (long duration), Let's Plays, Programming Tutorials, Tech Video, Cooking, Fun) that should be split into different views as the 'watch mode' is different for each type of video and time able to view
-- **Key Differentiator:** More control on what videos the user wants to watch as well as being able to filter and reduce noise presented
+- **Key Differentiator:** More control on what videos the user wants to watch as well as being able to filter and reduce noise presented (category filtering on the queue views scoped in docs/specs/006-category-queue-filtering.md)
 
 ## 2. Feature Scope
 ### MVP (Minimum Viable Product)
@@ -42,6 +42,8 @@
     stays visible here even after unsubscribing from its channel, since watch state is
     already guaranteed to survive unsubscribe. Click-through only (no inline
     un-watch/toggle action - use the Watching page's existing unmark action instead).
+  - All three views above can be narrowed to a single category at a time, including the
+    system Uncategorized category (docs/specs/006-category-queue-filtering.md).
   - **Ignored** view = Ignored videos only, with an un-ignore action (reverts to Unwatched) for reviewing/undoing mistaken ignores
 
 ### Ingestion Notes (MVP)
