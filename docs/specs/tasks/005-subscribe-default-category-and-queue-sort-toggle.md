@@ -54,5 +54,5 @@ Generated: 2026-07-24
   the existing test file's style) — done when: `bun test test/routes/queue.test.ts`
   passes covering both cases.
 
-- [ ] 5. Run full verification: `bun test` and `bun run lint` clean across the whole
+- [x] 5. Run full verification: `bun test` and `bun run lint` clean across the whole
   repo — done when: both commands exit 0 with no failures.
