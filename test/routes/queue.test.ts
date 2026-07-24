@@ -125,6 +125,7 @@ test("GET /queue returns unwatched/watching videos for active subscriptions, new
   expect(html).not.toContain(otherVideo.title);
   expect(html.indexOf(newer.title)).toBeLessThan(html.indexOf(older.title));
   expect(html).toContain(`/watching/${newer.id}?from=queue&amp;sort=newest`);
+  expect(html).toContain('href="/queue?sort=oldest"');
 });
 
 test("GET /queue?sort=oldest inverts the order", async () => {
@@ -144,6 +145,7 @@ test("GET /queue?sort=oldest inverts the order", async () => {
   const html = await res.text();
   expect(html.indexOf(older.title)).toBeLessThan(html.indexOf(newer.title));
   expect(html).toContain(`/watching/${older.id}?from=queue&amp;sort=oldest`);
+  expect(html).toContain('href="/queue"');
 });
 
 test("GET /continue-watching returns only watching videos for active subscriptions", async () => {

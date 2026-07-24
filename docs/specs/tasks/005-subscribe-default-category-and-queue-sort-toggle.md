@@ -47,7 +47,7 @@ Generated: 2026-07-24
   `curl`ing `/queue` and `/queue?sort=oldest` from inside the devcontainer both return
   HTML containing both links.
 
-- [ ] 4. Add the queue sort toggle test coverage per the spec's Testing section: in
+- [x] 4. Add the queue sort toggle test coverage per the spec's Testing section: in
   `test/routes/queue.test.ts`, add assertions that `GET /queue`'s response body contains
   a link to `/queue?sort=oldest`, and that `GET /queue?sort=oldest`'s response body
   contains a link to `/queue` (plain substring/`toContain` checks on the href, following
