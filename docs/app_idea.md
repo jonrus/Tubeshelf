@@ -26,7 +26,9 @@
   - **Mark Watching** - explicitly set to Watching immediately (bypasses the 10s timeout) and stay on the page
   - **Mark Watched & Return to Queue** (label flips to **Mark Unwatched & Return to Queue** when revisiting an already-Watched video) - update status and navigate back
   - **Return to Queue** - pure navigation, no status change, even if the 10s auto-Watching timeout already fired
-- Queue views:
+- Queue views (refined in docs/specs/004-watch-flow-queue-views.md — both views below are
+  scoped to the current user's actively-subscribed channels, so an unsubscribed channel's
+  preserved video history does not reappear in the queue):
   - Default queue view = Unwatched &cup; Watching videos (excludes Ignored), sorted **newest to oldest** by default with a toggle to invert to oldest-to-newest
   - **Continue Watching** view = Watching videos only
   - **Ignored** view = Ignored videos only, with an un-ignore action (reverts to Unwatched) for reviewing/undoing mistaken ignores
