@@ -1,5 +1,6 @@
 import { afterEach, expect, spyOn, test } from "bun:test";
 import { eq } from "drizzle-orm";
+import { rssUrlFor } from "../../src/lib/channel-input";
 
 // channelsRoute operates against the module-level `db` singleton in
 // src/db/client.ts, which reads DB_FILE_NAME at import time — so it must be
@@ -36,17 +37,54 @@ const realCategory = db
   .returning()
   .get();
 
-function mockFetchOnce(xml: string, status = 200) {
-  return spyOn(globalThis, "fetch").mockResolvedValue(
-    new Response(xml, { status }),
+// Pads a label out to a valid 22-character channel ID suffix rather than
+// hand-counting characters in string literals for every test.
+function channelId(label: string): string {
+  return `UC${(label + "A".repeat(22)).slice(0, 22)}`;
+}
+
+function feedXml(
+  title: string,
+  entries: { id: string; title: string; published: string }[],
+): string {
+  const entryXml = entries
+    .map(
+      (e) => `  <entry>
+    <id>yt:video:${e.id}</id>
+    <title>${e.title}</title>
+    <published>${e.published}</published>
+  </entry>`,
+    )
+    .join("\n");
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:media="http://search.yahoo.com/mrss/" xmlns="http://www.w3.org/2005/Atom">
+  <title>${title}</title>
+${entryXml}
+</feed>`;
+}
+
+// mockImplementation (rather than mockResolvedValue) so each call gets a
+// fresh Response — the two-step flow can fetch more than once per test, and
+// a shared Response instance's body can only be read once.
+function mockFetch(xml: string, status = 200) {
+  return spyOn(globalThis, "fetch").mockImplementation(
+    async () => new Response(xml, { status }),
   );
 }
 
-function postSubscription(channelInput: string, categoryId = "") {
-  return channelsRoute.request("/subscriptions", {
+function postPreview(channelInput: string, categoryId = "") {
+  return channelsRoute.request("/subscriptions/preview", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ channelInput, categoryId }),
+  });
+}
+
+function postConfirm(fields: Record<string, string>) {
+  return channelsRoute.request("/subscriptions", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams(fields),
   });
 }
 
@@ -61,27 +99,29 @@ afterEach(() => {
 });
 
 test("subscribe -> unsubscribe -> resubscribe cycle", async () => {
-  const channelId = "UCcycleCh1AAAAAAAAAAAAAA";
-  const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
-  const channelUrl = `https://www.youtube.com/channel/${channelId}`;
+  const id = channelId("cycleChannel");
+  const rssUrl = rssUrlFor(id);
+  const channelUrl = `https://www.youtube.com/channel/${id}`;
 
-  fetchSpy = mockFetchOnce(
-    `<?xml version="1.0" encoding="UTF-8"?><feed><title>Cycle Channel</title></feed>`,
-  );
+  fetchSpy = mockFetch(feedXml("Cycle Channel", []));
 
-  const subscribeRes = await postSubscription(channelUrl);
-  expect(subscribeRes.status).toBe(200);
-  const subscribeHtml = await subscribeRes.text();
-  expect(subscribeHtml).toContain("Cycle Channel");
-  expect(subscribeHtml).toContain("Uncategorized");
+  const previewRes = await postPreview(channelUrl);
+  expect(previewRes.status).toBe(200);
+  const previewHtml = await previewRes.text();
+  expect(previewHtml).toContain("Cycle Channel");
+  expect(previewHtml).toContain("Confirm Subscribe");
+
+  const confirmRes = await postConfirm({ channelId: id, categoryId: "" });
+  expect(confirmRes.status).toBe(200);
+  const confirmHtml = await confirmRes.text();
+  expect(confirmHtml).toContain("Uncategorized");
 
   const channel = db
     .select()
     .from(youtubeChannels)
-    .where(eq(youtubeChannels.youtubeChannelId, channelId))
+    .where(eq(youtubeChannels.youtubeChannelId, id))
     .get();
-  if (!channel)
-    throw new Error("subscribe did not create youtube_channels row");
+  if (!channel) throw new Error("confirm did not create youtube_channels row");
   expect(channel.rssUrl).toBe(rssUrl);
 
   const activeSub = db
@@ -89,7 +129,7 @@ test("subscribe -> unsubscribe -> resubscribe cycle", async () => {
     .from(subscriptions)
     .where(eq(subscriptions.youtubeChannelId, channel.id))
     .get();
-  if (!activeSub) throw new Error("subscribe did not create subscriptions row");
+  if (!activeSub) throw new Error("confirm did not create subscriptions row");
   const subscriptionId = activeSub.id;
 
   const unsubscribeRes = await deleteSubscription(subscriptionId);
@@ -105,15 +145,21 @@ test("subscribe -> unsubscribe -> resubscribe cycle", async () => {
   expect(inactiveSub?.unsubscribedAt).not.toBeNull();
 
   // Re-subscribe using the raw channel ID this time (a different input form
-  // than the /channel/<id> URL used above) plus a real category.
-  const resubscribeRes = await postSubscription(
-    channelId,
-    String(realCategory.id),
-  );
-  expect(resubscribeRes.status).toBe(200);
-  const resubscribeHtml = await resubscribeRes.text();
-  expect(resubscribeHtml).toContain("Cycle Channel");
-  expect(resubscribeHtml).toContain("Tech");
+  // than the /channel/<id> URL used above) plus a real category. The channel
+  // already exists at this point, so preview uses the stored name (no fetch)
+  // and confirm's fetch is the ingest refresh, not a title lookup.
+  const resubscribePreviewRes = await postPreview(id, String(realCategory.id));
+  expect(resubscribePreviewRes.status).toBe(200);
+  const resubscribePreviewHtml = await resubscribePreviewRes.text();
+  expect(resubscribePreviewHtml).toContain("Cycle Channel");
+
+  const resubscribeConfirmRes = await postConfirm({
+    channelId: id,
+    categoryId: String(realCategory.id),
+  });
+  expect(resubscribeConfirmRes.status).toBe(200);
+  const resubscribeConfirmHtml = await resubscribeConfirmRes.text();
+  expect(resubscribeConfirmHtml).toContain("Tech");
 
   const reactivatedSub = db
     .select()
@@ -133,21 +179,21 @@ test("subscribe -> unsubscribe -> resubscribe cycle", async () => {
 });
 
 test("blank categoryId resolves to the system category", async () => {
-  const channelId = "UCblankCatAAAAAAAAAAAAAA";
-  fetchSpy = mockFetchOnce(
-    `<?xml version="1.0" encoding="UTF-8"?><feed><title>Blank Category Channel</title></feed>`,
-  );
+  const id = channelId("blankCategory");
+  fetchSpy = mockFetch(feedXml("Blank Category Channel", []));
 
-  const res = await postSubscription(channelId, "");
-  expect(res.status).toBe(200);
+  const previewRes = await postPreview(id, "");
+  expect(previewRes.status).toBe(200);
+
+  const confirmRes = await postConfirm({ channelId: id, categoryId: "" });
+  expect(confirmRes.status).toBe(200);
 
   const channel = db
     .select()
     .from(youtubeChannels)
-    .where(eq(youtubeChannels.youtubeChannelId, channelId))
+    .where(eq(youtubeChannels.youtubeChannelId, id))
     .get();
-  if (!channel)
-    throw new Error("subscribe did not create youtube_channels row");
+  if (!channel) throw new Error("confirm did not create youtube_channels row");
   const sub = db
     .select()
     .from(subscriptions)
@@ -156,13 +202,11 @@ test("blank categoryId resolves to the system category", async () => {
   expect(sub?.categoryId).toBe(systemCategory.id);
 });
 
-test("an explicit system-category id is rejected inline", async () => {
-  const channelId = "UCsysRejecAAAAAAAAAAAAAA";
-  fetchSpy = mockFetchOnce(
-    `<?xml version="1.0" encoding="UTF-8"?><feed><title>System Reject Channel</title></feed>`,
-  );
+test("an explicit system-category id is rejected inline at preview", async () => {
+  const id = channelId("sysCatReject");
+  fetchSpy = mockFetch(feedXml("System Reject Channel", []));
 
-  const res = await postSubscription(channelId, String(systemCategory.id));
+  const res = await postPreview(id, String(systemCategory.id));
   expect(res.status).toBe(200);
   const html = await res.text();
   expect(html).toContain("Invalid category.");
@@ -170,9 +214,157 @@ test("an explicit system-category id is rejected inline", async () => {
   const channel = db
     .select()
     .from(youtubeChannels)
-    .where(eq(youtubeChannels.youtubeChannelId, channelId))
+    .where(eq(youtubeChannels.youtubeChannelId, id))
     .get();
   expect(channel).toBeUndefined();
+});
+
+test("preview renders the real fetched name and writes nothing to any table", async () => {
+  const id = channelId("previewOnly");
+  fetchSpy = mockFetch(feedXml("Preview Only Channel", []));
+
+  const res = await postPreview(id);
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).toContain("Preview Only Channel");
+  expect(html).toContain("Confirm Subscribe");
+  expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+  const channel = db
+    .select()
+    .from(youtubeChannels)
+    .where(eq(youtubeChannels.youtubeChannelId, id))
+    .get();
+  expect(channel).toBeUndefined();
+});
+
+test("confirm creates the subscription and populates videos in one round trip", async () => {
+  const id = channelId("confirmVideos");
+  const entries = [
+    {
+      id: "confirmVideos-vid1",
+      title: "Video One",
+      published: "2026-07-01T00:00:00+00:00",
+    },
+    {
+      id: "confirmVideos-vid2",
+      title: "Video Two",
+      published: "2026-07-02T00:00:00+00:00",
+    },
+  ];
+  fetchSpy = mockFetch(feedXml("Confirm Videos Channel", entries));
+
+  const previewRes = await postPreview(id);
+  expect(previewRes.status).toBe(200);
+  const previewHtml = await previewRes.text();
+  expect(previewHtml).toContain("Confirm Videos Channel");
+
+  const confirmRes = await postConfirm({ channelId: id, categoryId: "" });
+  expect(confirmRes.status).toBe(200);
+
+  const channel = db
+    .select()
+    .from(youtubeChannels)
+    .where(eq(youtubeChannels.youtubeChannelId, id))
+    .get();
+  if (!channel) throw new Error("confirm did not create youtube_channels row");
+
+  const sub = db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.youtubeChannelId, channel.id))
+    .get();
+  expect(sub).toBeTruthy();
+  expect(sub?.unsubscribedAt).toBeNull();
+
+  const channelVideos = db
+    .select()
+    .from(videos)
+    .where(eq(videos.channelId, channel.id))
+    .all();
+  expect(channelVideos.map((v) => v.youtubeVideoId).sort()).toEqual([
+    "confirmVideos-vid1",
+    "confirmVideos-vid2",
+  ]);
+});
+
+test("confirming an already-known channel only fetches to ingest, not to learn its name", async () => {
+  const id = channelId("alreadyKnown");
+  const channel = db
+    .insert(youtubeChannels)
+    .values({
+      youtubeChannelId: id,
+      name: "Already Known Channel",
+      rssUrl: rssUrlFor(id),
+    })
+    .returning()
+    .get();
+
+  fetchSpy = mockFetch(
+    feedXml("Already Known Channel", [
+      {
+        id: "alreadyKnown-vid1",
+        title: "Known Video",
+        published: "2026-07-15T00:00:00+00:00",
+      },
+    ]),
+  );
+
+  const res = await postConfirm({ channelId: id, categoryId: "" });
+  expect(res.status).toBe(200);
+
+  expect(fetchSpy).toHaveBeenCalledTimes(1);
+  expect(fetchSpy.mock.calls[0]?.[0]).toBe(rssUrlFor(id));
+
+  const channelVideos = db
+    .select()
+    .from(videos)
+    .where(eq(videos.channelId, channel.id))
+    .all();
+  expect(channelVideos.map((v) => v.youtubeVideoId)).toEqual([
+    "alreadyKnown-vid1",
+  ]);
+
+  const sub = db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.youtubeChannelId, channel.id))
+    .get();
+  expect(sub?.unsubscribedAt).toBeNull();
+});
+
+test("confirm rejects a malformed channelId that skipped preview", async () => {
+  const res = await postConfirm({
+    channelId: "not-a-real-channel-id",
+    categoryId: "",
+  });
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).toContain("Invalid channel.");
+
+  const channel = db
+    .select()
+    .from(youtubeChannels)
+    .where(eq(youtubeChannels.youtubeChannelId, "not-a-real-channel-id"))
+    .get();
+  expect(channel).toBeUndefined();
+});
+
+test("confirm derives the fetch URL from channelId alone, ignoring any other field", async () => {
+  const id = channelId("ssrfGuard");
+  fetchSpy = mockFetch(feedXml("SSRF Guard Channel", []));
+
+  const res = await postConfirm({
+    channelId: id,
+    categoryId: "",
+    rssUrl: "https://evil.example.com/feed.xml",
+  });
+  expect(res.status).toBe(200);
+
+  expect(fetchSpy.mock.calls.length).toBeGreaterThan(0);
+  for (const call of fetchSpy.mock.calls) {
+    expect(call[0]).toBe(rssUrlFor(id));
+  }
 });
 
 test("unsubscribe is scoped to the current user and 404s on another user's row", async () => {
