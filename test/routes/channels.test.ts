@@ -92,6 +92,15 @@ function deleteSubscription(id: number) {
   return channelsRoute.request(`/subscriptions/${id}`, { method: "DELETE" });
 }
 
+// Extracts the categoryId hidden field's value out of a preview response's
+// HTML, so tests round-trip through the real rendered value instead of
+// hardcoding a guess at what preview would have produced.
+function extractCategoryId(previewHtml: string): string {
+  const match = previewHtml.match(/name="categoryId" value="([^"]*)"/);
+  if (!match) throw new Error("preview response has no categoryId hidden field");
+  return match[1];
+}
+
 let fetchSpy: ReturnType<typeof spyOn> | undefined;
 afterEach(() => {
   fetchSpy?.mockRestore();
@@ -111,7 +120,10 @@ test("subscribe -> unsubscribe -> resubscribe cycle", async () => {
   expect(previewHtml).toContain("Cycle Channel");
   expect(previewHtml).toContain("Confirm Subscribe");
 
-  const confirmRes = await postConfirm({ channelId: id, categoryId: "" });
+  const confirmRes = await postConfirm({
+    channelId: id,
+    categoryId: extractCategoryId(previewHtml),
+  });
   expect(confirmRes.status).toBe(200);
   const confirmHtml = await confirmRes.text();
   expect(confirmHtml).toContain("Uncategorized");
@@ -184,9 +196,45 @@ test("blank categoryId resolves to the system category", async () => {
 
   const previewRes = await postPreview(id, "");
   expect(previewRes.status).toBe(200);
+  const previewHtml = await previewRes.text();
 
-  const confirmRes = await postConfirm({ channelId: id, categoryId: "" });
+  const confirmRes = await postConfirm({
+    channelId: id,
+    categoryId: extractCategoryId(previewHtml),
+  });
   expect(confirmRes.status).toBe(200);
+
+  const channel = db
+    .select()
+    .from(youtubeChannels)
+    .where(eq(youtubeChannels.youtubeChannelId, id))
+    .get();
+  if (!channel) throw new Error("confirm did not create youtube_channels row");
+  const sub = db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.youtubeChannelId, channel.id))
+    .get();
+  expect(sub?.categoryId).toBe(systemCategory.id);
+});
+
+test("subscribing with no category selected round-trips through preview to a successful confirm", async () => {
+  const id = channelId("blankRoundTrip");
+  fetchSpy = mockFetch(feedXml("Blank Round Trip Channel", []));
+
+  const previewRes = await postPreview(id, "");
+  expect(previewRes.status).toBe(200);
+  const previewHtml = await previewRes.text();
+  const extractedCategoryId = extractCategoryId(previewHtml);
+
+  const confirmRes = await postConfirm({
+    channelId: id,
+    categoryId: extractedCategoryId,
+  });
+  expect(confirmRes.status).toBe(200);
+  const confirmHtml = await confirmRes.text();
+  expect(confirmHtml).not.toContain("Invalid category.");
+  expect(confirmHtml).toContain("Uncategorized");
 
   const channel = db
     .select()

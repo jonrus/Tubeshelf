@@ -17,7 +17,7 @@ Generated: 2026-07-24
   edits above are made, `bun run lint` is clean, and `bunx tsc --noEmit` (or the
   project's equivalent typecheck) reports no new errors from the prop type change.
 
-- [ ] 2. Fix the test-coverage gap identified in the spec's Testing section: both
+- [x] 2. Fix the test-coverage gap identified in the spec's Testing section: both
   `"subscribe -> unsubscribe -> resubscribe cycle"` (`test/routes/channels.test.ts`, the
   `postConfirm({ channelId: id, categoryId: "" })` call around line 114) and
   `"blank categoryId resolves to the system category"` (`channels.test.ts:181-203`, same
