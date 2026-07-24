@@ -34,7 +34,7 @@
   and Continue Watching views below are scoped to the current user's
   actively-subscribed channels, so an unsubscribed channel's preserved video history
   does not reappear in either; **Watched** is the one exception - see below):
-  - Default queue view = Unwatched &cup; Watching videos (excludes Ignored), sorted **newest to oldest** by default with a toggle to invert to oldest-to-newest
+  - Default queue view = Unwatched &cup; Watching videos (excludes Ignored), sorted **newest to oldest** by default with a toggle to invert to oldest-to-newest (the toggle UI itself added in docs/specs/005-subscribe-default-category-and-queue-sort-toggle.md — spec004 built the underlying `?sort=` plumbing but left the visible toggle unbuilt)
   - **Continue Watching** view = Watching videos only
   - **Watched** view (added in docs/specs/004-watch-flow-queue-views.md, not part of the
     original MVP scope below) = a true watch history: every Watched video, sorted
