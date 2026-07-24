@@ -110,18 +110,33 @@ export const videos = sqliteTable("videos", {
 ]);
 ```
 
-Plain additive `ALTER TABLE ADD COLUMN`, same shape as spec003's
-`lastFetchedAt`/`nextFetchDueAt` addition — no FK retarget, no table recreation.
-`watchedAt` is kept in lockstep with `status` rather than derived: set to `now()` the
-moment a video *becomes* `watched`, and cleared back to `null` the moment it stops being
-`watched` (un-marked, or re-entered via a rewatch). It's never meaningful for a video
-that isn't currently `watched`, so there's no "last time this was watched" retained
-across a watched→unwatched→watched cycle — the Watched view only ever lists currently-
-`watched` videos anyway, so this doesn't lose any information the view could show.
-`watched_at_check` ties the two columns together at the DB level — matching
+**Not** a plain additive `ALTER TABLE ADD COLUMN` the way spec003's
+`lastFetchedAt`/`nextFetchDueAt` addition was — unlike those, `watched_at_check`
+references an *existing* column (`status`) alongside the new one, and SQLite's
+`ALTER TABLE ADD COLUMN` only permits a CHECK that references the column being added,
+nothing else. SQLite also has no `ALTER TABLE ADD CONSTRAINT`/`ADD CHECK` at all, so
+attaching this constraint to the already-existing `videos` table requires the same
+create-new/copy-rows/drop-old/rename recreation `drizzle-kit` used for spec002's
+`videos.channelId` FK retarget (docs/specs/002-channel-subscriptions.md's Open
+Questions) — **not** the simple two-column add spec003 did. Per CLAUDE.md, a
+recreate-shaped migration is exactly the kind that can hit `drizzle-kit`'s interactive
+"rename vs. new table" prompt, which a `devcontainer exec` session has no TTY to answer
+— if that happens, hand the exact `db:generate` command to the user to run in their own
+terminal rather than attempting a workaround, same as spec002's Verification handled it.
+
+`watchedAt` itself is kept in lockstep with `status` rather than derived: set to `now()`
+the moment a video *becomes* `watched`, and cleared back to `null` the moment it stops
+being `watched` (un-marked, or re-entered via a rewatch). It's never meaningful for a
+video that isn't currently `watched`, so there's no "last time this was watched"
+retained across a watched→unwatched→watched cycle — the Watched view only ever lists
+currently-`watched` videos anyway, so this doesn't lose any information the view could
+show. `watched_at_check` ties the two columns together at the DB level — matching
 `status_check`/`ignore_method_check`'s existing enum-CHECK convention — so any future
 write path that sets one without the other (not just the two functions below) fails
-loudly rather than silently producing an inconsistent row.
+loudly rather than silently producing an inconsistent row. (Verified by truth table:
+the constraint `(status = 'watched') = (watched_at is not null)` fires on exactly the
+two invalid combinations — `watched`+null and non-`watched`+non-null — and never on the
+two valid ones.)
 
 ### Watch status transitions (`src/lib/watch-status.ts`)
 
@@ -293,10 +308,14 @@ shows up on the Watching page, backed by the separate `toggleWatchedFromWatching
   only the queue *listings* are subscription-scoped. `from`/`sort` feed the return-to-origin
   navigation below; `sort` is only meaningful when `from=queue`.
 - `POST /videos/:id/watching` — calls `setWatching`. Used by both the explicit "Mark
-  Watching" button and the auto-timeout element below. Response: re-renders a small
-  `<span id="watch-status-badge">` partial reflecting the new status (`hx-swap="outerHTML"`),
-  not a full page reload — the Watching page's button labels don't need to change on this
-  transition (see below), so there's nothing else to update.
+  Watching" button and the auto-timeout element below — **neither of which is itself the
+  visible status badge**, so the response always renders
+  `<span id="watch-status-badge" hx-swap-oob="true">…</span>` (the same
+  out-of-band-swap pattern `channels.tsx:198` already uses for `SubscriptionList`) rather
+  than relying on the triggering element's own `hx-swap`. Both call sites set their own
+  `hx-swap="none"` (they have nothing local to update themselves — the badge lives
+  elsewhere on the page) and let the oob swap do the actual update regardless of which
+  of the two triggered the request.
 - `POST /videos/:id/watched-toggle?from=...&sort=...` — calls
   `toggleWatchedFromWatchingPage`. Plain (non-HTMX) form POST (the `from`/`sort` context
   travels as query params on the form's `action` URL, no hidden fields needed), responds
@@ -339,10 +358,16 @@ keeps the fallback behavior a single, explicit, intentional branch rather than i
 `undefined`-handling scattered across the two call sites:
 
 ```ts
+// All three `path` functions share the exact `(sort?: string) => string` signature,
+// even though only "queue" uses the argument -- TypeScript infers a call signature for
+// a union of function types from their *common* arity, so a mismatched signature here
+// (e.g. two of the three taking zero params) would make `entry.path(sort)` below a
+// `tsc --noEmit` error ("Expected 0 arguments, but got 1") despite being invisible to
+// `bun run lint`/`bun test`/`bun run dev`, which don't full-type-check.
 const RETURN_VIEWS = {
   queue: { label: "Queue", path: (sort?: string) => `/queue${sort === "oldest" ? "?sort=oldest" : ""}` },
-  "continue-watching": { label: "Continue Watching", path: () => "/continue-watching" },
-  watched: { label: "Watched", path: () => "/watched" },
+  "continue-watching": { label: "Continue Watching", path: (_sort?: string) => "/continue-watching" },
+  watched: { label: "Watched", path: (_sort?: string) => "/watched" },
 } as const;
 
 function resolveReturnTarget(from: string | undefined, sort: string | undefined) {
@@ -390,6 +415,14 @@ function handleWatchLinkClick(e) {
   // real YouTube URL -- and that orphaned tab still runs its own 10s auto-Watching
   // timer against a video the user never actually watched.
   if (e.type === "auxclick" && e.button !== 1) return;
+  // Ctrl/Cmd/Shift+click on the primary button is the other standard "open in a new
+  // tab/window" gesture, and the browser's own default handling of it (opening `href`
+  // in a new tab) isn't suppressed since preventDefault is never called below -- if
+  // window.open() also fired here, a modifier-click would open two new tabs (YouTube
+  // *and* /watching/:id) while leaving the current tab untouched, inconsistent with the
+  // plain-click behavior. Bail out and let the browser's native modifier-click handling
+  // run alone instead, same accepted-limitation posture as the right-click case below.
+  if (e.type === "click" && (e.ctrlKey || e.metaKey || e.shiftKey)) return;
   window.open(link.dataset.youtubeUrl, "_blank");
   // no preventDefault -- the click's default action still follows href to /watching/:id
   // in the current tab, which is what "navigates the current app view" means.
@@ -405,9 +438,9 @@ watched-toggle redirect above.
 new tab") never fires any DOM event this page can observe, so there's no way for
 client-side JS to intercept that path at all — it'll open `/watching/:id` (the app
 page) without the real YouTube URL, same gap as an unhandled middle-click would leave.
-Not fixable short of removing the real URL from `href` entirely (which would break
-plain navigation and no-JS fallback), so this is a known gap, not an oversight to chase
-further.
+Ctrl/Cmd/Shift+click behaves the same way once deliberately excluded above. Not fixable
+short of removing the real URL from `href` entirely (which would break plain navigation
+and no-JS fallback), so both are known gaps, not oversights to chase further.
 
 Video titles/descriptions elsewhere in each row are untrusted RSS content too, but they
 render through the same plain, auto-escaping JSX text interpolation every other view in
@@ -425,11 +458,14 @@ escaping argument.
   fetch, not an API call).
 - Auto-Watching timeout: an element rendered **only when current status !== "watched"**
   (per `docs/app_idea.md`: the timeout must not fire when revisiting an already-Watched
-  video), using `hx-trigger="load delay:10s" hx-post="/videos/:id/watching" hx-swap="none"`.
-  If the user navigates away before 10s (via either the redirect button or the plain
-  "Return to Queue" link), the element and its pending HTMX request are destroyed with
-  the page — nothing fires, nothing is recorded, matching the spec's "not persisted
-  server-side if interrupted" requirement with no extra bookkeeping.
+  video), using `hx-trigger="load delay:10s" hx-post="/videos/:id/watching" hx-swap="none"`
+  — `hx-swap="none"` here is intentional (see the `POST /videos/:id/watching` route
+  above: the visible badge update comes from that response's own `hx-swap-oob`, not from
+  this triggering element's swap mode). If the user navigates away before 10s (via
+  either the redirect button or the plain "Return to Queue" link), the element and its
+  pending HTMX request are destroyed with the page — nothing fires, nothing is recorded,
+  matching the spec's "not persisted server-side if interrupted" requirement with no
+  extra bookkeeping.
 - **bfcache caveat:** a plain navigation away truly destroys the page, but the browser's
   back/forward cache (bfcache) can instead *freeze* `/watching/:id` — pausing its
   pending 10-second timer rather than cancelling it — and later restore it (e.g. the
@@ -449,14 +485,19 @@ escaping argument.
   });
   ```
 
-  Added once in `layout.tsx` (or scoped to just the Watching page's view — either is
-  fine, since a reload is a no-op cost on any other page that happens to be bfcache-restored).
+  Scoped to `watching-page.tsx` specifically (an inline `<script>` in that view), **not**
+  added to `layout.tsx`. It's only `/watching/:id` that has state unsafe to resume from
+  bfcache — putting this in the shared layout would force a full reload on *every*
+  bfcache-eligible back/forward navigation anywhere in the app (e.g. Back from
+  `/watching/:id` to an otherwise-cacheable `/queue`), forfeiting bfcache's benefit
+  sitewide for a problem that only exists on one page.
 - Three actions, both navigating ones computed from `resolveReturnTarget(from, sort)`
   (see Return-to-origin navigation) so they go back to wherever the video was actually
   opened from:
-  - **Mark Watching** — `hx-post="/videos/:id/watching"`, stays on page (same endpoint
-    the auto-timer uses; redundant calls are harmless since `setWatching` is idempotent).
-    Not a navigating action, so it doesn't involve `from`/`sort` at all.
+  - **Mark Watching** — `hx-post="/videos/:id/watching" hx-swap="none"`, stays on page
+    (same endpoint and oob-swap pattern the auto-timer uses; redundant calls are
+    harmless since `setWatching` is idempotent). Not a navigating action, so it doesn't
+    involve `from`/`sort` at all.
   - **Mark Watched & Return to `{returnLabel}`** / **Mark Unwatched & Return to
     `{returnLabel}`** — prefix computed server-side from the video's status at
     page-render time (`watched` → "Mark Unwatched…", anything else → "Mark Watched…"),
@@ -527,35 +568,64 @@ active-link highlighting or other polish — first pass just needs the links to 
     missing/unrecognized `view` (including `view=watched`) falls back to re-rendering
     `queue`, per `resolveToggleView`.
 
+Three fixes from this spec's review have no automated coverage above, since they're
+purely client-side DOM/timer/event behavior `bun test` can't exercise (no real browser):
+the bfcache `pageshow`/reload script, `auxclick`/modifier-key handling on click-to-watch,
+and the double-submit guards. Verification steps 13-15 below are their only coverage —
+treat those as required, not optional, when validating this spec's implementation.
+
 ### Verification (manual, end-to-end)
 
-1. With at least one subscribed channel that has ingested videos, open `/queue` — videos
-   appear newest-first; toggling the sort shows oldest-first.
-2. Click a video's title — a new tab opens the real YouTube watch page; the current tab
+1. `bun run db:generate` — confirm the migration adds `watched_at` to `videos` (per the
+   Schema section above, this is expected to recreate the `videos` table rather than a
+   plain `ALTER TABLE ADD COLUMN`, since `watched_at_check` references the existing
+   `status` column — inspect the generated SQL to confirm). If `drizzle-kit` prompts
+   interactively (the "rename vs. new table" disambiguation spec002 hit), per CLAUDE.md
+   hand the exact command to the user to run in their own terminal rather than
+   attempting a workaround.
+2. With at least one subscribed channel that has ingested videos, open `/queue` —
+   videos appear newest-first; toggling the sort shows oldest-first.
+3. Click a video's title — a new tab opens the real YouTube watch page; the current tab
    navigates to `/watching/:id` showing its thumbnail and title.
-3. Wait 10s without navigating away — confirm via DB query the video's status is now
-   `watching`, and the page's status badge updates without a full reload.
-4. Reload `/watching/:id` on a fresh (still-unwatched) video and immediately click
+4. Wait 10s without navigating away — confirm via DB query the video's status is now
+   `watching`, **and** the visible status badge on the page updates without a full
+   reload (this exercises the `hx-swap-oob` badge update, not just the DB write).
+5. Reload `/watching/:id` on a fresh (still-unwatched) video and immediately click
    "Return to Queue" before 10s elapses — confirm via DB query the status is still
    `unwatched` (the timer never fired).
-5. Click "Mark Watched & Return to Queue" — lands back on `/queue`, video no longer
-   listed (moved to `watched`); revisit the same video's `/watching/:id` directly — button
-   now reads "Mark Unwatched & Return to Queue" and the auto-timer element is absent.
-6. On `/queue`, use the manual toggle on an Unwatched row — it disappears from the list
+6. On a fresh (unwatched) video's `/watching/:id`, wait past 10s so it's `watching`,
+   then click "Mark Watched & Return to Queue" — confirm via DB query the status is now
+   `watched`, **not** reverted to `unwatched` (this is the specific regression an
+   earlier draft of this spec had for the `watching` → confirm path — see Context).
+7. On `/queue`, use the manual toggle on an Unwatched row — it disappears from the list
    (now Watched); on a Watching row — it flips to Unwatched and stays visible.
-7. Unsubscribe from a channel with ingested videos still in `unwatched`/`watching` —
+8. Unsubscribe from a channel with ingested videos still in `unwatched`/`watching` —
    confirm its videos disappear from `/queue` and `/continue-watching` even though the
    `videos` rows still exist in the DB.
-8. Open `/watched` — confirm it lists videos marked Watched in step 5, most-recently-watched
+9. Open `/watched` — confirm it lists videos marked Watched in step 6, most-recently-watched
    first, with no inline toggle button (click-through only).
-9. From `/watched`, click a video into `/watching/:id` — confirm "Return to Watched" (not
-   "Return to Queue") is shown, and clicking it lands back on `/watched`.
-10. Unsubscribe from the channel of a video that's already Watched — confirm it still
+10. From `/watched`, click a video into `/watching/:id` — confirm "Return to Watched"
+    (not "Return to Queue") is shown, and clicking it lands back on `/watched`.
+11. Unsubscribe from the channel of a video that's already Watched — confirm it still
     appears on `/watched` (true history) even though it's now absent from `/queue` and
     `/continue-watching`.
-11. From `/queue?sort=oldest`, click a video into `/watching/:id`, then "Return to
+12. From `/queue?sort=oldest`, click a video into `/watching/:id`, then "Return to
     Queue" — confirm it lands back on `/queue?sort=oldest`, not the default sort.
-12. `bun test` and `bun run lint` clean.
+13. Open `/watching/:id` on a fresh video, navigate away (e.g. "Return to Queue") before
+    10s elapses, then use the browser's Back button to return to that same
+    `/watching/:id` instance — confirm (via the Network tab) this triggers a fresh
+    reload rather than restoring a bfcache'd page, and that no delayed
+    `POST /videos/:id/watching` fires afterward from the original page instance.
+14. Middle-click a queue row's title — confirm two new tabs open (the real YouTube
+    watch page and the app's `/watching/:id`) and the original `/queue` tab is
+    unaffected. Ctrl/Cmd+click the same row — confirm only `/watching/:id` opens in a
+    new tab (native browser behavior), not the YouTube URL (accepted limitation, see
+    Click-to-watch).
+15. On `/queue`, rapid-double-click a row's toggle button — confirm the status only
+    flips once, not twice (the `hx-disabled-elt` guard). On a Watching page, rapid-tap
+    "Mark Watched & Return to Queue" — confirm only one toggle happens before the page
+    navigates away.
+16. `bun test` and `bun run lint` clean.
 
 ## Open Questions
 
