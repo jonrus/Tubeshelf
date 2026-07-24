@@ -38,7 +38,7 @@ Generated: 2026-07-24
   Done when: `bun test test/routes/channels.test.ts` passes with task 1's fix in place,
   and you've confirmed (per the above) that it fails without it.
 
-- [ ] 3. Add the queue sort toggle UI per the spec's Design > Queue sort toggle section:
+- [x] 3. Add the queue sort toggle UI per the spec's Design > Queue sort toggle section:
   in `src/routes/queue.tsx`'s `GET /queue` handler (`queue.tsx:172-180`), add a `<p>`
   sibling before `<QueueList>` (inside `<Layout>`, outside `#queue-list`) containing two
   plain always-rendered links — `<a href="/queue">Newest first</a>` and

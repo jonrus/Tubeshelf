@@ -174,6 +174,10 @@ queueRoute.get("/queue", (c) => {
   const sort = resolveSort(c.req.query("sort"));
   return c.html(
     <Layout title="Queue">
+      <p>
+        <a href="/queue">Newest first</a> ·{" "}
+        <a href="/queue?sort=oldest">Oldest first</a>
+      </p>
       <QueueList view="queue" sort={sort} rows={queueVideos(user.id, sort)} />
     </Layout>,
   );

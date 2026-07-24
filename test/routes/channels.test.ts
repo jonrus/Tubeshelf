@@ -97,7 +97,8 @@ function deleteSubscription(id: number) {
 // hardcoding a guess at what preview would have produced.
 function extractCategoryId(previewHtml: string): string {
   const match = previewHtml.match(/name="categoryId" value="([^"]*)"/);
-  if (!match) throw new Error("preview response has no categoryId hidden field");
+  if (!match)
+    throw new Error("preview response has no categoryId hidden field");
   return match[1];
 }
 
