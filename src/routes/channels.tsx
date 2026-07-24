@@ -130,7 +130,7 @@ channelsRoute.post("/subscriptions/preview", async (c) => {
   return c.html(
     <ConfirmPanel
       channelId={parsed.channelId}
-      categoryId={resolvedCategory.categoryId}
+      categoryId={categoryIdRaw}
       channelName={channelName}
     />,
   );

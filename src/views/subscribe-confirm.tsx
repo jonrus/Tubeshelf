@@ -32,7 +32,7 @@ export const BlankSubscribeForm: FC<{ categories: Category[] }> = (props) => {
 
 export const ConfirmPanel: FC<{
   channelId: string;
-  categoryId: number;
+  categoryId: string;
   channelName: string;
 }> = (props) => {
   return (

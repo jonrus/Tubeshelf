@@ -2,7 +2,7 @@
 Spec: docs/specs/005-subscribe-default-category-and-queue-sort-toggle.md
 Generated: 2026-07-24
 
-- [ ] 1. Fix the category round-trip bug per the spec's Design > Category fix section:
+- [x] 1. Fix the category round-trip bug per the spec's Design > Category fix section:
   in `src/routes/channels.tsx`'s `POST /subscriptions/preview` handler (currently
   `channelsRoute.post("/subscriptions/preview", ...)`, `channels.tsx:92-137`), change the
   `<ConfirmPanel>` render (`channels.tsx:130-136`) to pass `categoryId={categoryIdRaw}`
