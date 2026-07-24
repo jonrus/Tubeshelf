@@ -167,6 +167,20 @@ later rather than a signature change.
 ### Routes (`src/routes/queue.tsx`)
 
 ```tsx
+// Shared by both the sort-toggle links and CategoryFilterLinks's buildHref below --
+// one place that knows how to assemble a /queue URL from its two optional params, so
+// there's exactly one `?` vs. no-`?` decision instead of two ad hoc ones that could
+// drift (see the buildQueueHref note further down for why the earlier draft's
+// `URLSearchParams({...}).toString()` call, used unconditionally, produced a bare
+// trailing "?" on the "All" link when both params were absent).
+function buildQueueHref(sort: "newest" | "oldest", category?: number): string {
+  const params = new URLSearchParams();
+  if (sort === "oldest") params.set("sort", "oldest");
+  if (category !== undefined) params.set("category", String(category));
+  const qs = params.toString();
+  return `/queue${qs ? `?${qs}` : ""}`;
+}
+
 queueRoute.get("/queue", (c) => {
   const user = getCurrentUser();
   const sort = resolveSort(c.req.query("sort"));
@@ -174,18 +188,13 @@ queueRoute.get("/queue", (c) => {
   return c.html(
     <Layout title="Queue">
       <p>
-        <a href={`/queue${category ? `?category=${category}` : ""}`}>Newest first</a> ·{" "}
-        <a href={`/queue?sort=oldest${category ? `&category=${category}` : ""}`}>Oldest first</a>
+        <a href={buildQueueHref("newest", category)}>Newest first</a> ·{" "}
+        <a href={buildQueueHref("oldest", category)}>Oldest first</a>
       </p>
       <CategoryFilterLinks
         categories={allCategories()}
         current={category}
-        buildHref={(catId) =>
-          `/queue?${new URLSearchParams({
-            ...(sort === "oldest" ? { sort: "oldest" } : {}),
-            ...(catId !== undefined ? { category: String(catId) } : {}),
-          }).toString()}`
-        }
+        buildHref={(catId) => buildQueueHref(sort, catId)}
       />
       <QueueList view="queue" sort={sort} category={category} rows={queueVideos(user.id, sort, category)} />
     </Layout>,
@@ -193,9 +202,23 @@ queueRoute.get("/queue", (c) => {
 });
 ```
 
+Both sort-toggle links and `buildHref` now go through `buildQueueHref`, using an
+explicit `category !== undefined` check rather than a truthy check (`category ? ... :
+""`, as an earlier draft of this section had) — the truthy form happens to be safe
+today only because SQLite `INTEGER PRIMARY KEY AUTOINCREMENT` ids start at `1`, never
+`0`, but that's an unstated invariant this rewrite makes irrelevant rather than relying
+on: `!== undefined` is correct regardless of what a category id's numeric value ever is.
+
 `GET /continue-watching` and `GET /watched` gain the analogous `resolveCategoryFilter`
-call, a `CategoryFilterLinks` block whose `buildHref` only ever sets/omits `category`
-(no `sort` to preserve), and pass `category` into their respective query calls.
+call and their own `buildContinueWatchingHref(category?: number)` /
+`buildWatchedHref(category?: number)` helpers — same `URLSearchParams`-then-
+conditional-`?` shape as `buildQueueHref` above, just without the `sort` branch (so
+each is effectively `category !== undefined ? "?category=" + category : ""` appended
+to its own base path, built through `URLSearchParams` rather than that literal string
+concatenation, for the same reason `buildQueueHref` is). Neither route uses truthy
+`category ? ... : ""` checks either — same explicit `!== undefined` reasoning as
+`buildQueueHref` above. Each route passes `category` into its `CategoryFilterLinks`
+`buildHref` and into its query call (`continueWatchingVideos`/`watchedVideos`).
 
 `POST /videos/:id/toggle` (the row toggle, queue/continue-watching only) reads
 `category` off the query string the same way it already reads `view`/`sort`, and passes
@@ -288,7 +311,58 @@ called out explicitly here so it isn't reintroduced at implementation time.)
 same as its existing `from`/`sort` params) and round-trips it unvalidated into the form
 `action` URL via `URLSearchParams`, exactly like `RETURN_VIEWS`'s `buildReturnPath`
 above — it never touches `resolveCategoryFilter` or a `number`. `WatchingPageProps`
-gains a `category: string | undefined` field for this purpose. These are two distinct
+gains a `category: string | undefined` field for this purpose. Spelled out in full
+(the one function this spec left as prose-only in an earlier draft, which is exactly
+the kind of gap that let the two bugs above slip through undetected — so it's fully
+sketched here rather than described secondhand):
+
+```ts
+// watching-page.tsx
+function watchedToggleAction(
+  id: number,
+  from: string | undefined,
+  sort: string | undefined,
+  category: string | undefined, // new 4th param
+): string {
+  const params = new URLSearchParams();
+  if (from !== undefined) params.set("from", from);
+  if (sort !== undefined) params.set("sort", sort);
+  if (category !== undefined) params.set("category", category); // new
+  const qs = params.toString();
+  return `/videos/${id}/watched-toggle${qs ? `?${qs}` : ""}`;
+}
+```
+
+```tsx
+// WatchingPage's <form action={...}> call site, watching-page.tsx
+<form
+  action={watchedToggleAction(props.id, props.from, props.sort, props.category)}
+  method="post"
+  onsubmit="this.querySelector('button').disabled = true"
+>
+```
+
+```ts
+// queue.tsx -- GET /watching/:id, alongside the existing from/sort reads
+queueRoute.get("/watching/:id", (c) => {
+  // ...unchanged video lookup...
+  const from = c.req.query("from");
+  const sort = c.req.query("sort");
+  const category = c.req.query("category"); // new
+  const returnTarget = resolveReturnTarget(from, sort, category);
+  return c.html(
+    <WatchingPage
+      // ...unchanged id/youtubeVideoId/title/status/from/sort/returnUrl/returnLabel...
+      category={category} // new
+    />,
+  );
+});
+```
+
+`POST /videos/:id/watched-toggle` also needs its own `category` read added alongside
+its existing `from`/`sort` reads, feeding `resolveReturnTarget` the same way `GET
+/watching/:id` does above — it already computes a `resolveReturnTarget(from, sort)`
+call today; this spec adds the third argument there too. These are two distinct
 `category` types flowing through this spec depending on which side of
 `resolveCategoryFilter` they're on: **`number | undefined`** wherever a value has been
 validated against the DB and is about to build a query or a `QueueList` prop
@@ -340,6 +414,19 @@ errors under this design, not just style slips.
   querystring parameter. This is the test that would have caught the raw
   template-string-interpolation bug an earlier draft of this spec had in two of
   `RETURN_VIEWS`'s three branches (see Design's `buildReturnPath` note).
+- **End-to-end row-link round trip** (not just the two halves above tested in
+  isolation): `GET /queue?category=<id>`, parse a row's rendered `<a href>` out of the
+  response body (not hand-constructed), follow it as the actual next request, and
+  assert the resulting `/watching/:id` page's "Return to Queue" link/form both point
+  back at `/queue?category=<id>` — proving `watchingHref` in `queue-list.tsx` actually
+  received and threaded the `category` argument, not just that `queueVideos` filtered
+  correctly and `resolveReturnTarget` builds correct URLs from hand-fed inputs
+  separately. Repeat once for `continue-watching` and once for `watched`. Without this,
+  an implementer who wires `category` into every query call but forgets to pass it into
+  `watchingHref(...)`'s call sites in `queue-list.tsx` would have every other test in
+  this section still pass, while the spec's central promise — filtering into a
+  category, opening a video, and returning to the same filtered view (see Scope) —
+  silently breaks.
 
 ### Verification (manual, end-to-end)
 
@@ -365,8 +452,35 @@ errors under this design, not just style slips.
 
 ## Open Questions
 
-A red-team review of this spec's draft caught two real bugs, both now fixed in the
-Design section above rather than left as open risk:
+A second red-team pass caught three more gaps, all now addressed above:
+- The `/queue` route's own sort-toggle links and `CategoryFilterLinks`'s `buildHref`
+  used a truthy `category ? ... : ""` check and, separately, an unconditional
+  `URLSearchParams(...).toString()` call that produced a bare trailing `?` on the "All"
+  link whenever no `sort`/`category` was active (e.g. `href="/queue?"`) — harmless
+  functionally, but an unacknowledged inconsistency with the ternary-based links right
+  next to it. Fixed by introducing `buildQueueHref`/`buildContinueWatchingHref`/
+  `buildWatchedHref` as the one place each route builds its own URLs from, always via
+  `URLSearchParams` with an explicit `!== undefined` check and a conditional `?` (see
+  Routes).
+- `watchedToggleAction`'s `category` wiring was described only in prose, unlike every
+  other touched function in this spec — given this spec's own history of a bug slipping
+  into an under-specified parallel code path (see below), it's now fully sketched (see
+  Row links) rather than left implicit.
+- No test exercised the actual `watchingHref`-generated row link through to the
+  Watching page's return target — only the two halves (query filtering,
+  return-target-from-hand-fed-inputs) in isolation, which would both still pass even if
+  `category` were never threaded into `watchingHref`'s call sites. Added as its own
+  Testing bullet ("End-to-end row-link round trip").
+- Not fixed, recorded instead as an accepted tradeoff: per Scope, the category picker
+  always lists every category regardless of whether it has any matching videos in the
+  current view, so filtering to a category with zero current results is
+  indistinguishable from a broken filter (no "no videos in this category" messaging).
+  Pre-existing gap (none of the three views has empty-state messaging today either),
+  but this spec makes hitting it routine rather than rare. Acceptable for MVP scope;
+  worth a follow-up if it proves confusing once in real use.
+
+A first red-team review of this spec's draft caught two real bugs, both now fixed in
+the Design section above rather than left as open risk:
 - `RETURN_VIEWS`'s `continue-watching`/`watched` branches interpolated the unvalidated
   `category` string directly into a template literal while `queue`'s branch went
   through `URLSearchParams` — an inconsistency that, for a `category` value containing
