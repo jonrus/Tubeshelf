@@ -16,9 +16,12 @@ import { applyFeedToChannel, ingestChannel } from "../lib/ingest";
 import { fetchChannelFeed } from "../lib/rss";
 import { upsertSubscription, upsertYoutubeChannel } from "../lib/subscribe";
 import { ChannelsPage } from "../views/channels-page";
+import {
+  BlankSubscribeForm,
+  ConfirmError,
+  ConfirmPanel,
+} from "../views/subscribe-confirm";
 import { SubscriptionList } from "../views/subscription-list";
-
-type Category = typeof categories.$inferSelect;
 
 type CategoryResolution =
   | { ok: true; categoryId: number }
@@ -44,66 +47,6 @@ function resolveCategoryId(categoryIdRaw: string): CategoryResolution {
     return { ok: false, error: "Invalid category." };
   }
   return { ok: true, categoryId: category.id };
-}
-
-// Local, unexported partials for the preview/confirm panel -- these render into the
-// same `#confirm-panel` slot the (not-yet-updated, see task 13) subscribe form will
-// target. Kept inline here rather than in src/views/ since extracting a shared,
-// properly wired-up view is task 13's job once channels-page.tsx itself is updated.
-function ConfirmError(props: { message: string }) {
-  return (
-    <div id="confirm-panel">
-      <p class="text-red-600">{props.message}</p>
-    </div>
-  );
-}
-
-function ConfirmPanel(props: {
-  channelId: string;
-  categoryId: number;
-  channelName: string;
-}) {
-  return (
-    <div id="confirm-panel">
-      <p>Subscribe to {props.channelName}?</p>
-      <form
-        hx-post="/subscriptions"
-        hx-target="#confirm-panel"
-        hx-swap="outerHTML"
-      >
-        <input type="hidden" name="channelId" value={props.channelId} />
-        <input type="hidden" name="categoryId" value={props.categoryId} />
-        <button type="submit">Confirm Subscribe</button>
-      </form>
-    </div>
-  );
-}
-
-function BlankSubscribeForm(props: { categories: Category[] }) {
-  return (
-    <div id="confirm-panel">
-      <form
-        hx-post="/subscriptions/preview"
-        hx-target="#confirm-panel"
-        hx-swap="outerHTML"
-      >
-        <input
-          type="text"
-          name="channelInput"
-          placeholder="Channel ID or URL"
-        />
-        <select name="categoryId">
-          <option value="">Uncategorized</option>
-          {props.categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </select>
-        <button type="submit">Subscribe</button>
-      </form>
-    </div>
-  );
 }
 
 function getCurrentUser() {
