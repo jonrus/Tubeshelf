@@ -6,6 +6,7 @@ import { seed } from "./db/seed";
 import { startScheduler } from "./lib/scheduler";
 import { categoriesRoute } from "./routes/categories";
 import { channelsRoute } from "./routes/channels";
+import { queueRoute } from "./routes/queue";
 
 runMigrations();
 console.log("Migrations complete.");
@@ -17,6 +18,7 @@ const app = new Hono();
 app.use("/css/*", serveStatic({ root: "./public" }));
 app.route("/", categoriesRoute);
 app.route("/", channelsRoute);
+app.route("/", queueRoute);
 
 startScheduler();
 

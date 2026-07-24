@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
+import { Hono } from "hono";
 import { db } from "../db/client";
 import {
   categories,
@@ -6,6 +7,15 @@ import {
   videos,
   youtubeChannels,
 } from "../db/schema";
+import { getCurrentUser } from "../lib/current-user";
+import {
+  setWatching,
+  toggleQueueStatus,
+  toggleWatchedFromWatchingPage,
+} from "../lib/watch-status";
+import { Layout } from "../views/layout";
+import { QueueList } from "../views/queue-list";
+import { WatchingPage, WatchStatusBadge } from "../views/watching-page";
 
 function queueVideos(userId: number, sort: "newest" | "oldest") {
   return db
@@ -139,3 +149,116 @@ function resolveReturnTarget(
   const entry = RETURN_VIEWS[key];
   return { url: entry.path(sort), label: entry.label };
 }
+
+function resolveSort(sort: string | undefined): "newest" | "oldest" {
+  return sort === "oldest" ? "oldest" : "newest";
+}
+
+function videoForWatchingPage(videoId: number) {
+  return db
+    .select({
+      id: videos.id,
+      youtubeVideoId: videos.youtubeVideoId,
+      title: videos.title,
+      status: videos.status,
+    })
+    .from(videos)
+    .where(eq(videos.id, videoId))
+    .get();
+}
+
+export const queueRoute = new Hono();
+
+queueRoute.get("/queue", (c) => {
+  const user = getCurrentUser();
+  const sort = resolveSort(c.req.query("sort"));
+  return c.html(
+    <Layout title="Queue">
+      <QueueList view="queue" sort={sort} rows={queueVideos(user.id, sort)} />
+    </Layout>,
+  );
+});
+
+queueRoute.get("/continue-watching", (c) => {
+  const user = getCurrentUser();
+  return c.html(
+    <Layout title="Continue Watching">
+      <QueueList
+        view="continue-watching"
+        rows={continueWatchingVideos(user.id)}
+      />
+    </Layout>,
+  );
+});
+
+queueRoute.get("/watched", (c) => {
+  const user = getCurrentUser();
+  return c.html(
+    <Layout title="Watched">
+      <QueueList view="watched" rows={watchedVideos(user.id)} />
+    </Layout>,
+  );
+});
+
+queueRoute.get("/watching/:id", (c) => {
+  const id = Number(c.req.param("id"));
+  const video = videoForWatchingPage(id);
+  if (!video) return c.notFound();
+
+  const from = c.req.query("from");
+  const sort = c.req.query("sort");
+  const returnTarget = resolveReturnTarget(from, sort);
+
+  return c.html(
+    <WatchingPage
+      id={video.id}
+      youtubeVideoId={video.youtubeVideoId}
+      title={video.title}
+      status={video.status}
+      from={from}
+      sort={sort}
+      returnUrl={returnTarget.url}
+      returnLabel={returnTarget.label}
+    />,
+  );
+});
+
+queueRoute.post("/videos/:id/watching", (c) => {
+  const id = Number(c.req.param("id"));
+  const result = setWatching(id);
+  if (!result) return c.notFound();
+
+  return c.html(<WatchStatusBadge status={result.status} oob />);
+});
+
+queueRoute.post("/videos/:id/watched-toggle", (c) => {
+  const id = Number(c.req.param("id"));
+  const result = toggleWatchedFromWatchingPage(id);
+  if (!result) return c.notFound();
+
+  const from = c.req.query("from");
+  const sort = c.req.query("sort");
+  return c.redirect(resolveReturnTarget(from, sort).url, 303);
+});
+
+queueRoute.post("/videos/:id/toggle", (c) => {
+  const id = Number(c.req.param("id"));
+  const result = toggleQueueStatus(id);
+  if (!result) return c.notFound();
+
+  const user = getCurrentUser();
+  const view = resolveToggleView(c.req.query("view"));
+  const sort = resolveSort(c.req.query("sort"));
+
+  if (view === "continue-watching") {
+    return c.html(
+      <QueueList
+        view="continue-watching"
+        rows={continueWatchingVideos(user.id)}
+      />,
+    );
+  }
+  return c.html(
+    <QueueList view="queue" sort={sort} rows={queueVideos(user.id, sort)} />,
+  );
+});
