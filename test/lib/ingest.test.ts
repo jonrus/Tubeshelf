@@ -101,7 +101,7 @@ test("re-ingesting an existing video updates title/description/publishedAt witho
   );
 
   db.update(videos)
-    .set({ status: "watched", ignoreMethod: "manual" })
+    .set({ status: "watched", ignoreMethod: "manual", watchedAt: new Date() })
     .where(eq(videos.youtubeVideoId, "vid-reingest"))
     .run();
 
