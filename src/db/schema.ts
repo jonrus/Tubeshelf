@@ -86,6 +86,7 @@ export const videos = sqliteTable(
       .notNull()
       .default("unwatched"),
     ignoreMethod: text("ignore_method", { enum: ["manual", "auto"] }),
+    watchedAt: integer("watched_at", { mode: "timestamp" }), // null unless status === "watched"
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`),
@@ -98,6 +99,10 @@ export const videos = sqliteTable(
     check(
       "ignore_method_check",
       sql`${t.ignoreMethod} is null or ${t.ignoreMethod} in ('manual','auto')`,
+    ),
+    check(
+      "watched_at_check",
+      sql`(${t.status} = 'watched') = (${t.watchedAt} is not null)`,
     ),
   ],
 );
