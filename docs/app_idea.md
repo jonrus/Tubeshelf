@@ -114,4 +114,4 @@
 - **Maintenance Plan:** As the deployment pattern is via Docker users should be able to backup the SQLite DB and be good.
 
 ---
-*Created: 07/18/2026* | *Status: In Development - MVP items 1, 2, and 5 implemented (specs 001-003); item 3 (watch flow & queue views) drafted as spec 004, not yet built; item 6 (Ignored/IgnoreRule) and auth (§5) remain unspecced*
+*Created: 07/18/2026* | *Status: In Progress - see docs/specs/ for what's implemented*
