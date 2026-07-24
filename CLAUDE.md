@@ -76,3 +76,14 @@ projects — this file just pins the project-specific paths above.
 A spec's frontmatter `status` progresses `draft` → `in-progress` (once tasks exist) →
 `implemented` (once `/work-task` finishes the last step). Don't hand-write code against a
 spec without going through a task file — that's what defeats the point of the pattern.
+
+## Memory vs. version control
+
+This project is developed from two separate machines (see the devcontainer note above).
+Claude Code's cross-session memory is local to whichever machine a session happens to run
+on — it does not sync between them. So for any durable project decision, plan, or
+non-obvious reasoning worth keeping (roadmap sequencing, a design tradeoff, anything a
+future session on *either* machine would want to know), default to writing it into a
+version-controlled repo doc — a spec, `docs/app_idea.md`, a task file — not only into
+assistant memory. Treat memory as a same-machine convenience/pointer at most, never the
+source of truth for something that matters project-wide.

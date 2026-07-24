@@ -63,6 +63,36 @@
 - Support other platforms than YouTube - Long term goal, I currently do not have any other platforms in mind
 - Application is in a place to be made public as an open source project, with enough documentation that I might be able to manage Pull Requests reasonably if there were any
 
+### Path to v1.0 (post-MVP-feature sequencing)
+*A loose plan, not a locked spec order — expect this to shift as work progresses. This
+section is the source of truth for the intended order (not any AI assistant's session
+memory, which doesn't follow across the two dev machines this project is built on).*
+
+Once all numbered MVP feature items above are implemented, the intended order of
+remaining pre-v1.0 work is:
+
+1. **Styling** — the UI is currently unstyled/ugly; Tailwind is already wired in
+   (§3). Sequenced before auth deliberately: this project's specs lean on manual
+   browser verification heavily, and once login/session middleware exists, every such
+   pass requires authenticating first — doing the visual-iteration-heavy work while the
+   app is still auth-free keeps that loop cheap.
+2. **Auth/CSRF** (§5's requirements) — sequenced right before deployment (below), not
+   immediately after MVP features finish, because its urgency comes from the app
+   actually being exposed (the tunnel-to-internet posture in §5), not from existing in
+   the abstract. Costs nothing to defer while the app is dev-only and undeployed.
+3. **DB squash** — collapse all migrations accumulated during MVP + styling + auth
+   development into one clean baseline. Deliberately the *last* schema-touching spec
+   here, not right after MVP features finish — auth (above) will likely add its own
+   schema (session/token storage, login-attempt tracking for the rate-limiting §5
+   requires), so squashing after it catches that dev-time churn too instead of leaving
+   it to accumulate past an earlier squash. Safe to do this aggressively since the app
+   has never been deployed — no real user data/migration path to preserve yet.
+4. **Deployment/Docker packaging** (§3's compose-file infrastructure, deferred since
+   spec001 since there was no app yet to containerize).
+5. **GitHub buildout** (CI, release image pushing, §6's CI/CD Pipeline) — sequenced
+   last, once there's an actual release artifact shape to automate around, rather than
+   chasing a moving packaging target.
+
 ### User Roles & Permissions
 | Role | Permissions |
 | :--- | :--- |
