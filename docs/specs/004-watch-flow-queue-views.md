@@ -124,6 +124,25 @@ recreate-shaped migration is exactly the kind that can hit `drizzle-kit`'s inter
 — if that happens, hand the exact `db:generate` command to the user to run in their own
 terminal rather than attempting a workaround, same as spec002's Verification handled it.
 
+Confirmed at implementation time (task 2): the generated migration's row-copy step
+(`INSERT INTO __new_videos (...) SELECT ... FROM videos`) included `"watched_at"`
+(double-quoted) in the `SELECT` list, sourced from the *old* `videos` table — which
+doesn't have that column yet, since it's the one being added. SQLite doesn't error on
+this the way a normal SQL engine would: a double-quoted identifier that fails to resolve
+to a real column silently falls back to being treated as a string literal (a long-standing
+SQLite misfeature, not gated behind `PRAGMA strict` by default). Verified directly against
+`bun:sqlite`: the generated statement, run as-is against a `videos` table with an existing
+row, wrote the literal string `"watched_at"` into that row's new column instead of `NULL`
+— for a `watched`-status row this happens to satisfy `watched_at_check` (non-null) while
+still being wrong data; for a non-`watched` row it would fail the check outright rather
+than silently corrupting. No `dev.db` existed yet in this repo, so nothing was actually
+corrupted, but the generated file was hand-edited (`drizzle/0003_redundant_sprite.sql`) to
+select a literal `NULL` in `watched_at`'s position instead of the phantom quoted
+identifier. Worth flagging for any future nullable-column-via-table-recreation migration
+in this project: inspect the copy-step's `SELECT` list column-by-column, not just the
+`CREATE TABLE` shape — `drizzle-kit` doesn't special-case a genuinely new column when
+building the row-copy `SELECT`, and SQLite won't catch the mistake for you.
+
 `watchedAt` itself is kept in lockstep with `status` rather than derived: set to `now()`
 the moment a video *becomes* `watched`, and cleared back to `null` the moment it stops
 being `watched` (un-marked, or re-entered via a rewatch). It's never meaningful for a
