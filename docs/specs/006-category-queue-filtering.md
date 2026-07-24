@@ -218,26 +218,36 @@ arity), all three entries must keep matching signatures even though `continue-wa
 and `watched` only use `category`, not `sort`:
 
 ```ts
+// All three branches build their URL through URLSearchParams, not string
+// interpolation -- category is an unvalidated, attacker-controlled string at this
+// call site (see below), and URLSearchParams guarantees it's percent-encoded into
+// the querystring rather than splicing raw bytes (CR/LF, `&`, `#`, etc.) into a
+// value later handed straight to c.redirect() in POST /videos/:id/watched-toggle.
+// An earlier draft of this spec interpolated continue-watching/watched's category
+// directly into a template string while queue's went through URLSearchParams --
+// same bug class the click-to-watch code in spec004 was already careful to avoid
+// (see that spec's Design note on why the YouTube URL is a `data-` attribute, not
+// a string-concatenated inline handler).
+function buildReturnPath(base: string, sort?: string, category?: string): string {
+  const params = new URLSearchParams();
+  if (sort === "oldest") params.set("sort", "oldest");
+  if (category !== undefined) params.set("category", category);
+  const qs = params.toString();
+  return `${base}${qs ? `?${qs}` : ""}`;
+}
+
 const RETURN_VIEWS = {
   queue: {
     label: "Queue",
-    path: (sort?: string, category?: string) => {
-      const params = new URLSearchParams();
-      if (sort === "oldest") params.set("sort", "oldest");
-      if (category !== undefined) params.set("category", category);
-      const qs = params.toString();
-      return `/queue${qs ? `?${qs}` : ""}`;
-    },
+    path: (sort?: string, category?: string) => buildReturnPath("/queue", sort, category),
   },
   "continue-watching": {
     label: "Continue Watching",
-    path: (_sort?: string, category?: string) =>
-      category !== undefined ? `/continue-watching?category=${category}` : "/continue-watching",
+    path: (_sort?: string, category?: string) => buildReturnPath("/continue-watching", undefined, category),
   },
   watched: {
     label: "Watched",
-    path: (_sort?: string, category?: string) =>
-      category !== undefined ? `/watched?category=${category}` : "/watched",
+    path: (_sort?: string, category?: string) => buildReturnPath("/watched", undefined, category),
   },
 } as const;
 
@@ -251,7 +261,9 @@ function resolveReturnTarget(from: string | undefined, sort: string | undefined,
 `category` here is carried as the raw query-string value (not re-validated through
 `resolveCategoryFilter`) for the same reason `sort` already is — it's just being
 round-tripped into a URL, not used to build a DB query at this call site; the
-destination route re-validates it fresh when the URL is actually followed.
+destination route re-validates it fresh when the URL is actually followed. Because
+it's unvalidated, it must go through `URLSearchParams` (as above) everywhere it's
+assembled into a URL or redirect target — never raw template-string interpolation.
 
 `GET /watching/:id` and `POST /videos/:id/watched-toggle` both read `category` off
 their query string and pass it into `resolveReturnTarget` alongside `from`/`sort`,
@@ -259,12 +271,35 @@ exactly as they already do for `sort`.
 
 ### Row links (`src/views/queue-list.tsx`, `src/views/watching-page.tsx`)
 
-`watchingHref`, `toggleHref` (`queue-list.tsx`) and `watchedToggleAction`
-(`watching-page.tsx`) each gain an optional `category` parameter, added into their
-`URLSearchParams` alongside the existing `from`/`view`/`sort` handling — same
-conditional-set pattern already used there for `sort`. `QueueListProps`'s three view
-variants and `WatchingPageProps` gain a `category: string | undefined` field passed
-through from the route the same way `sort`/`from` already are.
+`watchingHref`, `toggleHref` (`queue-list.tsx`) each gain an optional `category: number`
+parameter — **not** `string` — matching the type `resolveCategoryFilter` actually
+produces and that the `/queue` route already passes straight into `queueVideos(...,
+category)` (a `number | undefined`); converting to a string only happens inside these
+two functions, at the point they build a `URLSearchParams` (`params.set("category",
+String(category))`), the same place `CategoryFilterLinks`'s `buildHref` already does
+`String(catId)`. `QueueListProps`'s three view variants gain a matching
+`category?: number` field passed through from the route. (An earlier draft of this
+section typed this field `string | undefined` while the route fed it a `number` — a
+mismatch that would fail `tsc --noEmit` outright, not just be a style inconsistency;
+called out explicitly here so it isn't reintroduced at implementation time.)
+
+`watchedToggleAction` (`watching-page.tsx`) is different: it receives `category` off
+`c.req.query("category")` on `GET /watching/:id` (already a raw `string | undefined`,
+same as its existing `from`/`sort` params) and round-trips it unvalidated into the form
+`action` URL via `URLSearchParams`, exactly like `RETURN_VIEWS`'s `buildReturnPath`
+above — it never touches `resolveCategoryFilter` or a `number`. `WatchingPageProps`
+gains a `category: string | undefined` field for this purpose. These are two distinct
+`category` types flowing through this spec depending on which side of
+`resolveCategoryFilter` they're on: **`number | undefined`** wherever a value has been
+validated against the DB and is about to build a query or a `QueueList` prop
+(`queue.tsx`'s route handlers, `queueVideos`/`continueWatchingVideos`/`watchedVideos`,
+`QueueListProps`, `watchingHref`/`toggleHref`), and **`string | undefined`** wherever a
+value is only being round-tripped through a URL without ever being validated
+(`RETURN_VIEWS`/`resolveReturnTarget`, `WatchingPageProps`, `watchedToggleAction`,
+`GET /watching/:id`'s own `from`/`sort`/`category` query reads). Keep the two straight
+at implementation time — passing the unvalidated string into `QueueList`/`queueVideos`,
+or the validated number where a raw querystring passthrough is expected, are both type
+errors under this design, not just style slips.
 
 ### Testing (`test/routes/queue.test.ts`)
 
@@ -284,15 +319,27 @@ through from the route the same way `sort`/`from` already are.
   existing category (including Uncategorized) plus an "All" link; on `/queue`, each
   category link preserves the current `sort` value and each sort link preserves the
   current `category` value.
-- `POST /videos/:id/toggle?view=queue&sort=...&category=...` — re-renders the list
-  still scoped to the given category (toggling a row out of `unwatched`/`watching`
-  removes it from the filtered list, same as the existing unfiltered-toggle test, now
-  asserted with a category filter active).
+- `POST /videos/:id/toggle?view=queue&sort=...&category=...` **and**
+  `?view=continue-watching&category=...` — both re-render the list still scoped to the
+  given category (toggling a row out of `unwatched`/`watching` removes it from the
+  filtered list, same as the existing unfiltered-toggle test, now asserted with a
+  category filter active). Cover both `view` branches explicitly, not just `queue` —
+  the toggle route re-renders via two different query calls
+  (`queueVideos`/`continueWatchingVideos`) and it's a plausible implementation slip to
+  thread `category` through only one of them.
 - Return-navigation round trip: `/watching/:id?from=queue&sort=oldest&category=3`
   renders "Return to Queue" pointing at `/queue?sort=oldest&category=3`; same pattern
   for `from=continue-watching`/`from=watched` with just `&category=3`; `POST
   /videos/:id/watched-toggle?from=queue&sort=oldest&category=3` redirects to that same
   URL.
+- Return-navigation round trip with an adversarial `category` value: since
+  `category` is carried unvalidated through `RETURN_VIEWS`/`watchedToggleAction` (see
+  Row links), assert that a value like `?category=3%26evil%3Dtrue` (a percent-encoded
+  `&evil=true`) round-trips as a single, correctly-encoded `category` querystring
+  value on the computed return URL/redirect target — not as an injected second
+  querystring parameter. This is the test that would have caught the raw
+  template-string-interpolation bug an earlier draft of this spec had in two of
+  `RETURN_VIEWS`'s three branches (see Design's `buildReturnPath` note).
 
 ### Verification (manual, end-to-end)
 
@@ -317,6 +364,23 @@ through from the route the same way `sort`/`from` already are.
 9. `bun test` and `bun run lint` clean.
 
 ## Open Questions
+
+A red-team review of this spec's draft caught two real bugs, both now fixed in the
+Design section above rather than left as open risk:
+- `RETURN_VIEWS`'s `continue-watching`/`watched` branches interpolated the unvalidated
+  `category` string directly into a template literal while `queue`'s branch went
+  through `URLSearchParams` — an inconsistency that, for a `category` value containing
+  `&`/`#`/CR-LF, would have produced a structurally different (and for the redirect
+  case in `POST /videos/:id/watched-toggle`, potentially header-injectable) URL
+  depending on which of the three `from` values was in play. Fixed by routing all three
+  branches through one `buildReturnPath` helper (see Return-to-origin navigation).
+- `QueueListProps`'s `category` field was typed `string | undefined` in an earlier
+  draft while the `/queue` route fed it the `number | undefined` produced by
+  `resolveCategoryFilter` — a `tsc --noEmit` error, not just a style slip. Fixed by
+  keeping `category` as `number | undefined` everywhere it's on the validated side of
+  `resolveCategoryFilter` (queries, `QueueListProps`, `watchingHref`/`toggleHref`) and
+  `string | undefined` only where it's an unvalidated URL passthrough (`RETURN_VIEWS`,
+  `WatchingPageProps`, `watchedToggleAction`) — see Row links for the full split.
 
 - The conditional-array-spread-into-`and(...)` shape sketched for the optional
   category clause hasn't been confirmed against the installed `drizzle-orm@0.45.2` —
