@@ -32,6 +32,18 @@ its channel is unsubscribed, since spec002 already guarantees video rows and the
 watch state survive unsubscribe — a history view that silently dropped entries the
 moment you unsubscribed wouldn't actually be a history.
 
+A red-team review of this spec's draft caught a real bug worth recording: an earlier
+version of the Design routed both the queue page's manual toggle *and* the Watching
+page's "Mark Watched & Return" button through one shared toggle function. `app_idea.md`
+gives those two controls genuinely different transition tables — the queue toggle's
+`watching → unwatched` is explicitly "the only path back from Watching," while the
+Watching page "only ever moves a video forward to Watched" (its one backward exception,
+un-marking an already-Watched video, is a different transition again). Collapsing both
+into one function meant confirming "Mark Watched" on a video already in `watching`
+silently reverted it to `unwatched` instead — the ordinary wait-10s-then-confirm path.
+Design below now defines two separate functions; see `toggleQueueStatus` vs.
+`toggleWatchedFromWatchingPage`.
+
 ## Scope
 
 **In:**
@@ -58,6 +70,8 @@ moment you unsubscribed wouldn't actually be a history.
   hardcoded `/queue`, and the queue view's current sort order round-trips too.
 - A minimal top nav in `layout.tsx` (Categories / Channels / Queue / Continue Watching /
   Watched) so the new pages are reachable through the UI, not just by typing a URL.
+- Extracting `getCurrentUser()` out of `channels.tsx` into a shared `src/lib/current-user.ts`
+  (see Design) so the new queue routes don't duplicate it.
 
 **Out (deferred):**
 - `ignored` status, manual ignore action, the Ignored view, and IgnoreRule
@@ -87,7 +101,13 @@ moment you unsubscribed wouldn't actually be a history.
 export const videos = sqliteTable("videos", {
   // ...existing columns...
   watchedAt: integer("watched_at", { mode: "timestamp" }), // null unless status === "watched"
-});
+}, (t) => [
+  // ...existing status_check/ignore_method_check...
+  check(
+    "watched_at_check",
+    sql`(${t.status} = 'watched') = (${t.watchedAt} is not null)`,
+  ),
+]);
 ```
 
 Plain additive `ALTER TABLE ADD COLUMN`, same shape as spec003's
@@ -98,12 +118,19 @@ moment a video *becomes* `watched`, and cleared back to `null` the moment it sto
 that isn't currently `watched`, so there's no "last time this was watched" retained
 across a watched→unwatched→watched cycle — the Watched view only ever lists currently-
 `watched` videos anyway, so this doesn't lose any information the view could show.
+`watched_at_check` ties the two columns together at the DB level — matching
+`status_check`/`ignore_method_check`'s existing enum-CHECK convention — so any future
+write path that sets one without the other (not just the two functions below) fails
+loudly rather than silently producing an inconsistent row.
 
 ### Watch status transitions (`src/lib/watch-status.ts`)
 
-Two functions cover every transition described in `docs/app_idea.md`'s Watch Flow
-section — no separate "clear to unwatched" function, since that's just one branch of
-the same toggle used by both the queue page and the Watching page's second button:
+Three functions cover every transition described in `docs/app_idea.md`'s Watch Flow
+section. **`toggleQueueStatus` and `toggleWatchedFromWatchingPage` are deliberately two
+separate functions, not one shared toggle** — see the Context note above on the bug that
+came from conflating them. They have genuinely different transition tables for the same
+starting state (`watching`), because `app_idea.md` gives the queue page and the Watching
+page different rules for what their respective toggle/confirm controls are allowed to do.
 
 ```ts
 export function setWatching(videoId: number): { status: "watching" } | null {
@@ -123,15 +150,41 @@ export function setWatching(videoId: number): { status: "watching" } | null {
   return { status: "watching" };
 }
 
-export function toggleWatchStatus(videoId: number): { status: "watched" | "unwatched" } | null {
+// Used only by POST /videos/:id/toggle -- the queue/continue-watching row's manual
+// toggle. Matches app_idea.md: "for Watched/Unwatched videos it flips between the two;
+// for a video currently Watching, it clears the video back to Unwatched (this is the
+// only path back from Watching)."
+export function toggleQueueStatus(videoId: number): { status: "watched" | "unwatched" } | null {
   const current = db.select({ status: videos.status }).from(videos)
     .where(eq(videos.id, videoId)).get();
   if (!current) return null;
 
   // unwatched -> watched
   // watched   -> unwatched
-  // watching  -> unwatched   (the *only* path back from Watching, per app_idea.md)
+  // watching  -> unwatched
   const nextStatus = current.status === "unwatched" ? "watched" : "unwatched";
+
+  db.update(videos).set({
+    status: nextStatus,
+    watchedAt: nextStatus === "watched" ? new Date() : null,
+  }).where(eq(videos.id, videoId)).run();
+
+  return { status: nextStatus };
+}
+
+// Used only by POST /videos/:id/watched-toggle -- the Watching page's "Mark
+// Watched/Unwatched & Return to X" button. Matches app_idea.md: "the Watching page
+// itself only ever moves a video forward to Watched" -- unwatched AND watching both
+// move forward to watched here (unlike toggleQueueStatus, which treats watching as
+// "clear to unwatched"). The *only* backward transition this function ever makes is the
+// explicitly-named revisit case: an already-Watched video's button flips to "Mark
+// Unwatched," i.e. watched -> unwatched.
+export function toggleWatchedFromWatchingPage(videoId: number): { status: "watched" | "unwatched" } | null {
+  const current = db.select({ status: videos.status }).from(videos)
+    .where(eq(videos.id, videoId)).get();
+  if (!current) return null;
+
+  const nextStatus = current.status === "watched" ? "unwatched" : "watched";
 
   db.update(videos).set({
     status: nextStatus,
@@ -142,8 +195,8 @@ export function toggleWatchStatus(videoId: number): { status: "watched" | "unwat
 }
 ```
 
-Both live in one module since they're the only two writes to `videos.status` this spec
-introduces, and both are simple enough not to warrant a route-level split of logic vs.
+All three live in one module since they're the only writes to `videos.status` this spec
+introduces, and each is simple enough not to warrant a route-level split of logic vs.
 query.
 
 ### Queue queries (`src/routes/queue.tsx`)
@@ -152,6 +205,12 @@ Following `channels.tsx`'s existing convention (query helpers live next to the r
 not in a separate lib file), scoped to the current user's **active** subscriptions —
 this is the piece that isn't explicit in `docs/app_idea.md` but is necessary: without
 it, an unsubscribed channel's preserved video history would leak back into the queue.
+
+All three queries below take `userId`. `getCurrentUser()` currently lives as a private,
+unexported function inside `src/routes/channels.tsx` (`channels.tsx:52-60`) — this spec
+moves it to a shared `src/lib/current-user.ts` (single-user lookup by the seeded
+`"default"` username, unchanged logic) and updates `channels.tsx` to import it from
+there, so `queue.tsx` isn't left duplicating the same lookup out of necessity.
 
 ```ts
 function queueVideos(userId: number, sort: "newest" | "oldest") {
@@ -216,9 +275,11 @@ function watchedVideos(userId: number) {
 ```
 
 Since both queue views only ever show `unwatched`/`watching` videos, a queue row's
-toggle button only ever needs two labels: **"Mark Watched"** (unwatched rows) or
-**"Clear to Unwatched"** (watching rows) — `watched` never appears in either list, so
-that third transition is never rendered here (it only shows up on the Watching page).
+toggle button (backed by `toggleQueueStatus`) only ever needs two labels: **"Mark
+Watched"** (unwatched rows) or **"Clear to Unwatched"** (watching rows) — `watched`
+never appears in either list, so that third transition is never rendered here (it only
+shows up on the Watching page, backed by the separate `toggleWatchedFromWatchingPage`
+— see Watch status transitions above).
 
 ### Routes (`src/routes/queue.tsx`)
 
@@ -236,21 +297,37 @@ that third transition is never rendered here (it only shows up on the Watching p
   `<span id="watch-status-badge">` partial reflecting the new status (`hx-swap="outerHTML"`),
   not a full page reload — the Watching page's button labels don't need to change on this
   transition (see below), so there's nothing else to update.
-- `POST /videos/:id/watched-toggle?from=...&sort=...` — calls `toggleWatchStatus`. Plain
-  (non-HTMX) form POST (the `from`/`sort` context travels as query params on the form's
-  `action` URL, no hidden fields needed), responds with a 303 redirect computed by
-  `resolveReturnTarget` below — **not** a hardcoded `/queue`. Deliberately a real browser
-  navigation rather than an HTMX partial swap: navigating away destroys any still-pending
-  10-second auto-Watching timer on the page being left, which is what makes "not
-  persisted if interrupted" hold without any extra client-side cancellation code.
+- `POST /videos/:id/watched-toggle?from=...&sort=...` — calls
+  `toggleWatchedFromWatchingPage`. Plain (non-HTMX) form POST (the `from`/`sort` context
+  travels as query params on the form's `action` URL, no hidden fields needed), responds
+  with a 303 redirect computed by `resolveReturnTarget` below — **not** a hardcoded
+  `/queue`. Deliberately a real browser navigation rather than an HTMX partial swap:
+  navigating away destroys any still-pending 10-second auto-Watching timer on the page
+  being left, which is what makes "not persisted if interrupted" hold without any extra
+  client-side cancellation code (see the bfcache caveat under Watching page below —
+  "navigating away" isn't quite the same as "the page is truly gone").
 - `POST /videos/:id/toggle?view=queue|continue-watching&sort=newest|oldest` — calls
-  `toggleWatchStatus`, used by the queue/continue-watching row toggle (the Watched view
+  `toggleQueueStatus`, used by the queue/continue-watching row toggle (the Watched view
   has no inline toggle — see Scope). HTMX partial: re-renders and returns the whole list
   partial for the given `view`/`sort` (not just the one row), because toggling can remove
   the row from its current view entirely (e.g. toggling an Unwatched row to Watched
   removes it from both queue views). `view`/`sort` travel as query params on each row's
   own `hx-post` URL rather than a shared page-level default, so each row's toggle always
-  re-renders the exact list it's currently sitting in.
+  re-renders the exact list it's currently sitting in. `view` is validated the same
+  defensive way as `from`/`sort` below — a missing or unrecognized `view` (e.g. a
+  hand-crafted request, or `view=watched`, which this route was never wired to since the
+  Watched view has no toggle) falls back to re-rendering `queue`:
+
+  ```ts
+  function resolveToggleView(view: string | undefined): "queue" | "continue-watching" {
+    return view === "continue-watching" ? "continue-watching" : "queue";
+  }
+  ```
+
+  Each row's toggle button includes `hx-disabled-elt="this"` (htmx's built-in
+  disable-during-request attribute) for the same reason as the Watching page's
+  submit-disable above — the toggle isn't idempotent, so a double-click shouldn't be
+  able to fire it twice before the first response swaps the row away.
 
 ### Return-to-origin navigation (`src/routes/queue.tsx`)
 
@@ -303,17 +380,41 @@ attribute, which HTML-attribute escaping alone doesn't guard against:
 ```
 
 ```js
-document.addEventListener("click", (e) => {
+function handleWatchLinkClick(e) {
   const link = e.target.closest(".watch-link");
   if (!link) return;
+  // auxclick fires for middle-click (button 1); click fires for the primary button.
+  // Without also handling auxclick, middle-clicking a row opens the app's own
+  // /watching/:id page in a new tab via the browser's native middle-click behavior
+  // (which this listener doesn't control and shouldn't try to) while never opening the
+  // real YouTube URL -- and that orphaned tab still runs its own 10s auto-Watching
+  // timer against a video the user never actually watched.
+  if (e.type === "auxclick" && e.button !== 1) return;
   window.open(link.dataset.youtubeUrl, "_blank");
   // no preventDefault -- the click's default action still follows href to /watching/:id
   // in the current tab, which is what "navigates the current app view" means.
-});
+}
+document.addEventListener("click", handleWatchLinkClick);
+document.addEventListener("auxclick", handleWatchLinkClick);
 ```
 
 This is a real full-page navigation (not `hx-boost`), same reasoning as the
 watched-toggle redirect above.
+
+**Accepted limitation:** the browser's native right-click context menu ("Open link in
+new tab") never fires any DOM event this page can observe, so there's no way for
+client-side JS to intercept that path at all — it'll open `/watching/:id` (the app
+page) without the real YouTube URL, same gap as an unhandled middle-click would leave.
+Not fixable short of removing the real URL from `href` entirely (which would break
+plain navigation and no-JS fallback), so this is a known gap, not an oversight to chase
+further.
+
+Video titles/descriptions elsewhere in each row are untrusted RSS content too, but they
+render through the same plain, auto-escaping JSX text interpolation every other view in
+this codebase already uses (e.g. `src/views/subscription-list.tsx`'s channel-name
+rendering) — no raw-HTML/`dangerouslySetInnerHTML`-shaped path exists anywhere in this
+spec's views, so the `data-` attribute case above is the only place needing a deliberate
+escaping argument.
 
 ### Watching page (`src/views/watching-page.tsx`)
 
@@ -329,6 +430,27 @@ watched-toggle redirect above.
   "Return to Queue" link), the element and its pending HTMX request are destroyed with
   the page — nothing fires, nothing is recorded, matching the spec's "not persisted
   server-side if interrupted" requirement with no extra bookkeeping.
+- **bfcache caveat:** a plain navigation away truly destroys the page, but the browser's
+  back/forward cache (bfcache) can instead *freeze* `/watching/:id` — pausing its
+  pending 10-second timer rather than cancelling it — and later restore it (e.g. the
+  user hits Back after leaving) without firing a fresh `load`. A resumed timer can then
+  fire against stale context: e.g. the video was separately marked `watched` elsewhere
+  in the meantime, and the resumed timer's `POST /videos/:id/watching` silently reverts
+  it back to `watching` and wipes `watchedAt`, with no user intent behind it. Relying on
+  `Cache-Control` alone isn't reliably honored for bfcache eligibility across browsers,
+  so the Watching page adds the standard client-side opt-out instead — force a full
+  reload on any bfcache restore, which re-fetches current DB state (and correctly
+  re-decides whether the auto-timer element should even be rendered) rather than
+  resuming stale in-memory state:
+
+  ```js
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) location.reload();
+  });
+  ```
+
+  Added once in `layout.tsx` (or scoped to just the Watching page's view — either is
+  fine, since a reload is a no-op cost on any other page that happens to be bfcache-restored).
 - Three actions, both navigating ones computed from `resolveReturnTarget(from, sort)`
   (see Return-to-origin navigation) so they go back to wherever the video was actually
   opened from:
@@ -339,7 +461,12 @@ watched-toggle redirect above.
     `{returnLabel}`** — prefix computed server-side from the video's status at
     page-render time (`watched` → "Mark Unwatched…", anything else → "Mark Watched…"),
     suffix from `resolveReturnTarget(...).label`; plain form
-    `action="/videos/:id/watched-toggle?from=...&sort=..." method="post"`.
+    `action="/videos/:id/watched-toggle?from=...&sort=..." method="post"`. The submit
+    button disables itself on submit (`onsubmit="this.querySelector('button').disabled = true"`
+    on the `<form>`, no HTMX involved here) so a double-click or slow-network double-tap
+    can't fire the toggle twice and flip the status back — cheap given the toggle itself
+    isn't naturally idempotent, and the page is being left immediately after anyway so
+    there's no re-enable case to handle.
   - **Return to `{returnLabel}`** — plain `<a href={resolveReturnTarget(...).url}>`, no
     request at all, no status change.
 
@@ -358,10 +485,13 @@ active-link highlighting or other polish — first pass just needs the links to 
 - `test/lib/watch-status.test.ts`: `setWatching` — unwatched/watching/watched all
   transition to `watching`; returns `null` for a nonexistent video ID; transitioning
   from `watched` clears `watchedAt` to `null`, transitioning from `unwatched`/`watching`
-  leaves `watchedAt` untouched (already `null`). `toggleWatchStatus` — unwatched→watched
+  leaves `watchedAt` untouched (already `null`). `toggleQueueStatus` — unwatched→watched
   (sets `watchedAt` to a non-null recent timestamp), watched→unwatched (clears
   `watchedAt`), watching→unwatched (`watchedAt` stays `null`); returns `null` for a
-  nonexistent video ID.
+  nonexistent video ID. `toggleWatchedFromWatchingPage` — unwatched→watched **and**
+  watching→watched (both set `watchedAt`; this is the case the pre-review draft got
+  wrong for the `watching` starting state — assert it explicitly), watched→unwatched
+  (clears `watchedAt`); returns `null` for a nonexistent video ID.
 - `test/routes/queue.test.ts`:
   - `GET /queue` — returns only `unwatched`/`watching` videos for the current user's
     active subscriptions; excludes videos from an unsubscribed channel (insert a video
@@ -385,12 +515,17 @@ active-link highlighting or other polish — first pass just needs the links to 
     missing/unrecognized `from` (e.g. `?from=bogus`, or no query string at all) falls
     back to "Return to Queue" / `/queue`.
   - `POST /videos/:id/watching` — sets status to `watching` regardless of prior status.
-  - `POST /videos/:id/watched-toggle?from=...&sort=...` — toggles per
-    `toggleWatchStatus` and responds with a 303 to `resolveReturnTarget(from, sort).url`
-    (covering all three `from` values plus the missing/unrecognized fallback).
-  - `POST /videos/:id/toggle` — toggles status and the returned partial reflects the
-    row's removal from the view it was posted from (e.g. toggling an unwatched row in
-    `?view=queue` no longer appears in the re-rendered list).
+  - `POST /videos/:id/watched-toggle?from=...&sort=...` — the case that matters most:
+    starting from `watching` (not just `unwatched`/`watched`), confirms the resulting
+    status is `watched`, not `unwatched` — this is exactly the regression the pre-review
+    draft had. Also toggles watched→unwatched correctly, and responds with a 303 to
+    `resolveReturnTarget(from, sort).url` (covering all three `from` values plus the
+    missing/unrecognized fallback).
+  - `POST /videos/:id/toggle` — toggles status per `toggleQueueStatus` and the returned
+    partial reflects the row's removal from the view it was posted from (e.g. toggling
+    an unwatched row in `?view=queue` no longer appears in the re-rendered list); a
+    missing/unrecognized `view` (including `view=watched`) falls back to re-rendering
+    `queue`, per `resolveToggleView`.
 
 ### Verification (manual, end-to-end)
 
@@ -437,3 +572,24 @@ active-link highlighting or other polish — first pass just needs the links to 
   Watching, Watched) is explicitly deferred to a future "endless scroll queue"-shaped
   spec rather than being added piecemeal here, even though Watched in particular has no
   natural size cap.
+- `inArray(videos.status, ["unwatched", "watching"])` in `queueVideos` is a
+  literal-array-against-enum-column shape not previously used in this codebase
+  (`scheduler.ts`'s existing `inArray` usage takes a subquery, not a literal array) —
+  low-risk, but per this project's established pattern of confirming novel Drizzle API
+  shapes against the installed `drizzle-orm` version (specs 002/003 both flagged and
+  later confirmed several), verify this one compiles/filters as expected at
+  implementation time too.
+- `src/lib/rss.ts`'s entry parsing extracts `videoId` (stripped from the `yt:video:`-
+  prefixed `<id>` element) with no pattern validation, unlike `CHANNEL_ID_PATTERN` for
+  channel IDs. Traced through this spec's design and not currently exploitable (the
+  `data-youtube-url` attribute is HTML-attribute-escaped, and the URL prefix
+  `https://www.youtube.com/watch?v=` is fixed, not built from the video ID via string
+  concatenation past that point) — but it's untrusted external RSS content flowing
+  through the system with no validation at the layer that should probably own it, worth
+  tightening in `rss.ts` itself at some point rather than continuing to rely on
+  every downstream consumer independently getting escaping right.
+- The `pageshow`/`persisted` reload (see Watching page's bfcache caveat) is a standard,
+  well-documented pattern, but hasn't been verified against the actual pinned
+  `htmx.org@2.0.4` + this app's specific HTMX usage in a real browser — confirm at
+  implementation time that the reload doesn't interact oddly with any in-flight HTMX
+  request on the page being restored.
