@@ -1,0 +1,108 @@
+import type { FC } from "hono/jsx";
+import type { videos } from "../db/schema";
+
+type VideoStatus = (typeof videos.$inferSelect)["status"];
+
+export type QueueListView = "queue" | "continue-watching" | "watched";
+
+export type QueueRow = {
+  id: number;
+  youtubeVideoId: string;
+  title: string;
+  publishedAt: Date | null;
+  status: VideoStatus;
+  channelName: string;
+  categoryName: string;
+};
+
+export type WatchedRow = {
+  id: number;
+  youtubeVideoId: string;
+  title: string;
+  watchedAt: Date | null;
+  channelName: string;
+  categoryName: string;
+};
+
+function youtubeUrl(youtubeVideoId: string): string {
+  return `https://www.youtube.com/watch?v=${youtubeVideoId}`;
+}
+
+function watchingHref(
+  id: number,
+  view: QueueListView,
+  sort?: "newest" | "oldest",
+): string {
+  const params = new URLSearchParams({ from: view });
+  if (view === "queue" && sort) params.set("sort", sort);
+  return `/watching/${id}?${params.toString()}`;
+}
+
+function toggleHref(
+  id: number,
+  view: "queue" | "continue-watching",
+  sort?: "newest" | "oldest",
+): string {
+  const params = new URLSearchParams({ view });
+  if (sort) params.set("sort", sort);
+  return `/videos/${id}/toggle?${params.toString()}`;
+}
+
+type QueueListProps =
+  | { view: "queue"; sort: "newest" | "oldest"; rows: QueueRow[] }
+  | { view: "continue-watching"; rows: QueueRow[] }
+  | { view: "watched"; rows: WatchedRow[] };
+
+export const QueueList: FC<QueueListProps> = (props) => {
+  return (
+    <div id="queue-list">
+      <ul>
+        {props.view === "watched"
+          ? props.rows.map((row) => (
+              <li key={row.id}>
+                <a
+                  href={watchingHref(row.id, "watched")}
+                  class="watch-link"
+                  data-youtube-url={youtubeUrl(row.youtubeVideoId)}
+                >
+                  {row.title}
+                </a>{" "}
+                — {row.channelName} ({row.categoryName})
+                {row.watchedAt
+                  ? ` · watched ${row.watchedAt.toLocaleDateString()}`
+                  : ""}
+              </li>
+            ))
+          : props.rows.map((row) => {
+              const sort = props.view === "queue" ? props.sort : undefined;
+              return (
+                <li key={row.id}>
+                  <a
+                    href={watchingHref(row.id, props.view, sort)}
+                    class="watch-link"
+                    data-youtube-url={youtubeUrl(row.youtubeVideoId)}
+                  >
+                    {row.title}
+                  </a>{" "}
+                  — {row.channelName} ({row.categoryName})
+                  {row.publishedAt
+                    ? ` · published ${row.publishedAt.toLocaleDateString()}`
+                    : ""}
+                  <button
+                    type="button"
+                    hx-post={toggleHref(row.id, props.view, sort)}
+                    hx-target="#queue-list"
+                    hx-swap="outerHTML"
+                    hx-disabled-elt="this"
+                  >
+                    {row.status === "watching"
+                      ? "Clear to Unwatched"
+                      : "Mark Watched"}
+                  </button>
+                </li>
+              );
+            })}
+      </ul>
+    </div>
+  );
+};
