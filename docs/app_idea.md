@@ -22,15 +22,26 @@
 - Clicking a video opens the YouTube link in a new browser tab (fire-and-forget - no tab monitoring needed) and navigates the current app view to a **Watching page** showing the video's thumbnail and title.
 - The Watching page auto-marks the video as **Watching** after a 10-second client-side timeout, unless the user navigates away first. This timeout is not persisted server-side - if interrupted (tab/page closed early), nothing is recorded, by design.
 - The 10-second auto-Watching timeout does not fire when revisiting a video that is already marked **Watched**.
-- The Watching page offers three actions:
+- The Watching page offers three actions (refined in
+  docs/specs/004-watch-flow-queue-views.md — "Return to Queue" is actually "smart":
+  it and the Mark Watched/Unwatched action both navigate back to whichever view -
+  default queue, Continue Watching, or Watched - the video was actually opened from,
+  not a hardcoded queue page, and the queue's current sort order round-trips too):
   - **Mark Watching** - explicitly set to Watching immediately (bypasses the 10s timeout) and stay on the page
   - **Mark Watched & Return to Queue** (label flips to **Mark Unwatched & Return to Queue** when revisiting an already-Watched video) - update status and navigate back
   - **Return to Queue** - pure navigation, no status change, even if the 10s auto-Watching timeout already fired
-- Queue views (refined in docs/specs/004-watch-flow-queue-views.md — both views below are
-  scoped to the current user's actively-subscribed channels, so an unsubscribed channel's
-  preserved video history does not reappear in the queue):
+- Queue views (refined in docs/specs/004-watch-flow-queue-views.md — the default queue
+  and Continue Watching views below are scoped to the current user's
+  actively-subscribed channels, so an unsubscribed channel's preserved video history
+  does not reappear in either; **Watched** is the one exception - see below):
   - Default queue view = Unwatched &cup; Watching videos (excludes Ignored), sorted **newest to oldest** by default with a toggle to invert to oldest-to-newest
   - **Continue Watching** view = Watching videos only
+  - **Watched** view (added in docs/specs/004-watch-flow-queue-views.md, not part of the
+    original MVP scope below) = a true watch history: every Watched video, sorted
+    most-recently-watched-first, and **not** scoped to active subscriptions - a video
+    stays visible here even after unsubscribing from its channel, since watch state is
+    already guaranteed to survive unsubscribe. Click-through only (no inline
+    un-watch/toggle action - use the Watching page's existing unmark action instead).
   - **Ignored** view = Ignored videos only, with an un-ignore action (reverts to Unwatched) for reviewing/undoing mistaken ignores
 
 ### Ingestion Notes (MVP)
@@ -69,7 +80,7 @@
 - **User:** MVP runs as a single implicit user, but the schema should still model a `User` record now so v2.0 multi-user support doesn't require a breaking migration
 - **Category:** User-defined free-text label (reasonable length limit). Exactly one system-managed **"Uncategorized"** default exists and is not user-creatable/selectable. Rename is supported by updating the Category row in place (every Channel/Video referencing it via foreign key picks up the new name immediately). No explicit delete operation is needed for MVP - a category with zero channels attached just stops appearing anywhere; it can linger harmlessly or be auto-pruned later.
 - **Channel:** A subscribed YouTube channel; belongs to exactly one Category (defaults to "Uncategorized" if none chosen at subscribe time). Flagged `possible_missed_videos: bool` (manually dismissed) per the RSS gap-detection check in *Ingestion Notes*. (Refined in docs/specs/002-channel-subscriptions.md — split into a global `YoutubeChannel` entity, shared across users and never deleted, plus a per-user `Subscription` join record carrying the Category and active/unsubscribed state, so a channel isn't tied 1:1 to the user who first added it. Unsubscribing deactivates the Subscription only; no Video rows are ever deleted.)
-- **Video:** Belongs to exactly one Channel; has a watch status of `unwatched | watching | watched | ignored`, plus `ignore_method: manual | auto | null` (null unless status is `ignored`) tracking how it got ignored. Keyed on YouTube's own video ID (unique constraint) so RSS ingestion **upserts** rather than inserting duplicates on repeated polls. Un-ignoring reverts status to `unwatched` and clears `ignore_method` (in-progress state isn't preserved through an ignore/un-ignore cycle).
+- **Video:** Belongs to exactly one Channel; has a watch status of `unwatched | watching | watched | ignored`, plus `ignore_method: manual | auto | null` (null unless status is `ignored`) tracking how it got ignored. Keyed on YouTube's own video ID (unique constraint) so RSS ingestion **upserts** rather than inserting duplicates on repeated polls. Un-ignoring reverts status to `unwatched` and clears `ignore_method` (in-progress state isn't preserved through an ignore/un-ignore cycle). (Refined in docs/specs/004-watch-flow-queue-views.md — adds `watched_at: timestamp | null`, non-null exactly when status is `watched`, powering the Watched history view's most-recently-watched-first sort; cleared whenever a video stops being `watched`, so it never reflects a stale prior watch.)
 - **IgnoreRule:** A global, user-managed keyword/substring (e.g. `#shorts`), supporting add/edit/delete. Checked case-insensitively against a Video's title/description at ingestion time; a match sets status to `ignored` with `ignore_method: auto`. Any add/edit/delete to the rule list triggers a full reconciliation pass over `auto`-ignored and Unwatched/Watching videos (see MVP item 6) - `manual` ignores are never touched by this pass.
 - **Relationships:** (refined in docs/specs/002-channel-subscriptions.md per the Channel/Subscription split above)
   - Category 1-to-many Subscription (one category has many subscriptions; each subscription has exactly one category)
@@ -103,4 +114,4 @@
 - **Maintenance Plan:** As the deployment pattern is via Docker users should be able to backup the SQLite DB and be good.
 
 ---
-*Created: 07/18/2026* | *Status: Brainstorming*
+*Created: 07/18/2026* | *Status: In Development - MVP items 1, 2, and 5 implemented (specs 001-003); item 3 (watch flow & queue views) drafted as spec 004, not yet built; item 6 (Ignored/IgnoreRule) and auth (§5) remain unspecced*
