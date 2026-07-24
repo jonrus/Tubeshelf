@@ -1,17 +1,13 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import { db } from "../db/client";
-import {
-  categories,
-  subscriptions,
-  users,
-  youtubeChannels,
-} from "../db/schema";
+import { categories, subscriptions, youtubeChannels } from "../db/schema";
 import {
   CHANNEL_ID_PATTERN,
   parseChannelInput,
   rssUrlFor,
 } from "../lib/channel-input";
+import { getCurrentUser } from "../lib/current-user";
 import { applyFeedToChannel, ingestChannel } from "../lib/ingest";
 import { fetchChannelFeed } from "../lib/rss";
 import { upsertSubscription, upsertYoutubeChannel } from "../lib/subscribe";
@@ -47,16 +43,6 @@ function resolveCategoryId(categoryIdRaw: string): CategoryResolution {
     return { ok: false, error: "Invalid category." };
   }
   return { ok: true, categoryId: category.id };
-}
-
-function getCurrentUser() {
-  const user = db
-    .select()
-    .from(users)
-    .where(eq(users.username, "default"))
-    .get();
-  if (!user) throw new Error("seed did not create the default user");
-  return user;
 }
 
 function listNonSystemCategories() {
