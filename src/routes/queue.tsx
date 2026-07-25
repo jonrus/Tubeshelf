@@ -9,9 +9,11 @@ import {
 } from "../db/schema";
 import { getCurrentUser } from "../lib/current-user";
 import {
+  ignoreVideo,
   setWatching,
   toggleQueueStatus,
   toggleWatchedFromWatchingPage,
+  unignoreVideo,
 } from "../lib/watch-status";
 import { Layout } from "../views/layout";
 import { CategoryFilterLinks, QueueList } from "../views/queue-list";
@@ -121,6 +123,36 @@ function watchedVideos(userId: number, categoryId?: number) {
       ),
     )
     .orderBy(desc(videos.watchedAt))
+    .all();
+}
+
+function ignoredVideos(userId: number, categoryId?: number) {
+  return db
+    .select({
+      id: videos.id,
+      title: videos.title,
+      channelName: youtubeChannels.name,
+      categoryName: categories.name,
+      ignoreMethod: videos.ignoreMethod,
+    })
+    .from(videos)
+    .innerJoin(youtubeChannels, eq(videos.channelId, youtubeChannels.id))
+    .innerJoin(
+      subscriptions,
+      eq(subscriptions.youtubeChannelId, youtubeChannels.id),
+    )
+    .innerJoin(categories, eq(subscriptions.categoryId, categories.id))
+    .where(
+      and(
+        eq(subscriptions.userId, userId),
+        isNull(subscriptions.unsubscribedAt),
+        eq(videos.status, "ignored"),
+        ...(categoryId !== undefined
+          ? [eq(subscriptions.categoryId, categoryId)]
+          : []),
+      ),
+    )
+    .orderBy(desc(videos.createdAt))
     .all();
 }
 
@@ -279,6 +311,13 @@ function buildWatchedHref(category?: number): string {
   return `/watched${qs ? `?${qs}` : ""}`;
 }
 
+function buildIgnoredHref(category?: number): string {
+  const params = new URLSearchParams();
+  if (category !== undefined) params.set("category", String(category));
+  const qs = params.toString();
+  return `/ignored${qs ? `?${qs}` : ""}`;
+}
+
 queueRoute.get("/continue-watching", (c) => {
   const user = getCurrentUser();
   const category = resolveCategoryFilter(c.req.query("category"));
@@ -312,6 +351,25 @@ queueRoute.get("/watched", (c) => {
         view="watched"
         category={category}
         rows={watchedVideos(user.id, category)}
+      />
+    </Layout>,
+  );
+});
+
+queueRoute.get("/ignored", (c) => {
+  const user = getCurrentUser();
+  const category = resolveCategoryFilter(c.req.query("category"));
+  return c.html(
+    <Layout title="Ignored">
+      <CategoryFilterLinks
+        categories={allCategories()}
+        current={category}
+        buildHref={buildIgnoredHref}
+      />
+      <QueueList
+        view="ignored"
+        category={category}
+        rows={ignoredVideos(user.id, category)}
       />
     </Layout>,
   );
@@ -386,6 +444,51 @@ queueRoute.post("/videos/:id/toggle", (c) => {
       sort={sort}
       category={category}
       rows={queueVideos(user.id, sort, category)}
+    />,
+  );
+});
+
+queueRoute.post("/videos/:id/ignore", (c) => {
+  const id = Number(c.req.param("id"));
+  const result = ignoreVideo(id);
+  if (!result) return c.notFound();
+
+  const user = getCurrentUser();
+  const view = resolveToggleView(c.req.query("view"));
+  const sort = resolveSort(c.req.query("sort"));
+  const category = resolveCategoryFilter(c.req.query("category"));
+
+  if (view === "continue-watching") {
+    return c.html(
+      <QueueList
+        view="continue-watching"
+        category={category}
+        rows={continueWatchingVideos(user.id, category)}
+      />,
+    );
+  }
+  return c.html(
+    <QueueList
+      view="queue"
+      sort={sort}
+      category={category}
+      rows={queueVideos(user.id, sort, category)}
+    />,
+  );
+});
+
+queueRoute.post("/videos/:id/unignore", (c) => {
+  const id = Number(c.req.param("id"));
+  const result = unignoreVideo(id);
+  if (!result) return c.notFound();
+
+  const user = getCurrentUser();
+  const category = resolveCategoryFilter(c.req.query("category"));
+  return c.html(
+    <QueueList
+      view="ignored"
+      category={category}
+      rows={ignoredVideos(user.id, category)}
     />,
   );
 });

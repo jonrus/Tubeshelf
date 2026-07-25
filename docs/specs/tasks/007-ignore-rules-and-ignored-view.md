@@ -98,7 +98,7 @@ Generated: 2026-07-25
   tsc --noEmit` reports no new errors, and `bun test test/routes/queue.test.ts` still
   passes unmodified (proves the rewritten render body didn't change existing output).
 
-- [ ] 5. Wire the Ignored view and ignore/unignore routes into `src/routes/queue.tsx` per
+- [x] 5. Wire the Ignored view and ignore/unignore routes into `src/routes/queue.tsx` per
   the spec's Design > `src/routes/queue.tsx` changes section: add the `ignoredVideos`
   query function (same shape as `continueWatchingVideos` at `queue.tsx:58`, scoped to
   active subscriptions, `status = 'ignored'`, selecting `ignoreMethod`), the
