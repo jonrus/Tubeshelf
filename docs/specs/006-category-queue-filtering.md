@@ -448,7 +448,7 @@ errors under this design, not just style slips.
    identically to `/queue` (falls back to unfiltered), not a 500.
 8. Filter `/watched` to a category whose channel has since been unsubscribed — confirm
    its watched videos still appear (true history + category filter both hold at once).
-9. `bun test` and `bun run lint` clean.
+9. `bun test`, `bun run lint`, and `bunx tsc --noEmit` all clean.
 
 ## Open Questions
 

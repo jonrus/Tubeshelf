@@ -163,8 +163,12 @@ Generated: 2026-07-24
   `/queue?category=<id>` — repeat once each for `continue-watching` and `watched`.
   Done when: `bun test test/routes/queue.test.ts` passes covering all of the above.
 
-- [ ] 10. Run full verification: `bun test` and `bun run lint` clean across the whole
-  repo — done when: both commands exit 0 with no failures.
+- [ ] 10. Run full verification: `bun test`, `bun run lint`, and `bunx tsc --noEmit`
+  clean across the whole repo — done when: all three commands exit 0 with no failures
+  (the typecheck in particular catches issues neither `bun test` nor `bun run lint`
+  run a full type-check for, e.g. the pre-existing `noUncheckedIndexedAccess` error
+  fixed separately in `test/routes/channels.test.ts` on 2026-07-25 — it wasn't caught
+  until someone ran `tsc --noEmit` by hand).
 
 Manual end-to-end verification (spec's "Verification" section, steps 1–9) is
 browser/DB-driven and not part of this checklist — run it once all tasks above are

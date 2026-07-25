@@ -77,6 +77,15 @@ A spec's frontmatter `status` progresses `draft` → `in-progress` (once tasks e
 `implemented` (once `/work-task` finishes the last step). Don't hand-write code against a
 spec without going through a task file — that's what defeats the point of the pattern.
 
+Every spec's final task-file step (and matching manual-verification section, if the spec
+has one) must run all three of `bun test`, `bun run lint`, **and `bunx tsc --noEmit`**
+clean across the repo — not just the first two. `bun test`/`bun run lint` don't do a full
+type-check, so type errors (e.g. ones caused by `tsconfig.json`'s
+`noUncheckedIndexedAccess`) can sit unnoticed for multiple specs' worth of commits until
+someone runs `tsc --noEmit` by hand (confirmed happening in spec006: a `match[1]:
+string | undefined` error introduced by spec005 wasn't caught until spec006's final
+verification pass, several commits later).
+
 ## Memory vs. version control
 
 This project is developed from two separate machines (see the devcontainer note above).
