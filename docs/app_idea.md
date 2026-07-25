@@ -16,7 +16,7 @@
 4. **Firm constraint, not just a preference:** no YouTube Data API usage, to keep setup friction at zero. This is a deliberate tradeoff, not an oversight - it's why the RSS feed's 15-video window and missing duration/view-count data (see *Ingestion Notes*) are accepted limitations rather than problems to solve by reaching for the API mid-build.
 5. Users can unsubscribe from a channel (refined in docs/specs/002-channel-subscriptions.md — unsubscribing no longer deletes any videos; it only deactivates the subscription, and all video history/state is preserved and restored on re-subscribe).
 6. Videos can be manually marked **Ignored** (a general noise filter, e.g. for Shorts or anything else uninteresting), removing them from the default queue and Continue Watching views; a dedicated **Ignored** view lists them for review/undo. A global, user-managed list of keyword/substring rules (e.g. `#shorts`; add/edit/delete supported) is checked case-insensitively against incoming video titles and descriptions at RSS ingestion time - a match auto-sets the video to Ignored immediately rather than landing in the normal queue first.
-   - Each Ignored video tracks *how* it was ignored - **manually** (explicit user action) or **auto** (matched a rule). Whenever the rule list changes (add/edit/delete), the full rule set is re-run: every **auto**-ignored video that no longer matches any rule is un-ignored back to Unwatched, and every Unwatched/Watching video that newly matches gets auto-ignored. **Manually**-ignored videos are never touched by this reconciliation - only an explicit un-ignore action clears them. Manually triggering Ignore on an already auto-ignored video converts it to manual, "locking it in" against future rule changes.
+   - Each Ignored video tracks *how* it was ignored - **manually** (explicit user action) or **auto** (matched a rule). Whenever the rule list changes (add/edit/delete), the full rule set is re-run: every **auto**-ignored video that no longer matches any rule is un-ignored back to Unwatched, and every Unwatched/Watching video that newly matches gets auto-ignored. **Manually**-ignored videos are never touched by this reconciliation - only an explicit un-ignore action clears them. Manually triggering Ignore on an already auto-ignored video converts it to manual, "locking it in" against future rule changes (deferred in docs/specs/007-ignore-rules-and-ignored-view.md - no UI surface for this exists yet, since auto-ignored videos never appear on the views where the manual Ignore action lives; auto-ignored videos stay reconcilable by rule changes indefinitely unless explicitly un-ignored).
 
 ### Watch Flow (MVP)
 - Clicking a video opens the YouTube link in a new browser tab (fire-and-forget - no tab monitoring needed) and navigates the current app view to a **Watching page** showing the video's thumbnail and title.
@@ -43,8 +43,9 @@
     already guaranteed to survive unsubscribe. Click-through only (no inline
     un-watch/toggle action - use the Watching page's existing unmark action instead).
   - All three views above can be narrowed to a single category at a time, including the
-    system Uncategorized category (docs/specs/006-category-queue-filtering.md).
-  - **Ignored** view = Ignored videos only, with an un-ignore action (reverts to Unwatched) for reviewing/undoing mistaken ignores
+    system Uncategorized category (docs/specs/006-category-queue-filtering.md); the
+    **Ignored** view below gets the same category filter (docs/specs/007-ignore-rules-and-ignored-view.md).
+  - **Ignored** view = Ignored videos only, with an un-ignore action (reverts to Unwatched) for reviewing/undoing mistaken ignores. Scoped to active subscriptions like the default queue and Continue Watching views above, not true history like Watched (docs/specs/007-ignore-rules-and-ignored-view.md).
 
 ### Ingestion Notes (MVP)
 - YouTube's channel RSS feed is an **unofficial, undocumented endpoint** - it could change format or access rules with no notice, and the whole "zero API" architecture has no fallback if that happens. This is an accepted risk, not something to be surprised by later.
