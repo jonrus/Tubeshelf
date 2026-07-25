@@ -27,7 +27,7 @@ Generated: 2026-07-25
   when: `bun run lint` is clean, `bunx tsc --noEmit` reports no new errors, and `bun test
   test/lib/ignore-rules.test.ts` passes covering all of the above.
 
-- [ ] 2. Wire keyword matching into `applyFeedToChannel` in `src/lib/ingest.ts` (function
+- [x] 2. Wire keyword matching into `applyFeedToChannel` in `src/lib/ingest.ts` (function
   starts at `ingest.ts:20`, its `.values({...})`/`.onConflictDoUpdate({...})` upsert
   starts around `ingest.ts:31`) per the spec's Design > `src/lib/ingest.ts` changes
   section: import `listIgnoreRules`/`matchesAnyRule` from `./ignore-rules` (task 1), call

@@ -1,6 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "../db/client";
 import { videos, youtubeChannels } from "../db/schema";
+import { listIgnoreRules, matchesAnyRule } from "./ignore-rules";
 import { type ChannelFeed, fetchChannelFeed } from "./rss";
 
 type YoutubeChannelRow = typeof youtubeChannels.$inferSelect;
@@ -26,7 +27,13 @@ export function applyFeedToChannel(channelId: number, feed: ChannelFeed): void {
     .limit(1)
     .get();
 
+  const rules = listIgnoreRules();
+
   for (const entry of feed.entries) {
+    const ignored = matchesAnyRule(
+      { title: entry.title, description: entry.description },
+      rules,
+    );
     db.insert(videos)
       .values({
         channelId,
@@ -34,6 +41,9 @@ export function applyFeedToChannel(channelId: number, feed: ChannelFeed): void {
         title: entry.title,
         description: entry.description,
         publishedAt: entry.publishedAt,
+        ...(ignored
+          ? { status: "ignored" as const, ignoreMethod: "auto" as const }
+          : {}),
       })
       .onConflictDoUpdate({
         target: videos.youtubeVideoId,

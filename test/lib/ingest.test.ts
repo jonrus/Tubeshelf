@@ -9,7 +9,9 @@ process.env.DB_FILE_NAME = ":memory:";
 
 const { db } = await import("../../src/db/client");
 const { migrate } = await import("drizzle-orm/bun-sqlite/migrator");
-const { videos, youtubeChannels } = await import("../../src/db/schema");
+const { videos, youtubeChannels, ignoreRules } = await import(
+  "../../src/db/schema"
+);
 const { applyFeedToChannel, ingestChannel } = await import(
   "../../src/lib/ingest"
 );
@@ -127,6 +129,70 @@ test("re-ingesting an existing video updates title/description/publishedAt witho
   expect(row?.publishedAt).toEqual(new Date("2026-07-03T00:00:00Z"));
   expect(row?.status).toBe("watched");
   expect(row?.ignoreMethod).toBe("manual");
+});
+
+test("a feed entry matching an existing IgnoreRule is inserted as ignored/auto on first ingestion", () => {
+  const channel = makeChannel("UCingest0009");
+  db.insert(ignoreRules).values({ keyword: "spoiler" }).run();
+
+  applyFeedToChannel(
+    channel.id,
+    feedOf([
+      {
+        videoId: "vid-matches-rule",
+        title: "Big SPOILER Warning",
+        description: null,
+        publishedAt: new Date("2026-07-01T00:00:00Z"),
+      },
+    ]),
+  );
+
+  const row = db
+    .select()
+    .from(videos)
+    .where(eq(videos.youtubeVideoId, "vid-matches-rule"))
+    .get();
+  expect(row?.status).toBe("ignored");
+  expect(row?.ignoreMethod).toBe("auto");
+});
+
+test("re-ingesting an existing video with a title that newly matches a rule keeps its existing status/ignoreMethod unchanged", () => {
+  const channel = makeChannel("UCingest0010");
+
+  applyFeedToChannel(
+    channel.id,
+    feedOf([
+      {
+        videoId: "vid-no-rule-yet",
+        title: "Original Title",
+        description: null,
+        publishedAt: new Date("2026-07-01T00:00:00Z"),
+      },
+    ]),
+  );
+
+  db.insert(ignoreRules).values({ keyword: "clickbait" }).run();
+
+  applyFeedToChannel(
+    channel.id,
+    feedOf([
+      {
+        videoId: "vid-no-rule-yet",
+        title: "Total Clickbait Title",
+        description: null,
+        publishedAt: new Date("2026-07-03T00:00:00Z"),
+      },
+    ]),
+  );
+
+  const row = db
+    .select()
+    .from(videos)
+    .where(eq(videos.youtubeVideoId, "vid-no-rule-yet"))
+    .get();
+  expect(row?.title).toBe("Total Clickbait Title");
+  expect(row?.status).toBe("unwatched");
+  expect(row?.ignoreMethod).toBeNull();
 });
 
 test("gap detection does not fire on a channel's first-ever ingest", () => {
