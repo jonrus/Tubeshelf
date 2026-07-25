@@ -68,7 +68,7 @@ Generated: 2026-07-24
   `/continue-watching?category=<id>` and `/watched?category=<id>` from inside the
   devcontainer each return HTML scoped to that category only.
 
-- [ ] 5. Wire `category` through the `POST /videos/:id/toggle` handler (locate by route
+- [x] 5. Wire `category` through the `POST /videos/:id/toggle` handler (locate by route
   path — its line number has shifted from the pre-task-1 `queue.tsx:248`) per the
   spec's Design > Routes section: read `const category =
   resolveCategoryFilter(c.req.query("category"))` alongside the existing `view`/`sort`

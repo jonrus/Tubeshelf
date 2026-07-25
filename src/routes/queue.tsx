@@ -344,16 +344,23 @@ queueRoute.post("/videos/:id/toggle", (c) => {
   const user = getCurrentUser();
   const view = resolveToggleView(c.req.query("view"));
   const sort = resolveSort(c.req.query("sort"));
+  const category = resolveCategoryFilter(c.req.query("category"));
 
   if (view === "continue-watching") {
     return c.html(
       <QueueList
         view="continue-watching"
-        rows={continueWatchingVideos(user.id)}
+        category={category}
+        rows={continueWatchingVideos(user.id, category)}
       />,
     );
   }
   return c.html(
-    <QueueList view="queue" sort={sort} rows={queueVideos(user.id, sort)} />,
+    <QueueList
+      view="queue"
+      sort={sort}
+      category={category}
+      rows={queueVideos(user.id, sort, category)}
+    />,
   );
 });
