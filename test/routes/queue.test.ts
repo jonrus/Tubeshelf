@@ -1067,3 +1067,85 @@ test("POST /videos/:id/unignore 404s for a nonexistent video", async () => {
   });
   expect(res.status).toBe(404);
 });
+
+test("End-to-end: a queue row's rendered Ignore button round-trips through /videos/:id/ignore and removes the row from a fresh /queue", async () => {
+  const channel = makeChannel("Row Ignore Button Round Trip Queue Channel");
+  makeSubscription(channel.id);
+  const video = makeVideo(channel.id, { status: "unwatched" });
+
+  const queueRes = await queueRoute.request("/queue");
+  const queueHtml = await queueRes.text();
+  const buttonMatch = queueHtml.match(
+    new RegExp(`hx-post="(/videos/${video.id}/ignore\\?[^"]*)"`),
+  );
+  const rawHxPost = buttonMatch?.[1];
+  if (rawHxPost === undefined) {
+    throw new Error("expected a rendered Ignore button for the video");
+  }
+  const hxPost = rawHxPost.replace(/&amp;/g, "&");
+
+  const ignoreRes = await queueRoute.request(hxPost, { method: "POST" });
+  expect(ignoreRes.status).toBe(200);
+
+  const freshQueueRes = await queueRoute.request("/queue");
+  const freshQueueHtml = await freshQueueRes.text();
+  expect(freshQueueHtml).not.toContain(video.title);
+});
+
+test("End-to-end: a continue-watching row's rendered Ignore button round-trips through /videos/:id/ignore and removes the row from a fresh /continue-watching", async () => {
+  const channel = makeChannel(
+    "Row Ignore Button Round Trip Continue Watching Channel",
+  );
+  makeSubscription(channel.id);
+  const video = makeVideo(channel.id, { status: "watching" });
+
+  const continueRes = await queueRoute.request("/continue-watching");
+  const continueHtml = await continueRes.text();
+  const buttonMatch = continueHtml.match(
+    new RegExp(`hx-post="(/videos/${video.id}/ignore\\?[^"]*)"`),
+  );
+  const rawHxPost = buttonMatch?.[1];
+  if (rawHxPost === undefined) {
+    throw new Error("expected a rendered Ignore button for the video");
+  }
+  const hxPost = rawHxPost.replace(/&amp;/g, "&");
+
+  const ignoreRes = await queueRoute.request(hxPost, { method: "POST" });
+  expect(ignoreRes.status).toBe(200);
+
+  const freshContinueRes = await queueRoute.request("/continue-watching");
+  const freshContinueHtml = await freshContinueRes.text();
+  expect(freshContinueHtml).not.toContain(video.title);
+});
+
+test("End-to-end: an ignored row's rendered Un-ignore button round-trips through /videos/:id/unignore, removes the row from a fresh /ignored, and the video reappears as unwatched on a fresh /queue", async () => {
+  const channel = makeChannel("Row Unignore Button Round Trip Channel");
+  makeSubscription(channel.id);
+  const video = makeVideo(channel.id, {
+    status: "ignored",
+    ignoreMethod: "manual",
+  });
+
+  const ignoredRes = await queueRoute.request("/ignored");
+  const ignoredHtml = await ignoredRes.text();
+  const buttonMatch = ignoredHtml.match(
+    new RegExp(`hx-post="(/videos/${video.id}/unignore(?:\\?[^"]*)?)"`),
+  );
+  const rawHxPost = buttonMatch?.[1];
+  if (rawHxPost === undefined) {
+    throw new Error("expected a rendered Un-ignore button for the video");
+  }
+  const hxPost = rawHxPost.replace(/&amp;/g, "&");
+
+  const unignoreRes = await queueRoute.request(hxPost, { method: "POST" });
+  expect(unignoreRes.status).toBe(200);
+
+  const freshIgnoredRes = await queueRoute.request("/ignored");
+  const freshIgnoredHtml = await freshIgnoredRes.text();
+  expect(freshIgnoredHtml).not.toContain(video.title);
+
+  const freshQueueRes = await queueRoute.request("/queue");
+  const freshQueueHtml = await freshQueueRes.text();
+  expect(freshQueueHtml).toContain(video.title);
+  expect(videoRow(video.id).status).toBe("unwatched");
+});

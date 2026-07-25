@@ -139,7 +139,7 @@ Generated: 2026-07-25
   test/routes/queue.test.ts` passes covering all of the above plus all pre-existing
   tests unmodified.
 
-- [ ] 7. Add the end-to-end row-button round trip tests to `test/routes/queue.test.ts`
+- [x] 7. Add the end-to-end row-button round trip tests to `test/routes/queue.test.ts`
   per the spec's Testing section's final bullet, modeled directly on the existing
   end-to-end row-link tests at `queue.test.ts:738` (`"End-to-end: a queue row's link
   round-trips through /watching/:id..."`) — same "parse the actual rendered attribute
