@@ -255,10 +255,15 @@ export function setWatching(videoId: number): { status: "watching" } | null {
   db.update(videos)
     .set({
       status: "watching",
-      ignoreMethod: null, // closes the stale-ignoreMethod gap above; a no-op write
-      // on the far more common already-null path, same tradeoff the existing
-      // watchedAt-on-rewatch-only comment already accepts for a similar reason.
+      // Only touches watchedAt on the watched -> watching branch (the rewatch flow via
+      // the Watching page's "Mark Watching" button) -- the other two source states
+      // (unwatched, watching) already have it null, so leaving the key out of `set`
+      // avoids a redundant write on the far more common non-rewatch path.
       ...(current.status === "watched" ? { watchedAt: null } : {}),
+      ignoreMethod: null, // new -- closes the stale-ignoreMethod gap above; a no-op
+      // write on the far more common already-null path, same tradeoff as watchedAt's
+      // comment just above, just unconditional rather than branch-gated since every
+      // non-ignored target status here has ignoreMethod null already.
     })
     .where(eq(videos.id, videoId))
     .run();
@@ -282,6 +287,9 @@ export function toggleQueueStatus(
     .where(eq(videos.id, videoId)).get();
   if (!current) return null;
 
+  // unwatched -> watched
+  // watched   -> unwatched
+  // watching  -> unwatched
   const nextStatus = current.status === "unwatched" ? "watched" : "unwatched";
 
   db.update(videos)
