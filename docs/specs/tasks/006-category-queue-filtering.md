@@ -80,7 +80,7 @@ Generated: 2026-07-24
   plausible. Done when: `bun run lint` is clean and `bun test test/routes/queue.test.ts`
   still passes unmodified.
 
-- [ ] 6. Add `category` to the return-to-origin navigation machinery in
+- [x] 6. Add `category` to the return-to-origin navigation machinery in
   `src/routes/queue.tsx` per the spec's Design > Return-to-origin navigation section:
   add the `buildReturnPath(base, sort?, category?)` helper (exact code sketched there,
   routing through `URLSearchParams` — do not use raw template-string interpolation for

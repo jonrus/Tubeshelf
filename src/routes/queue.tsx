@@ -154,37 +154,59 @@ function resolveToggleView(
   return view === "continue-watching" ? "continue-watching" : "queue";
 }
 
-// All three `path` functions share the exact `(sort?: string) => string` signature,
-// even though only "queue" uses the argument -- TypeScript infers a call signature for
-// a union of function types from their *common* arity, so a mismatched signature here
-// (e.g. two of the three taking zero params) would make `entry.path(sort)` below a
-// `tsc --noEmit` error ("Expected 0 arguments, but got 1") despite being invisible to
-// `bun run lint`/`bun test`/`bun run dev`, which don't full-type-check.
+// All three branches build their URL through URLSearchParams, not string
+// interpolation -- category is an unvalidated, attacker-controlled string at this
+// call site, and URLSearchParams guarantees it's percent-encoded into the querystring
+// rather than splicing raw bytes (CR/LF, `&`, `#`, etc.) into a value later handed
+// straight to c.redirect() in POST /videos/:id/watched-toggle.
+function buildReturnPath(
+  base: string,
+  sort?: string,
+  category?: string,
+): string {
+  const params = new URLSearchParams();
+  if (sort === "oldest") params.set("sort", "oldest");
+  if (category !== undefined) params.set("category", category);
+  const qs = params.toString();
+  return `${base}${qs ? `?${qs}` : ""}`;
+}
+
+// All three `path` functions share the exact `(sort?: string, category?: string) =>
+// string` signature, even though only "queue" uses `sort` -- TypeScript infers a call
+// signature for a union of function types from their *common* arity, so a mismatched
+// signature here (e.g. two of the three taking fewer params) would make
+// `entry.path(sort, category)` below a `tsc --noEmit` error ("Expected 1 arguments,
+// but got 2") despite being invisible to `bun run lint`/`bun test`/`bun run dev`,
+// which don't full-type-check.
 const RETURN_VIEWS = {
   queue: {
     label: "Queue",
-    path: (sort?: string) => `/queue${sort === "oldest" ? "?sort=oldest" : ""}`,
+    path: (sort?: string, category?: string) =>
+      buildReturnPath("/queue", sort, category),
   },
   "continue-watching": {
     label: "Continue Watching",
-    path: (_sort?: string) => "/continue-watching",
+    path: (_sort?: string, category?: string) =>
+      buildReturnPath("/continue-watching", undefined, category),
   },
   watched: {
     label: "Watched",
-    path: (_sort?: string) => "/watched",
+    path: (_sort?: string, category?: string) =>
+      buildReturnPath("/watched", undefined, category),
   },
 } as const;
 
 function resolveReturnTarget(
   from: string | undefined,
   sort: string | undefined,
+  category: string | undefined,
 ) {
   const key =
     from !== undefined && from in RETURN_VIEWS
       ? (from as keyof typeof RETURN_VIEWS)
       : "queue";
   const entry = RETURN_VIEWS[key];
-  return { url: entry.path(sort), label: entry.label };
+  return { url: entry.path(sort, category), label: entry.label };
 }
 
 function resolveSort(sort: string | undefined): "newest" | "oldest" {
@@ -302,7 +324,8 @@ queueRoute.get("/watching/:id", (c) => {
 
   const from = c.req.query("from");
   const sort = c.req.query("sort");
-  const returnTarget = resolveReturnTarget(from, sort);
+  const category = c.req.query("category");
+  const returnTarget = resolveReturnTarget(from, sort, category);
 
   return c.html(
     <WatchingPage
@@ -333,7 +356,8 @@ queueRoute.post("/videos/:id/watched-toggle", (c) => {
 
   const from = c.req.query("from");
   const sort = c.req.query("sort");
-  return c.redirect(resolveReturnTarget(from, sort).url, 303);
+  const category = c.req.query("category");
+  return c.redirect(resolveReturnTarget(from, sort, category).url, 303);
 });
 
 queueRoute.post("/videos/:id/toggle", (c) => {
