@@ -447,6 +447,36 @@ test("GET /watching/:id resolves the return target from from/sort, with fallback
     `action="/videos/${video.id}/watched-toggle?from=queue&amp;sort=oldest"`,
   );
 
+  const queueCategoryRes = await queueRoute.request(
+    `/watching/${video.id}?from=queue&sort=oldest&category=${category.id}`,
+  );
+  const queueCategoryHtml = await queueCategoryRes.text();
+  expect(queueCategoryHtml).toContain("Return to Queue");
+  expect(queueCategoryHtml).toContain(
+    `href="/queue?sort=oldest&amp;category=${category.id}"`,
+  );
+  expect(queueCategoryHtml).toContain(
+    `action="/videos/${video.id}/watched-toggle?from=queue&amp;sort=oldest&amp;category=${category.id}"`,
+  );
+
+  const continueCategoryRes = await queueRoute.request(
+    `/watching/${video.id}?from=continue-watching&category=${category.id}`,
+  );
+  const continueCategoryHtml = await continueCategoryRes.text();
+  expect(continueCategoryHtml).toContain("Return to Continue Watching");
+  expect(continueCategoryHtml).toContain(
+    `href="/continue-watching?category=${category.id}"`,
+  );
+
+  const watchedCategoryRes = await queueRoute.request(
+    `/watching/${video.id}?from=watched&category=${category.id}`,
+  );
+  const watchedCategoryHtml = await watchedCategoryRes.text();
+  expect(watchedCategoryHtml).toContain("Return to Watched");
+  expect(watchedCategoryHtml).toContain(
+    `href="/watched?category=${category.id}"`,
+  );
+
   const bogusRes = await queueRoute.request(`/watching/${video.id}?from=bogus`);
   const bogusHtml = await bogusRes.text();
   expect(bogusHtml).toContain("Return to Queue");
@@ -526,6 +556,16 @@ test("POST /videos/:id/watched-toggle redirects to resolveReturnTarget's url for
   );
   expect(queueRes.status).toBe(303);
   expect(queueRes.headers.get("location")).toBe("/queue?sort=oldest");
+
+  const queueCategoryVideo = makeVideo(channel.id, { status: "unwatched" });
+  const queueCategoryRes = await queueRoute.request(
+    `/videos/${queueCategoryVideo.id}/watched-toggle?from=queue&sort=oldest&category=${category.id}`,
+    { method: "POST" },
+  );
+  expect(queueCategoryRes.status).toBe(303);
+  expect(queueCategoryRes.headers.get("location")).toBe(
+    `/queue?sort=oldest&category=${category.id}`,
+  );
 
   const continueVideo = makeVideo(channel.id, { status: "unwatched" });
   const continueRes = await queueRoute.request(
@@ -666,6 +706,144 @@ test("POST /videos/:id/toggle?view=queue&category=<id> keeps the re-rendered par
   expect(html).not.toContain(toggled.title);
   expect(html).toContain(staysSameCategory.title);
   expect(html).not.toContain(otherCategoryVideo.title);
+});
+
+test("GET /watching/:id round-trips an adversarial category value as a single encoded param, not an injected second querystring key", async () => {
+  const channel = makeChannel("Adversarial Category Channel");
+  const video = makeVideo(channel.id, { status: "unwatched" });
+  const adversarial = "3&evil=true";
+
+  const res = await queueRoute.request(
+    `/watching/${video.id}?from=continue-watching&category=${encodeURIComponent(adversarial)}`,
+  );
+  expect(res.status).toBe(200);
+  const html = await res.text();
+
+  const hrefMatch = html.match(/href="(\/continue-watching\?[^"]*)"/);
+  const rawHref = hrefMatch?.[1];
+  if (rawHref === undefined) {
+    throw new Error("expected a rendered Return to Continue Watching link");
+  }
+  const href = rawHref.replace(/&amp;/g, "&");
+  const queryString = href.split("?")[1];
+  if (queryString === undefined) {
+    throw new Error("expected a querystring on the return link");
+  }
+  const params = new URLSearchParams(queryString);
+  expect(params.get("category")).toBe(adversarial);
+  expect(params.has("evil")).toBe(false);
+  expect([...params.keys()]).toEqual(["category"]);
+});
+
+test("End-to-end: a queue row's link round-trips through /watching/:id back to the same category-filtered /queue", async () => {
+  const channel = makeChannel("Row Link Round Trip Queue Channel");
+  makeSubscription(channel.id, { categoryId: category.id });
+  const video = makeVideo(channel.id, { status: "unwatched" });
+
+  const queueRes = await queueRoute.request(`/queue?category=${category.id}`);
+  const queueHtml = await queueRes.text();
+  const rowHrefMatch = queueHtml.match(
+    new RegExp(`href="(/watching/${video.id}\\?[^"]*)"`),
+  );
+  const rawRowHref = rowHrefMatch?.[1];
+  if (rawRowHref === undefined) {
+    throw new Error("expected a rendered row link for the video");
+  }
+  const rowHref = rawRowHref.replace(/&amp;/g, "&");
+
+  const watchingRes = await queueRoute.request(rowHref);
+  const watchingHtml = await watchingRes.text();
+  expect(watchingHtml).toContain(`href="/queue?category=${category.id}"`);
+
+  const actionMatch = watchingHtml.match(/action="([^"]*watched-toggle[^"]*)"/);
+  const rawAction = actionMatch?.[1];
+  if (rawAction === undefined) {
+    throw new Error("expected a rendered watched-toggle form action");
+  }
+  const action = rawAction.replace(/&amp;/g, "&");
+
+  const toggleRes = await queueRoute.request(action, { method: "POST" });
+  expect(toggleRes.status).toBe(303);
+  expect(toggleRes.headers.get("location")).toBe(
+    `/queue?category=${category.id}`,
+  );
+});
+
+test("End-to-end: a continue-watching row's link round-trips through /watching/:id back to the same category-filtered /continue-watching", async () => {
+  const channel = makeChannel("Row Link Round Trip Continue Watching Channel");
+  makeSubscription(channel.id, { categoryId: category.id });
+  const video = makeVideo(channel.id, { status: "watching" });
+
+  const continueRes = await queueRoute.request(
+    `/continue-watching?category=${category.id}`,
+  );
+  const continueHtml = await continueRes.text();
+  const rowHrefMatch = continueHtml.match(
+    new RegExp(`href="(/watching/${video.id}\\?[^"]*)"`),
+  );
+  const rawRowHref = rowHrefMatch?.[1];
+  if (rawRowHref === undefined) {
+    throw new Error("expected a rendered row link for the video");
+  }
+  const rowHref = rawRowHref.replace(/&amp;/g, "&");
+
+  const watchingRes = await queueRoute.request(rowHref);
+  const watchingHtml = await watchingRes.text();
+  expect(watchingHtml).toContain(
+    `href="/continue-watching?category=${category.id}"`,
+  );
+
+  const actionMatch = watchingHtml.match(/action="([^"]*watched-toggle[^"]*)"/);
+  const rawAction = actionMatch?.[1];
+  if (rawAction === undefined) {
+    throw new Error("expected a rendered watched-toggle form action");
+  }
+  const action = rawAction.replace(/&amp;/g, "&");
+
+  const toggleRes = await queueRoute.request(action, { method: "POST" });
+  expect(toggleRes.status).toBe(303);
+  expect(toggleRes.headers.get("location")).toBe(
+    `/continue-watching?category=${category.id}`,
+  );
+});
+
+test("End-to-end: a watched row's link round-trips through /watching/:id back to the same category-filtered /watched", async () => {
+  const channel = makeChannel("Row Link Round Trip Watched Channel");
+  makeSubscription(channel.id, { categoryId: category.id });
+  const video = makeVideo(channel.id, {
+    status: "watched",
+    watchedAt: new Date("2026-07-01T00:00:00Z"),
+  });
+
+  const watchedRes = await queueRoute.request(
+    `/watched?category=${category.id}`,
+  );
+  const watchedHtml = await watchedRes.text();
+  const rowHrefMatch = watchedHtml.match(
+    new RegExp(`href="(/watching/${video.id}\\?[^"]*)"`),
+  );
+  const rawRowHref = rowHrefMatch?.[1];
+  if (rawRowHref === undefined) {
+    throw new Error("expected a rendered row link for the video");
+  }
+  const rowHref = rawRowHref.replace(/&amp;/g, "&");
+
+  const watchingRes = await queueRoute.request(rowHref);
+  const watchingHtml = await watchingRes.text();
+  expect(watchingHtml).toContain(`href="/watched?category=${category.id}"`);
+
+  const actionMatch = watchingHtml.match(/action="([^"]*watched-toggle[^"]*)"/);
+  const rawAction = actionMatch?.[1];
+  if (rawAction === undefined) {
+    throw new Error("expected a rendered watched-toggle form action");
+  }
+  const action = rawAction.replace(/&amp;/g, "&");
+
+  const toggleRes = await queueRoute.request(action, { method: "POST" });
+  expect(toggleRes.status).toBe(303);
+  expect(toggleRes.headers.get("location")).toBe(
+    `/watched?category=${category.id}`,
+  );
 });
 
 test("POST /videos/:id/toggle?view=continue-watching&category=<id> keeps the re-rendered partial scoped to that category", async () => {

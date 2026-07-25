@@ -137,7 +137,7 @@ Generated: 2026-07-24
   scoped to the given category. Done when: `bun test test/routes/queue.test.ts` passes
   covering all of the above.
 
-- [ ] 9. Add return-navigation test coverage to `test/routes/queue.test.ts` per the
+- [x] 9. Add return-navigation test coverage to `test/routes/queue.test.ts` per the
   spec's Testing section. Extend the existing test named `"GET /watching/:id resolves
   the return target from from/sort, with fallback for missing/unrecognized from"`
   (locate by test name — task 8's additions will have shifted its line number from the
