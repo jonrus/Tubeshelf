@@ -101,7 +101,7 @@ Generated: 2026-07-24
   keep matching call signatures), and `bun test test/routes/queue.test.ts` still passes
   unmodified.
 
-- [ ] 7. In `src/views/watching-page.tsx`, add a 4th `category: string | undefined`
+- [x] 7. In `src/views/watching-page.tsx`, add a 4th `category: string | undefined`
   parameter to `watchedToggleAction` (currently `watching-page.tsx:18`), setting
   `params.set("category", category)` when present, per the spec's Design > Row links
   section's full code sketch. Add a `category: string | undefined` field to

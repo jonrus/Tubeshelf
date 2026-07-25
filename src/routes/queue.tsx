@@ -335,6 +335,7 @@ queueRoute.get("/watching/:id", (c) => {
       status={video.status}
       from={from}
       sort={sort}
+      category={category}
       returnUrl={returnTarget.url}
       returnLabel={returnTarget.label}
     />,

@@ -19,10 +19,12 @@ function watchedToggleAction(
   id: number,
   from: string | undefined,
   sort: string | undefined,
+  category: string | undefined,
 ): string {
   const params = new URLSearchParams();
   if (from !== undefined) params.set("from", from);
   if (sort !== undefined) params.set("sort", sort);
+  if (category !== undefined) params.set("category", category);
   const qs = params.toString();
   return `/videos/${id}/watched-toggle${qs ? `?${qs}` : ""}`;
 }
@@ -45,6 +47,7 @@ export type WatchingPageProps = {
   status: VideoStatus;
   from: string | undefined;
   sort: string | undefined;
+  category: string | undefined;
   returnUrl: string;
   returnLabel: string;
 };
@@ -76,7 +79,12 @@ export const WatchingPage: FC<WatchingPageProps> = (props) => {
         Mark Watching
       </button>
       <form
-        action={watchedToggleAction(props.id, props.from, props.sort)}
+        action={watchedToggleAction(
+          props.id,
+          props.from,
+          props.sort,
+          props.category,
+        )}
         method="post"
         onsubmit="this.querySelector('button').disabled = true"
       >
