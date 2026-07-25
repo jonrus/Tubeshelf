@@ -18,6 +18,7 @@ export function setWatching(videoId: number): { status: "watching" } | null {
       // (unwatched, watching) already have it null, so leaving the key out of `set`
       // avoids a redundant write on the far more common non-rewatch path.
       ...(current.status === "watched" ? { watchedAt: null } : {}),
+      ignoreMethod: null,
     })
     .where(eq(videos.id, videoId))
     .run();
@@ -48,6 +49,7 @@ export function toggleQueueStatus(
     .set({
       status: nextStatus,
       watchedAt: nextStatus === "watched" ? new Date() : null,
+      ignoreMethod: null,
     })
     .where(eq(videos.id, videoId))
     .run();
@@ -78,9 +80,40 @@ export function toggleWatchedFromWatchingPage(
     .set({
       status: nextStatus,
       watchedAt: nextStatus === "watched" ? new Date() : null,
+      ignoreMethod: null,
     })
     .where(eq(videos.id, videoId))
     .run();
 
   return { status: nextStatus };
+}
+
+export function ignoreVideo(videoId: number): { status: "ignored" } | null {
+  const current = db
+    .select({ status: videos.status })
+    .from(videos)
+    .where(eq(videos.id, videoId))
+    .get();
+  if (!current) return null;
+
+  db.update(videos)
+    .set({ status: "ignored", ignoreMethod: "manual", watchedAt: null })
+    .where(eq(videos.id, videoId))
+    .run();
+  return { status: "ignored" };
+}
+
+export function unignoreVideo(videoId: number): { status: "unwatched" } | null {
+  const current = db
+    .select({ status: videos.status })
+    .from(videos)
+    .where(eq(videos.id, videoId))
+    .get();
+  if (!current) return null;
+
+  db.update(videos)
+    .set({ status: "unwatched", ignoreMethod: null, watchedAt: null })
+    .where(eq(videos.id, videoId))
+    .run();
+  return { status: "unwatched" };
 }

@@ -49,7 +49,7 @@ Generated: 2026-07-25
   errors, and `bun test test/lib/ingest.test.ts` passes covering both new cases plus all
   pre-existing tests unmodified.
 
-- [ ] 3. In `src/lib/watch-status.ts`, add `ignoreMethod: null` to the `.set({...})` call
+- [x] 3. In `src/lib/watch-status.ts`, add `ignoreMethod: null` to the `.set({...})` call
   in each of the three existing functions — `setWatching` (`watch-status.ts:5`),
   `toggleQueueStatus` (`:32`), `toggleWatchedFromWatchingPage` (`:65`) — exactly per the
   spec's Design > `src/lib/watch-status.ts` changes section's full sketches of all
