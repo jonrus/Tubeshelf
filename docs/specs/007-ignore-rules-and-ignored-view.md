@@ -216,7 +216,51 @@ export function applyFeedToChannel(channelId: number, feed: ChannelFeed): void {
 }
 ```
 
-### `src/lib/watch-status.ts` additions
+### `src/lib/watch-status.ts` changes
+
+**Real gap caught in red-team review, fixed here rather than left implicit:** none of
+the three *existing* functions (`setWatching`, `toggleQueueStatus`,
+`toggleWatchedFromWatchingPage`) touch `ignoreMethod`, and none of their call sites
+(`/watching/:id`, `/videos/:id/toggle`, `/videos/:id/watched-toggle`) guard against
+being invoked against a video whose `status` is currently `ignored` — `videoForWatchingPage`
+has no status filter, and the two POST routes look a video up by bare id with no status
+check either. Concretely: a video is `watching`; a rule edit's reconciliation pass
+auto-ignores it while a `/watching/:id` tab for it is still open; the user then clicks
+"Mark Watched & Return to X" — `toggleWatchedFromWatchingPage` moves it to `watched`
+but leaves `ignoreMethod: "auto"` in place, silently violating `app_idea.md`'s own
+data-model invariant ("`ignore_method`... null unless status is `ignored`"). All three
+existing functions now unconditionally clear `ignoreMethod` alongside their status
+write, since none of their target statuses (`watching`, `watched`, `unwatched`) is ever
+`ignored`:
+
+```ts
+export function setWatching(videoId: number): { status: "watching" } | null {
+  const current = db
+    .select({ status: videos.status })
+    .from(videos)
+    .where(eq(videos.id, videoId))
+    .get();
+  if (!current) return null;
+
+  db.update(videos)
+    .set({
+      status: "watching",
+      ignoreMethod: null, // closes the stale-ignoreMethod gap above; a no-op write
+      // on the far more common already-null path, same tradeoff the existing
+      // watchedAt-on-rewatch-only comment already accepts for a similar reason.
+      ...(current.status === "watched" ? { watchedAt: null } : {}),
+    })
+    .where(eq(videos.id, videoId))
+    .run();
+
+  return { status: "watching" };
+}
+```
+
+`toggleQueueStatus` and `toggleWatchedFromWatchingPage` each gain the same
+`ignoreMethod: null` in their existing `.set({...})` call, unconditionally, alongside
+their existing `status`/`watchedAt` writes — no other change to either function's
+logic.
 
 Two new functions, same shape as the existing three:
 
@@ -351,13 +395,22 @@ same two possible source views.
 
 `QueueListProps`'s union gains an `"ignored"` variant with its own row type:
 
+**Type-error caught in red-team review:** `videos.ignoreMethod` has no `.notNull()` in
+`src/db/schema.ts` (only `watchedAt` is tied to its status via the `watched_at_check`
+constraint — `ignoreMethod` isn't similarly tied to `status = 'ignored'`), so
+`ignoredVideos()`'s direct select of `videos.ignoreMethod` infers as
+`"manual" | "auto" | null` under Drizzle, not the non-nullable type an earlier draft of
+this section declared. `IgnoredRow` is typed nullable to match, and the render branch
+below only shows the `[manual]`/`[auto]` annotation when it's actually present rather
+than asserting/coalescing a value that the schema doesn't actually guarantee:
+
 ```ts
 export type IgnoredRow = {
   id: number;
   title: string;
   channelName: string;
   categoryName: string;
-  ignoreMethod: "manual" | "auto";
+  ignoreMethod: "manual" | "auto" | null;
 };
 
 type QueueListProps =
@@ -390,55 +443,104 @@ function unignoreHref(id: number, category?: number): string {
 }
 ```
 
-`QueueList`'s render branches gain a third case (`ignored`), alongside the existing
-`watched`-vs-everything-else split — plain text title (no `watch-link` anchor, no
-`youtubeUrl`/`data-youtube-url`, deliberately, per Scope: these are not meant to be
-clicked through to YouTube) plus the `[manual]`/`[auto]` annotation and an Un-ignore
-button:
+`QueueList`'s body becomes a three-way branch on `props.view` (`watched` / `ignored` /
+queue+continue-watching), fully sketched here rather than left as prose — spec006's own
+retro flagged exactly this category of gap ("described only in prose... exactly the
+kind of gap that let a bug slip through undetected") for `watchedToggleAction`, so this
+spec holds itself to the same standard rather than repeating it:
 
 ```tsx
-{props.view === "ignored"
-  ? props.rows.map((row) => (
-      <li key={row.id}>
-        {row.title} [{row.ignoreMethod}] — {row.channelName} ({row.categoryName})
-        <button
-          type="button"
-          hx-post={unignoreHref(row.id, props.category)}
-          hx-target="#queue-list"
-          hx-swap="outerHTML"
-          hx-disabled-elt="this"
-        >
-          Un-ignore
-        </button>
-      </li>
-    ))
-  : /* ...existing watched / queue+continue-watching branches... */}
+export const QueueList: FC<QueueListProps> = (props) => {
+  return (
+    <div id="queue-list">
+      <ul>
+        {props.view === "watched"
+          ? props.rows.map((row) => (
+              <li key={row.id}>
+                <a
+                  href={watchingHref(row.id, "watched", undefined, props.category)}
+                  class="watch-link"
+                  data-youtube-url={youtubeUrl(row.youtubeVideoId)}
+                >
+                  {row.title}
+                </a>{" "}
+                — {row.channelName} ({row.categoryName})
+                {row.watchedAt
+                  ? ` · watched ${row.watchedAt.toLocaleDateString()}`
+                  : ""}
+              </li>
+            ))
+          : props.view === "ignored"
+            ? props.rows.map((row) => (
+                <li key={row.id}>
+                  {row.title}
+                  {row.ignoreMethod ? ` [${row.ignoreMethod}]` : ""} —{" "}
+                  {row.channelName} ({row.categoryName})
+                  <button
+                    type="button"
+                    hx-post={unignoreHref(row.id, props.category)}
+                    hx-target="#queue-list"
+                    hx-swap="outerHTML"
+                    hx-disabled-elt="this"
+                  >
+                    Un-ignore
+                  </button>
+                </li>
+              ))
+            : props.rows.map((row) => {
+                const sort = props.view === "queue" ? props.sort : undefined;
+                return (
+                  <li key={row.id}>
+                    <a
+                      href={watchingHref(row.id, props.view, sort, props.category)}
+                      class="watch-link"
+                      data-youtube-url={youtubeUrl(row.youtubeVideoId)}
+                    >
+                      {row.title}
+                    </a>{" "}
+                    — {row.channelName} ({row.categoryName})
+                    {row.publishedAt
+                      ? ` · published ${row.publishedAt.toLocaleDateString()}`
+                      : ""}
+                    <button
+                      type="button"
+                      hx-post={toggleHref(row.id, props.view, sort, props.category)}
+                      hx-target="#queue-list"
+                      hx-swap="outerHTML"
+                      hx-disabled-elt="this"
+                    >
+                      {row.status === "watching"
+                        ? "Clear to Unwatched"
+                        : "Mark Watched"}
+                    </button>
+                    <button
+                      type="button"
+                      hx-post={ignoreHref(row.id, props.view, sort, props.category)}
+                      hx-target="#queue-list"
+                      hx-swap="outerHTML"
+                      hx-disabled-elt="this"
+                    >
+                      Ignore
+                    </button>
+                  </li>
+                );
+              })}
+      </ul>
+    </div>
+  );
+};
 ```
 
-The existing queue/continue-watching row branch gains a second button next to the
-existing toggle button, using `ignoreHref`:
-
-```tsx
-<button
-  type="button"
-  hx-post={ignoreHref(row.id, props.view, sort, props.category)}
-  hx-target="#queue-list"
-  hx-swap="outerHTML"
-  hx-disabled-elt="this"
->
-  Ignore
-</button>
-```
-
-(`props.view` is narrowed to `"queue" | "continue-watching"` inside this branch
-already, same narrowing the existing `toggleHref` call relies on.)
+(`props.view` is narrowed to `"queue" | "continue-watching"` inside the third branch
+already, same narrowing the existing `toggleHref` call relies on — `ignoreHref` reuses
+that same narrowed `props.view`/`sort` pair.)
 
 ### `src/routes/ignore-rules.tsx` (new)
 
 Modeled directly on `categories.tsx`'s add/list shape, extended with edit/delete:
 
 ```tsx
-import { asc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { db } from "../db/client";
 import { ignoreRules } from "../db/schema";
@@ -649,6 +751,16 @@ app.route("/", ignoreRulesRoute);
   ignored.
 - Category-filter round trip for `/ignored`'s picker links, same pattern as the other
   three views' existing coverage.
+- **End-to-end row-button round trip** (caught missing in red-team review — the bullets
+  above only hit `/videos/:id/ignore`/`/videos/:id/unignore` with hand-built query
+  strings, which would still all pass even if `ignoreHref`/`unignoreHref` were never
+  actually wired into `queue-list.tsx`'s JSX, exactly the gap spec006's own "End-to-end
+  row-link round trip" test was added to close for `watchingHref`): `GET /queue`, parse
+  a row's rendered Ignore button's `hx-post` value out of the response body (not
+  hand-constructed), `POST` to that extracted URL, and assert the video is gone from a
+  fresh `GET /queue`. Repeat once for `/continue-watching`'s Ignore button and once for
+  `/ignored`'s Un-ignore button (parsed from a `GET /ignored` response, asserting the
+  video reappears on a fresh `GET /queue` as `unwatched`).
 
 ### Verification (manual, end-to-end)
 
@@ -676,7 +788,28 @@ app.route("/", ignoreRulesRoute);
 
 ## Open Questions
 
-None. The one deferred item from Context (the "lock in"/convert-to-manual action) is
-recorded as an accepted scope cut, not an open question — it can be picked up in a
-follow-up spec if auto-ignored videos accumulating without a lock-in path proves
-annoying in real use.
+None currently open. A red-team pass of this spec's draft (before any implementation)
+caught four real issues, all fixed in the Design section above rather than left as risk:
+- `IgnoredRow.ignoreMethod` was typed non-nullable (`"manual" | "auto"`) while
+  `ignoredVideos()`'s Drizzle select actually infers `"manual" | "auto" | null` from
+  the schema's nullable `ignoreMethod` column — a `tsc --noEmit` error, not just a style
+  slip. Fixed by widening the type and rendering the `[manual]`/`[auto]` tag
+  conditionally (see `src/views/queue-list.tsx` changes).
+- The `src/routes/ignore-rules.tsx` sketch imported `asc` from `drizzle-orm` without
+  using it (ordering lives inside `listIgnoreRules()` instead) — would fail
+  `bun run lint`'s `noUnusedImports` rule. Fixed by dropping the unused import.
+- None of the three pre-existing `watch-status.ts` functions cleared `ignoreMethod`,
+  and none of their call sites guard against acting on an already-`ignored` video (all
+  reachable directly by id, with no status filter) — a video could get marked
+  Watching/Watched while silently keeping a stale `ignoreMethod`, violating
+  `app_idea.md`'s own "null unless status is ignored" invariant. Fixed by having all
+  three existing functions unconditionally clear `ignoreMethod` alongside their status
+  write (see `src/lib/watch-status.ts` changes).
+- No test exercised the actual `ignoreHref`/`unignoreHref`-generated row buttons through
+  to a real status change — only the route handlers in isolation, which would all still
+  pass even if those two functions were never wired into `queue-list.tsx`'s JSX. Added
+  as the Testing section's "End-to-end row-button round trip" bullet.
+
+The one deferred item from Context (the "lock in"/convert-to-manual action) remains an
+accepted scope cut, not an open question — it can be picked up in a follow-up spec if
+auto-ignored videos accumulating without a lock-in path proves annoying in real use.
