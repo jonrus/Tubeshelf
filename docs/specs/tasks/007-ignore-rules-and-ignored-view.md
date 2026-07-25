@@ -66,11 +66,9 @@ Generated: 2026-07-25
   whichever source status fits each function) and directly `db.update(videos).set({
   ignoreMethod: "auto" }).where(...)` to simulate the stale-state scenario the spec's
   Design section describes, then call the function and assert `ignoreMethod` is `null`
-  afterward — cover all three functions, not just one (this is the direct unit-level
-  regression test for the invariant-violation bug the spec's Design section fixes; the
-  spec's own Testing section only calls for HTTP-route-level coverage of the *new*
-  ignore/unignore routes, not this regression on the three pre-existing functions, so
-  this bullet fills that gap). Add new tests for `ignoreVideo`: transitions `unwatched`
+  afterward — cover all three functions, not just one (this is the spec's Testing >
+  `test/lib/watch-status.test.ts` extension section, added there after being caught as
+  a gap during this task file's own decomposition pass). Add new tests for `ignoreVideo`: transitions `unwatched`
   to `ignored`/`manual` and clears `watchedAt`; transitions `watching` to
   `ignored`/`manual`; returns `null` for a nonexistent id. Add new tests for
   `unignoreVideo`: transitions `ignored`/`manual` to `unwatched` with `ignoreMethod:

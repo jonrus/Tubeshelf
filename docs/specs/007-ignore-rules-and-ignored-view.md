@@ -807,6 +807,25 @@ app.route("/", ignoreRulesRoute);
   `manual` video is left untouched by both directions even when it would/wouldn't
   match current rules.
 
+`test/lib/watch-status.test.ts` extension (gap caught while decomposing this spec into
+tasks — the Design section's `ignoreMethod`-clearing fix on the three pre-existing
+functions otherwise had no direct unit coverage, only indirect coverage through the new
+HTTP routes' tests below):
+- `setWatching`, `toggleQueueStatus`, and `toggleWatchedFromWatchingPage` each clear a
+  stale `ignoreMethod` to `null` — for each function, create a video via the existing
+  `makeVideo` helper, directly `db.update(videos).set({ ignoreMethod: "auto" })` to
+  simulate the stale-state scenario the Design section describes, call the function,
+  and assert `ignoreMethod` is `null` afterward. Cover all three functions explicitly,
+  not just one.
+- `ignoreVideo`: transitions `unwatched` to `ignored`/`manual` and clears `watchedAt`;
+  transitions `watching` to `ignored`/`manual`; returns `null` for a nonexistent id.
+- `unignoreVideo`: transitions both an `ignored`/`manual` and an `ignored`/`auto` video
+  to `unwatched` with `ignoreMethod: null` (cover both source values); transitions a
+  `watched` video (non-null `watchedAt`) to `unwatched` without throwing, clearing
+  `watchedAt` to `null` (the direct unit-level version of the crash regression a second
+  red-team pass caught — see `unignoreVideo`'s Design section); returns `null` for a
+  nonexistent id.
+
 `test/lib/ingest.test.ts` extension:
 - A feed entry matching an existing `IgnoreRule` is inserted as `ignored`/`auto` on
   first ingestion.
@@ -941,3 +960,11 @@ The one deferred item from Context (the "lock in"/convert-to-manual action, as a
 UI surface) remains an accepted scope cut, not an open question — it can be picked up
 in a follow-up spec if auto-ignored videos accumulating without a lock-in path proves
 annoying in real use.
+
+A third pass — decomposing this spec into `docs/specs/tasks/007-ignore-rules-and-ignored-view.md`
+via `/spec-tasks`, a different failure mode than the two red-team passes above (checking
+the decomposition, not the design) — caught one gap: the Testing section had no direct
+unit coverage for the `ignoreMethod`-clearing fix on the three pre-existing
+`watch-status.ts` functions, only indirect coverage through the new ignore/unignore
+routes' HTTP-level tests. Fixed by adding the `test/lib/watch-status.test.ts` extension
+bullet above.
