@@ -17,7 +17,11 @@ import { Layout } from "../views/layout";
 import { QueueList } from "../views/queue-list";
 import { WatchingPage, WatchStatusBadge } from "../views/watching-page";
 
-function queueVideos(userId: number, sort: "newest" | "oldest") {
+function queueVideos(
+  userId: number,
+  sort: "newest" | "oldest",
+  categoryId?: number,
+) {
   return db
     .select({
       id: videos.id,
@@ -40,6 +44,9 @@ function queueVideos(userId: number, sort: "newest" | "oldest") {
         eq(subscriptions.userId, userId),
         isNull(subscriptions.unsubscribedAt),
         inArray(videos.status, ["unwatched", "watching"]),
+        ...(categoryId !== undefined
+          ? [eq(subscriptions.categoryId, categoryId)]
+          : []),
       ),
     )
     .orderBy(
@@ -48,7 +55,7 @@ function queueVideos(userId: number, sort: "newest" | "oldest") {
     .all();
 }
 
-function continueWatchingVideos(userId: number) {
+function continueWatchingVideos(userId: number, categoryId?: number) {
   return db
     .select({
       id: videos.id,
@@ -71,13 +78,16 @@ function continueWatchingVideos(userId: number) {
         eq(subscriptions.userId, userId),
         isNull(subscriptions.unsubscribedAt),
         eq(videos.status, "watching"),
+        ...(categoryId !== undefined
+          ? [eq(subscriptions.categoryId, categoryId)]
+          : []),
       ),
     )
     .orderBy(desc(videos.publishedAt))
     .all();
 }
 
-function watchedVideos(userId: number) {
+function watchedVideos(userId: number, categoryId?: number) {
   return db
     .select({
       id: videos.id,
@@ -105,9 +115,36 @@ function watchedVideos(userId: number) {
         // the subscriptions row (sets unsubscribedAt) rather than removing it -- MVP's
         // single-user unique(userId, youtubeChannelId) constraint guarantees exactly one
         // such row per channel this user has ever subscribed to, active or not.
+        ...(categoryId !== undefined
+          ? [eq(subscriptions.categoryId, categoryId)]
+          : []),
       ),
     )
     .orderBy(desc(videos.watchedAt))
+    .all();
+}
+
+function resolveCategoryFilter(raw: string | undefined): number | undefined {
+  if (raw === undefined) return undefined;
+  const id = Number(raw);
+  if (!Number.isInteger(id)) return undefined;
+  const exists = db
+    .select({ id: categories.id })
+    .from(categories)
+    .where(eq(categories.id, id))
+    .get();
+  return exists ? id : undefined;
+}
+
+function allCategories() {
+  return db
+    .select({
+      id: categories.id,
+      name: categories.name,
+      isSystem: categories.isSystem,
+    })
+    .from(categories)
+    .orderBy(desc(categories.isSystem), asc(categories.name))
     .all();
 }
 

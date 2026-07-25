@@ -496,11 +496,16 @@ the Design section above rather than left as open risk:
   `string | undefined` only where it's an unvalidated URL passthrough (`RETURN_VIEWS`,
   `WatchingPageProps`, `watchedToggleAction`) — see Row links for the full split.
 
-- The conditional-array-spread-into-`and(...)` shape sketched for the optional
+- ~~The conditional-array-spread-into-`and(...)` shape sketched for the optional
   category clause hasn't been confirmed against the installed `drizzle-orm@0.45.2` —
   same "verify novel Drizzle shape at implementation time" posture flagged repeatedly
   in specs 002–004; if it doesn't compile/filter as expected, fall back to building the
-  conditions array with a plain `if` push before calling `and(...)`.
+  conditions array with a plain `if` push before calling `and(...)`.~~ Confirmed at
+  task 1 implementation: the `...(categoryId !== undefined ? [eq(...)] : [])` spread
+  compiles cleanly against `drizzle-orm@0.45.2` in all three query helpers
+  (`queueVideos`/`continueWatchingVideos`/`watchedVideos`), with `bun run lint`, `bunx
+  tsc --noEmit`, and the full pre-existing `test/routes/queue.test.ts` suite all
+  unaffected. No fallback needed.
 - The plain link-list picker is a judgment call for MVP scale (a personal subscription
   list with a handful of categories); if the real category count later makes the link
   row unwieldy, revisit with the `<select>`-dropdown alternative considered and

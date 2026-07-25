@@ -2,7 +2,7 @@
 Spec: docs/specs/006-category-queue-filtering.md
 Generated: 2026-07-24
 
-- [ ] 1. In `src/routes/queue.tsx`, add `resolveCategoryFilter(raw: string | undefined):
+- [x] 1. In `src/routes/queue.tsx`, add `resolveCategoryFilter(raw: string | undefined):
   number | undefined` and `allCategories()` per the spec's Design > Category filter
   resolution and Category option list sections (exact code sketched there). Add an
   optional `categoryId?: number` parameter to `queueVideos` (currently `queue.tsx:20`),
