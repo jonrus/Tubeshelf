@@ -153,7 +153,7 @@ Generated: 2026-07-25
   `bun test test/routes/queue.test.ts` passes covering all three round trips plus all
   pre-existing tests unmodified.
 
-- [ ] 8. Create `src/routes/ignore-rules.tsx`, `src/views/ignore-rules-list.tsx`, and
+- [x] 8. Create `src/routes/ignore-rules.tsx`, `src/views/ignore-rules-list.tsx`, and
   `src/views/ignore-rules-page.tsx` (all new) exactly per the spec's Design >
   `src/routes/ignore-rules.tsx` and `src/views/ignore-rules-list.tsx` +
   `ignore-rules-page.tsx` sections (full code sketched in both — `GET /ignore-rules`,

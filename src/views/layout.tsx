@@ -27,7 +27,8 @@ export const Layout: FC<{ title: string; children?: Child }> = (props) => {
           <a href="/">Categories</a> | <a href="/channels">Channels</a> |{" "}
           <a href="/queue">Queue</a> |{" "}
           <a href="/continue-watching">Continue Watching</a> |{" "}
-          <a href="/watched">Watched</a> | <a href="/ignored">Ignored</a>
+          <a href="/watched">Watched</a> | <a href="/ignored">Ignored</a> |{" "}
+          <a href="/ignore-rules">Ignore Rules</a>
         </nav>
         {props.children}
         <script dangerouslySetInnerHTML={{ __html: WATCH_LINK_CLICK_SCRIPT }} />
