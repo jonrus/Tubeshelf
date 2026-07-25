@@ -170,7 +170,7 @@ Generated: 2026-07-25
   curling `/ignore-rules` (GET/POST add/edit/delete) from inside the devcontainer
   behaves as the spec describes.
 
-- [ ] 9. Create `test/routes/ignore-rules.test.ts` (new), modeled on the existing
+- [x] 9. Create `test/routes/ignore-rules.test.ts` (new), modeled on the existing
   `test/routes/queue.test.ts`'s structure (module-level `DB_FILE_NAME=":memory:"`,
   `migrate(...)`, `seed(db)`, local fixture helpers), covering the spec's Testing >
   `test/routes/ignore-rules.test.ts` bullets: `GET /ignore-rules` lists existing rules;
