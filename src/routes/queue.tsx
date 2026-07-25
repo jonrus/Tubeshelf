@@ -14,7 +14,7 @@ import {
   toggleWatchedFromWatchingPage,
 } from "../lib/watch-status";
 import { Layout } from "../views/layout";
-import { QueueList } from "../views/queue-list";
+import { CategoryFilterLinks, QueueList } from "../views/queue-list";
 import { WatchingPage, WatchStatusBadge } from "../views/watching-page";
 
 function queueVideos(
@@ -206,16 +206,39 @@ function videoForWatchingPage(videoId: number) {
 
 export const queueRoute = new Hono();
 
+// Shared by both the sort-toggle links and CategoryFilterLinks's buildHref below --
+// one place that knows how to assemble a /queue URL from its two optional params, so
+// there's exactly one `?` vs. no-`?` decision instead of two ad hoc ones that could
+// drift.
+function buildQueueHref(sort: "newest" | "oldest", category?: number): string {
+  const params = new URLSearchParams();
+  if (sort === "oldest") params.set("sort", "oldest");
+  if (category !== undefined) params.set("category", String(category));
+  const qs = params.toString();
+  return `/queue${qs ? `?${qs}` : ""}`;
+}
+
 queueRoute.get("/queue", (c) => {
   const user = getCurrentUser();
   const sort = resolveSort(c.req.query("sort"));
+  const category = resolveCategoryFilter(c.req.query("category"));
   return c.html(
     <Layout title="Queue">
       <p>
-        <a href="/queue">Newest first</a> ·{" "}
-        <a href="/queue?sort=oldest">Oldest first</a>
+        <a href={buildQueueHref("newest", category)}>Newest first</a> ·{" "}
+        <a href={buildQueueHref("oldest", category)}>Oldest first</a>
       </p>
-      <QueueList view="queue" sort={sort} rows={queueVideos(user.id, sort)} />
+      <CategoryFilterLinks
+        categories={allCategories()}
+        current={category}
+        buildHref={(catId) => buildQueueHref(sort, catId)}
+      />
+      <QueueList
+        view="queue"
+        sort={sort}
+        category={category}
+        rows={queueVideos(user.id, sort, category)}
+      />
     </Layout>,
   );
 });

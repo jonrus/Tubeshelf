@@ -35,7 +35,7 @@ Generated: 2026-07-24
   --noEmit` reports no new errors, and `bun test test/routes/queue.test.ts` still passes
   unmodified.
 
-- [ ] 3. Wire category filtering into the `GET /queue` handler (`queueRoute.get(
+- [x] 3. Wire category filtering into the `GET /queue` handler (`queueRoute.get(
   "/queue", ...)` — locate by route path; task 1's edits above it will have shifted its
   line number from the pre-task-1 `queue.tsx:172`) per the spec's Design > Routes
   section: add the `buildQueueHref(sort, category?)` helper (exact code
