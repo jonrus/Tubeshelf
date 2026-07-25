@@ -80,7 +80,7 @@ Generated: 2026-07-25
   `bunx tsc --noEmit` reports no new errors, and `bun test test/lib/watch-status.test.ts`
   passes covering all of the above plus all pre-existing tests unmodified.
 
-- [ ] 4. In `src/views/queue-list.tsx`, add the `IgnoredRow` type, extend
+- [x] 4. In `src/views/queue-list.tsx`, add the `IgnoredRow` type, extend
   `QueueListProps`'s union with the `"ignored"` variant, and add `ignoreHref`/
   `unignoreHref` helpers, exactly per the spec's Design > `src/views/queue-list.tsx`
   changes section (note `IgnoredRow.ignoreMethod` must be typed `"manual" | "auto" |

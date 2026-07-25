@@ -24,6 +24,14 @@ export type WatchedRow = {
   categoryName: string;
 };
 
+export type IgnoredRow = {
+  id: number;
+  title: string;
+  channelName: string;
+  categoryName: string;
+  ignoreMethod: "manual" | "auto" | null;
+};
+
 function youtubeUrl(youtubeVideoId: string): string {
   return `https://www.youtube.com/watch?v=${youtubeVideoId}`;
 }
@@ -52,6 +60,25 @@ function toggleHref(
   return `/videos/${id}/toggle?${params.toString()}`;
 }
 
+function ignoreHref(
+  id: number,
+  view: "queue" | "continue-watching",
+  sort?: "newest" | "oldest",
+  category?: number,
+): string {
+  const params = new URLSearchParams({ view });
+  if (sort) params.set("sort", sort);
+  if (category !== undefined) params.set("category", String(category));
+  return `/videos/${id}/ignore?${params.toString()}`;
+}
+
+function unignoreHref(id: number, category?: number): string {
+  const params = new URLSearchParams();
+  if (category !== undefined) params.set("category", String(category));
+  const qs = params.toString();
+  return `/videos/${id}/unignore${qs ? `?${qs}` : ""}`;
+}
+
 export const CategoryFilterLinks: FC<{
   categories: { id: number; name: string }[];
   buildHref: (categoryId?: number) => string;
@@ -76,7 +103,8 @@ type QueueListProps =
       rows: QueueRow[];
     }
   | { view: "continue-watching"; category?: number; rows: QueueRow[] }
-  | { view: "watched"; category?: number; rows: WatchedRow[] };
+  | { view: "watched"; category?: number; rows: WatchedRow[] }
+  | { view: "ignored"; category?: number; rows: IgnoredRow[] };
 
 export const QueueList: FC<QueueListProps> = (props) => {
   return (
@@ -103,45 +131,76 @@ export const QueueList: FC<QueueListProps> = (props) => {
                   : ""}
               </li>
             ))
-          : props.rows.map((row) => {
-              const sort = props.view === "queue" ? props.sort : undefined;
-              return (
+          : props.view === "ignored"
+            ? props.rows.map((row) => (
                 <li key={row.id}>
-                  <a
-                    href={watchingHref(
-                      row.id,
-                      props.view,
-                      sort,
-                      props.category,
-                    )}
-                    class="watch-link"
-                    data-youtube-url={youtubeUrl(row.youtubeVideoId)}
-                  >
-                    {row.title}
-                  </a>{" "}
-                  — {row.channelName} ({row.categoryName})
-                  {row.publishedAt
-                    ? ` · published ${row.publishedAt.toLocaleDateString()}`
-                    : ""}
+                  {row.title}
+                  {row.ignoreMethod ? ` [${row.ignoreMethod}]` : ""} —{" "}
+                  {row.channelName} ({row.categoryName})
                   <button
                     type="button"
-                    hx-post={toggleHref(
-                      row.id,
-                      props.view,
-                      sort,
-                      props.category,
-                    )}
+                    hx-post={unignoreHref(row.id, props.category)}
                     hx-target="#queue-list"
                     hx-swap="outerHTML"
                     hx-disabled-elt="this"
                   >
-                    {row.status === "watching"
-                      ? "Clear to Unwatched"
-                      : "Mark Watched"}
+                    Un-ignore
                   </button>
                 </li>
-              );
-            })}
+              ))
+            : props.rows.map((row) => {
+                const sort = props.view === "queue" ? props.sort : undefined;
+                return (
+                  <li key={row.id}>
+                    <a
+                      href={watchingHref(
+                        row.id,
+                        props.view,
+                        sort,
+                        props.category,
+                      )}
+                      class="watch-link"
+                      data-youtube-url={youtubeUrl(row.youtubeVideoId)}
+                    >
+                      {row.title}
+                    </a>{" "}
+                    — {row.channelName} ({row.categoryName})
+                    {row.publishedAt
+                      ? ` · published ${row.publishedAt.toLocaleDateString()}`
+                      : ""}
+                    <button
+                      type="button"
+                      hx-post={toggleHref(
+                        row.id,
+                        props.view,
+                        sort,
+                        props.category,
+                      )}
+                      hx-target="#queue-list"
+                      hx-swap="outerHTML"
+                      hx-disabled-elt="this"
+                    >
+                      {row.status === "watching"
+                        ? "Clear to Unwatched"
+                        : "Mark Watched"}
+                    </button>
+                    <button
+                      type="button"
+                      hx-post={ignoreHref(
+                        row.id,
+                        props.view,
+                        sort,
+                        props.category,
+                      )}
+                      hx-target="#queue-list"
+                      hx-swap="outerHTML"
+                      hx-disabled-elt="this"
+                    >
+                      Ignore
+                    </button>
+                  </li>
+                );
+              })}
       </ul>
     </div>
   );
