@@ -20,7 +20,7 @@ Generated: 2026-07-24
   test test/routes/queue.test.ts` still passes unmodified (proves the new optional
   parameters didn't change existing unfiltered behavior).
 
-- [ ] 2. In `src/views/queue-list.tsx`, add the `CategoryFilterLinks` component exactly
+- [x] 2. In `src/views/queue-list.tsx`, add the `CategoryFilterLinks` component exactly
   per the spec's Design > Picker component section (`categories`/`buildHref`/`current`
   props, "All" link plus one link per category, no active-link styling). Add an optional
   `category?: number` parameter to `watchingHref` and `toggleHref` (currently

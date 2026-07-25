@@ -32,9 +32,11 @@ function watchingHref(
   id: number,
   view: QueueListView,
   sort?: "newest" | "oldest",
+  category?: number,
 ): string {
   const params = new URLSearchParams({ from: view });
   if (view === "queue" && sort) params.set("sort", sort);
+  if (category !== undefined) params.set("category", String(category));
   return `/watching/${id}?${params.toString()}`;
 }
 
@@ -42,16 +44,39 @@ function toggleHref(
   id: number,
   view: "queue" | "continue-watching",
   sort?: "newest" | "oldest",
+  category?: number,
 ): string {
   const params = new URLSearchParams({ view });
   if (sort) params.set("sort", sort);
+  if (category !== undefined) params.set("category", String(category));
   return `/videos/${id}/toggle?${params.toString()}`;
 }
 
+export const CategoryFilterLinks: FC<{
+  categories: { id: number; name: string }[];
+  buildHref: (categoryId?: number) => string;
+  current?: number;
+}> = (props) => (
+  <p>
+    <a href={props.buildHref()}>All</a>
+    {props.categories.map((cat) => (
+      <>
+        {" "}
+        · <a href={props.buildHref(cat.id)}>{cat.name}</a>
+      </>
+    ))}
+  </p>
+);
+
 type QueueListProps =
-  | { view: "queue"; sort: "newest" | "oldest"; rows: QueueRow[] }
-  | { view: "continue-watching"; rows: QueueRow[] }
-  | { view: "watched"; rows: WatchedRow[] };
+  | {
+      view: "queue";
+      sort: "newest" | "oldest";
+      category?: number;
+      rows: QueueRow[];
+    }
+  | { view: "continue-watching"; category?: number; rows: QueueRow[] }
+  | { view: "watched"; category?: number; rows: WatchedRow[] };
 
 export const QueueList: FC<QueueListProps> = (props) => {
   return (
@@ -61,7 +86,12 @@ export const QueueList: FC<QueueListProps> = (props) => {
           ? props.rows.map((row) => (
               <li key={row.id}>
                 <a
-                  href={watchingHref(row.id, "watched")}
+                  href={watchingHref(
+                    row.id,
+                    "watched",
+                    undefined,
+                    props.category,
+                  )}
                   class="watch-link"
                   data-youtube-url={youtubeUrl(row.youtubeVideoId)}
                 >
@@ -78,7 +108,12 @@ export const QueueList: FC<QueueListProps> = (props) => {
               return (
                 <li key={row.id}>
                   <a
-                    href={watchingHref(row.id, props.view, sort)}
+                    href={watchingHref(
+                      row.id,
+                      props.view,
+                      sort,
+                      props.category,
+                    )}
                     class="watch-link"
                     data-youtube-url={youtubeUrl(row.youtubeVideoId)}
                   >
@@ -90,7 +125,12 @@ export const QueueList: FC<QueueListProps> = (props) => {
                     : ""}
                   <button
                     type="button"
-                    hx-post={toggleHref(row.id, props.view, sort)}
+                    hx-post={toggleHref(
+                      row.id,
+                      props.view,
+                      sort,
+                      props.category,
+                    )}
                     hx-target="#queue-list"
                     hx-swap="outerHTML"
                     hx-disabled-elt="this"
