@@ -2,7 +2,7 @@
 Spec: docs/specs/007-ignore-rules-and-ignored-view.md
 Generated: 2026-07-25
 
-- [ ] 1. Create `src/lib/ignore-rules.ts` with `listIgnoreRules()`, `matchesAnyRule(video,
+- [x] 1. Create `src/lib/ignore-rules.ts` with `listIgnoreRules()`, `matchesAnyRule(video,
   rules)`, and `reconcileIgnoreRules(): void` exactly per the spec's Design >
   `src/lib/ignore-rules.ts` (new) section (exact code sketched there, including the
   `db.transaction((tx) => {...})` wrapper around both select/update passes — confirm this
