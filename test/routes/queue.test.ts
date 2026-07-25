@@ -30,6 +30,22 @@ const category = db
   .returning()
   .get();
 
+const otherCategory = db
+  .insert(categories)
+  .values({ name: "Other Queue Test Category" })
+  .returning()
+  .get();
+
+const systemCategoryRow = db
+  .select()
+  .from(categories)
+  .where(eq(categories.isSystem, true))
+  .get();
+if (!systemCategoryRow) {
+  throw new Error("seed did not create the system Uncategorized category");
+}
+const systemCategory = systemCategoryRow;
+
 let channelCounter = 0;
 function makeChannel(name: string) {
   channelCounter += 1;
@@ -47,14 +63,14 @@ function makeChannel(name: string) {
 
 function makeSubscription(
   channelId: number,
-  opts: { unsubscribed?: boolean } = {},
+  opts: { unsubscribed?: boolean; categoryId?: number } = {},
 ) {
   return db
     .insert(subscriptions)
     .values({
       userId: defaultUser.id,
       youtubeChannelId: channelId,
-      categoryId: category.id,
+      categoryId: opts.categoryId ?? category.id,
       unsubscribedAt: opts.unsubscribed ? new Date() : null,
     })
     .returning()
@@ -212,6 +228,164 @@ test("GET /watched lists only watched videos, most-recently-watched-first, inclu
     html.indexOf(earlierWatched.title),
   );
   expect(html).toContain(`/watching/${laterWatched.id}?from=watched`);
+});
+
+test("GET /queue?category=<id> only returns that category's videos", async () => {
+  const channel = makeChannel("Category Filter Queue Channel");
+  makeSubscription(channel.id, { categoryId: category.id });
+  const inCategory = makeVideo(channel.id, { status: "unwatched" });
+
+  const otherChannel = makeChannel("Category Filter Queue Other Channel");
+  makeSubscription(otherChannel.id, { categoryId: otherCategory.id });
+  const inOtherCategory = makeVideo(otherChannel.id, { status: "unwatched" });
+
+  const res = await queueRoute.request(`/queue?category=${category.id}`);
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).toContain(inCategory.title);
+  expect(html).not.toContain(inOtherCategory.title);
+});
+
+test("GET /queue?category=<uncategorized id> returns exactly the Uncategorized-channel videos", async () => {
+  const uncategorizedChannel = makeChannel(
+    "Category Filter Uncategorized Channel",
+  );
+  makeSubscription(uncategorizedChannel.id, { categoryId: systemCategory.id });
+  const uncategorizedVideo = makeVideo(uncategorizedChannel.id, {
+    status: "unwatched",
+  });
+
+  const categorizedChannel = makeChannel("Category Filter Categorized Channel");
+  makeSubscription(categorizedChannel.id, { categoryId: category.id });
+  const categorizedVideo = makeVideo(categorizedChannel.id, {
+    status: "unwatched",
+  });
+
+  const res = await queueRoute.request(`/queue?category=${systemCategory.id}`);
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).toContain(uncategorizedVideo.title);
+  expect(html).not.toContain(categorizedVideo.title);
+});
+
+test("GET /queue?category=<invalid or nonexistent> falls back to unfiltered, same as no category param", async () => {
+  const channel = makeChannel("Category Filter Fallback Channel");
+  makeSubscription(channel.id, { categoryId: otherCategory.id });
+  const video = makeVideo(channel.id, { status: "unwatched" });
+
+  const noParamRes = await queueRoute.request("/queue");
+  const noParamHtml = await noParamRes.text();
+  expect(noParamHtml).toContain(video.title);
+
+  const invalidRes = await queueRoute.request("/queue?category=not-a-number");
+  const invalidHtml = await invalidRes.text();
+  expect(invalidHtml).toContain(video.title);
+
+  const nonexistentRes = await queueRoute.request("/queue?category=999999");
+  const nonexistentHtml = await nonexistentRes.text();
+  expect(nonexistentHtml).toContain(video.title);
+});
+
+test("GET /queue?category=<id>&sort=oldest composes filtering with sort", async () => {
+  const channel = makeChannel("Category Filter Sort Channel");
+  makeSubscription(channel.id, { categoryId: category.id });
+  const older = makeVideo(channel.id, {
+    status: "unwatched",
+    publishedAt: new Date("2026-05-01T00:00:00Z"),
+  });
+  const newer = makeVideo(channel.id, {
+    status: "unwatched",
+    publishedAt: new Date("2026-05-10T00:00:00Z"),
+  });
+
+  const otherChannel = makeChannel("Category Filter Sort Other Channel");
+  makeSubscription(otherChannel.id, { categoryId: otherCategory.id });
+  const otherVideo = makeVideo(otherChannel.id, {
+    status: "unwatched",
+    publishedAt: new Date("2026-05-05T00:00:00Z"),
+  });
+
+  const res = await queueRoute.request(
+    `/queue?category=${category.id}&sort=oldest`,
+  );
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).not.toContain(otherVideo.title);
+  expect(html.indexOf(older.title)).toBeLessThan(html.indexOf(newer.title));
+});
+
+test("GET /continue-watching?category=<id> only returns that category's videos", async () => {
+  const channel = makeChannel("Category Filter Continue Watching Channel");
+  makeSubscription(channel.id, { categoryId: category.id });
+  const inCategory = makeVideo(channel.id, { status: "watching" });
+
+  const otherChannel = makeChannel(
+    "Category Filter Continue Watching Other Channel",
+  );
+  makeSubscription(otherChannel.id, { categoryId: otherCategory.id });
+  const inOtherCategory = makeVideo(otherChannel.id, { status: "watching" });
+
+  const res = await queueRoute.request(
+    `/continue-watching?category=${category.id}`,
+  );
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).toContain(inCategory.title);
+  expect(html).not.toContain(inOtherCategory.title);
+});
+
+test("GET /watched?category=<id> only returns that category's videos, including a since-unsubscribed channel's history", async () => {
+  const channel = makeChannel("Category Filter Watched Channel");
+  const sub = makeSubscription(channel.id, { categoryId: category.id });
+  const historyVideo = makeVideo(channel.id, {
+    status: "watched",
+    watchedAt: new Date("2026-07-01T00:00:00Z"),
+  });
+  db.update(subscriptions)
+    .set({ unsubscribedAt: new Date() })
+    .where(eq(subscriptions.id, sub.id))
+    .run();
+
+  const otherChannel = makeChannel("Category Filter Watched Other Channel");
+  makeSubscription(otherChannel.id, { categoryId: otherCategory.id });
+  const otherVideo = makeVideo(otherChannel.id, {
+    status: "watched",
+    watchedAt: new Date("2026-07-02T00:00:00Z"),
+  });
+
+  const res = await queueRoute.request(`/watched?category=${category.id}`);
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).toContain(historyVideo.title);
+  expect(html).not.toContain(otherVideo.title);
+});
+
+test("GET /queue, /continue-watching, /watched each render a link per existing category plus All", async () => {
+  for (const path of ["/queue", "/continue-watching", "/watched"]) {
+    const res = await queueRoute.request(path);
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain(">All</a>");
+    expect(html).toContain(`>${category.name}</a>`);
+    expect(html).toContain(`>${otherCategory.name}</a>`);
+    expect(html).toContain(">Uncategorized</a>");
+  }
+});
+
+test("GET /queue's category links preserve sort, and sort links preserve category", async () => {
+  const sortedRes = await queueRoute.request("/queue?sort=oldest");
+  const sortedHtml = await sortedRes.text();
+  expect(sortedHtml).toContain(
+    `href="/queue?sort=oldest&amp;category=${category.id}"`,
+  );
+
+  const filteredRes = await queueRoute.request(
+    `/queue?category=${category.id}`,
+  );
+  const filteredHtml = await filteredRes.text();
+  expect(filteredHtml).toContain(
+    `href="/queue?sort=oldest&amp;category=${category.id}"`,
+  );
 });
 
 test("GET /watching/:id 404s for a nonexistent video", async () => {
@@ -467,4 +641,54 @@ test("POST /videos/:id/toggle 404s for a nonexistent video", async () => {
     method: "POST",
   });
   expect(res.status).toBe(404);
+});
+
+test("POST /videos/:id/toggle?view=queue&category=<id> keeps the re-rendered partial scoped to that category", async () => {
+  const channel = makeChannel("Category Filter Toggle Queue Channel");
+  makeSubscription(channel.id, { categoryId: category.id });
+  const toggled = makeVideo(channel.id, { status: "unwatched" });
+  const staysSameCategory = makeVideo(channel.id, { status: "watching" });
+
+  const otherChannel = makeChannel(
+    "Category Filter Toggle Queue Other Channel",
+  );
+  makeSubscription(otherChannel.id, { categoryId: otherCategory.id });
+  const otherCategoryVideo = makeVideo(otherChannel.id, {
+    status: "unwatched",
+  });
+
+  const res = await queueRoute.request(
+    `/videos/${toggled.id}/toggle?view=queue&category=${category.id}`,
+    { method: "POST" },
+  );
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).not.toContain(toggled.title);
+  expect(html).toContain(staysSameCategory.title);
+  expect(html).not.toContain(otherCategoryVideo.title);
+});
+
+test("POST /videos/:id/toggle?view=continue-watching&category=<id> keeps the re-rendered partial scoped to that category", async () => {
+  const channel = makeChannel(
+    "Category Filter Toggle Continue Watching Channel",
+  );
+  makeSubscription(channel.id, { categoryId: category.id });
+  const toggled = makeVideo(channel.id, { status: "watching" });
+
+  const otherChannel = makeChannel(
+    "Category Filter Toggle Continue Watching Other Channel",
+  );
+  makeSubscription(otherChannel.id, { categoryId: otherCategory.id });
+  const otherCategoryVideo = makeVideo(otherChannel.id, {
+    status: "watching",
+  });
+
+  const res = await queueRoute.request(
+    `/videos/${toggled.id}/toggle?view=continue-watching&category=${category.id}`,
+    { method: "POST" },
+  );
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).not.toContain(toggled.title);
+  expect(html).not.toContain(otherCategoryVideo.title);
 });

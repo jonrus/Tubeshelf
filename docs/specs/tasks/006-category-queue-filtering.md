@@ -112,7 +112,7 @@ Generated: 2026-07-24
   existing props. Done when: `bun run lint` is clean, `bunx tsc --noEmit` reports no new
   errors, and `bun test test/routes/queue.test.ts` still passes unmodified.
 
-- [ ] 8. Add filtering-behavior test coverage to `test/routes/queue.test.ts` per the
+- [x] 8. Add filtering-behavior test coverage to `test/routes/queue.test.ts` per the
   spec's Testing section. First add a second category fixture alongside the existing
   module-level `category` (`queue.test.ts:27-31`, `"Queue Test Category"`) — e.g. `const
   otherCategory = db.insert(categories).values({ name: "Other Queue Test Category"
