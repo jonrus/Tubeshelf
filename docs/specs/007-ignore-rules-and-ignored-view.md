@@ -131,33 +131,43 @@ export function matchesAnyRule(
 export function reconcileIgnoreRules(): void {
   const rules = listIgnoreRules();
 
-  const autoIgnored = db
-    .select({ id: videos.id, title: videos.title, description: videos.description })
-    .from(videos)
-    .where(and(eq(videos.status, "ignored"), eq(videos.ignoreMethod, "auto")))
-    .all();
-  for (const video of autoIgnored) {
-    if (!matchesAnyRule(video, rules)) {
-      db.update(videos)
-        .set({ status: "unwatched", ignoreMethod: null })
-        .where(eq(videos.id, video.id))
-        .run();
+  // Wrapped in one transaction -- unlike applyFeedToChannel's per-channel upserts
+  // (docs/specs/003-scheduled-video-ingestion.md's "no transaction needed" call),
+  // which self-heal automatically on the next hourly scheduled poll regardless of a
+  // mid-run failure, this function only reruns on the next explicit rule add/edit/
+  // delete. A crash partway through the loop below (a genuine DB failure, not a
+  // reachable app-level error) would otherwise leave some videos reconciled and
+  // others not, with no guaranteed retry -- a single transaction makes the whole pass
+  // atomic instead.
+  db.transaction((tx) => {
+    const autoIgnored = tx
+      .select({ id: videos.id, title: videos.title, description: videos.description })
+      .from(videos)
+      .where(and(eq(videos.status, "ignored"), eq(videos.ignoreMethod, "auto")))
+      .all();
+    for (const video of autoIgnored) {
+      if (!matchesAnyRule(video, rules)) {
+        tx.update(videos)
+          .set({ status: "unwatched", ignoreMethod: null })
+          .where(eq(videos.id, video.id))
+          .run();
+      }
     }
-  }
 
-  const candidates = db
-    .select({ id: videos.id, title: videos.title, description: videos.description })
-    .from(videos)
-    .where(inArray(videos.status, ["unwatched", "watching"]))
-    .all();
-  for (const video of candidates) {
-    if (matchesAnyRule(video, rules)) {
-      db.update(videos)
-        .set({ status: "ignored", ignoreMethod: "auto" })
-        .where(eq(videos.id, video.id))
-        .run();
+    const candidates = tx
+      .select({ id: videos.id, title: videos.title, description: videos.description })
+      .from(videos)
+      .where(inArray(videos.status, ["unwatched", "watching"]))
+      .all();
+    for (const video of candidates) {
+      if (matchesAnyRule(video, rules)) {
+        tx.update(videos)
+          .set({ status: "ignored", ignoreMethod: "auto" })
+          .where(eq(videos.id, video.id))
+          .run();
+      }
     }
-  }
+  });
 }
 ```
 
@@ -257,10 +267,56 @@ export function setWatching(videoId: number): { status: "watching" } | null {
 }
 ```
 
-`toggleQueueStatus` and `toggleWatchedFromWatchingPage` each gain the same
-`ignoreMethod: null` in their existing `.set({...})` call, unconditionally, alongside
-their existing `status`/`watchedAt` writes — no other change to either function's
-logic.
+`toggleQueueStatus` and `toggleWatchedFromWatchingPage` each gain the identical single
+new key in their existing `.set({...})` call — fully sketched here too, rather than
+left as prose, per a second red-team pass's note that leaving these two as prose was
+itself the same "described only in prose" category this spec already criticizes itself
+for elsewhere (only the *addition* is new; every other line is unchanged from the
+current file):
+
+```ts
+export function toggleQueueStatus(
+  videoId: number,
+): { status: "watched" | "unwatched" } | null {
+  const current = db.select({ status: videos.status }).from(videos)
+    .where(eq(videos.id, videoId)).get();
+  if (!current) return null;
+
+  const nextStatus = current.status === "unwatched" ? "watched" : "unwatched";
+
+  db.update(videos)
+    .set({
+      status: nextStatus,
+      watchedAt: nextStatus === "watched" ? new Date() : null,
+      ignoreMethod: null, // new
+    })
+    .where(eq(videos.id, videoId))
+    .run();
+
+  return { status: nextStatus };
+}
+
+export function toggleWatchedFromWatchingPage(
+  videoId: number,
+): { status: "watched" | "unwatched" } | null {
+  const current = db.select({ status: videos.status }).from(videos)
+    .where(eq(videos.id, videoId)).get();
+  if (!current) return null;
+
+  const nextStatus = current.status === "watched" ? "unwatched" : "watched";
+
+  db.update(videos)
+    .set({
+      status: nextStatus,
+      watchedAt: nextStatus === "watched" ? new Date() : null,
+      ignoreMethod: null, // new
+    })
+    .where(eq(videos.id, videoId))
+    .run();
+
+  return { status: nextStatus };
+}
+```
 
 Two new functions, same shape as the existing three:
 
@@ -283,17 +339,33 @@ export function unignoreVideo(videoId: number): { status: "unwatched" } | null {
   if (!current) return null;
 
   db.update(videos)
-    .set({ status: "unwatched", ignoreMethod: null })
+    .set({ status: "unwatched", ignoreMethod: null, watchedAt: null })
     .where(eq(videos.id, videoId))
     .run();
   return { status: "unwatched" };
 }
 ```
 
-`ignoreVideo` clears `watchedAt` defensively (mirroring the `watched_at_check`
-constraint requiring it null whenever status isn't `watched`) even though its only
-call site (the queue/continue-watching row button) only ever fires against
-`unwatched`/`watching` rows, which already have it null.
+**Real bug caught in a second red-team pass, fixed here:** an earlier draft of
+`unignoreVideo` left `watchedAt` untouched. `POST /videos/:id/unignore` (see routes
+below) has no status guard, same as every other by-id route in this codebase — so
+calling it against a video that's currently `watched` (reachable: its id is exposed in
+`/ignored`'s rendered markup, and a stale tab could separately mark that same video
+Watched via the already-unguarded `/videos/:id/watched-toggle` first) would set
+`status: "unwatched"` while leaving `watchedAt` non-null, violating the
+`watched_at_check` constraint (`(status = 'watched') = (watched_at is not null)`,
+`src/db/schema.ts`) and throwing at the `.run()` call — an uncaught 500, not a silent
+bad state. `ignoreVideo` above already clears `watchedAt` defensively for the same
+underlying reason (unguarded-by-id routes); `unignoreVideo` now does too, closing the
+one call site that didn't.
+
+Separately (not a bug, just worth stating plainly): `POST /videos/:id/ignore` itself
+also has no status guard, so calling it against a video that's already `ignored`
+(again, only reachable by directly hitting the route with a known id — no UI surface
+does this) would harmlessly set `ignoreMethod: 'manual'` again. That's not a bad state;
+it's exactly the deferred "lock in" behavior from Context, just reachable through the
+raw route rather than through any UI this spec builds. Left as-is — no UI surface
+triggers it, and there's no invariant it violates.
 
 ### `src/routes/queue.tsx` changes
 
@@ -602,7 +674,23 @@ infrastructure to defer it to.
 
 ### `src/views/ignore-rules-list.tsx` + `ignore-rules-page.tsx` (new)
 
-`IgnoreRulesPage` is a thin `Layout` wrapper, same shape as `CategoriesPage`.
+`IgnoreRulesPage` is a thin `Layout` wrapper, same shape as `CategoriesPage`:
+
+```tsx
+import type { FC } from "hono/jsx";
+import type { ignoreRules } from "../db/schema";
+import { Layout } from "./layout";
+import { IgnoreRulesList } from "./ignore-rules-list";
+
+export const IgnoreRulesPage: FC<{
+  rules: (typeof ignoreRules.$inferSelect)[];
+}> = (props) => (
+  <Layout title="Ignore Rules">
+    <IgnoreRulesList rules={props.rules} />
+  </Layout>
+);
+```
+
 `IgnoreRulesList` is the interesting piece — an `editingId` prop switches one row into
 an inline edit form, following the exact `hx-select` "reuse the GET route as a cancel
 target" pattern `subscribe-confirm.tsx`'s `ConfirmPanel` Cancel button already
@@ -749,6 +837,11 @@ app.route("/", ignoreRulesRoute);
   it from the re-rendered `/ignored` list — cover both source `ignoreMethod` values
   explicitly, since un-ignore must behave identically regardless of how the video got
   ignored.
+- `POST /videos/:id/unignore` against a video whose status is currently `watched`
+  (`watchedAt` non-null) does **not** throw/500 and correctly clears `watchedAt` to
+  `null` alongside `status: 'unwatched'` — the regression test for the crash a second
+  red-team pass caught (see `unignoreVideo`'s Design section): without clearing
+  `watchedAt`, this update would violate the `watched_at_check` constraint.
 - Category-filter round trip for `/ignored`'s picker links, same pattern as the other
   three views' existing coverage.
 - **End-to-end row-button round trip** (caught missing in red-team review — the bullets
@@ -810,6 +903,33 @@ caught four real issues, all fixed in the Design section above rather than left 
   pass even if those two functions were never wired into `queue-list.tsx`'s JSX. Added
   as the Testing section's "End-to-end row-button round trip" bullet.
 
-The one deferred item from Context (the "lock in"/convert-to-manual action) remains an
-accepted scope cut, not an open question — it can be picked up in a follow-up spec if
-auto-ignored videos accumulating without a lock-in path proves annoying in real use.
+A second red-team pass (after the first pass's four fixes above were already applied)
+caught one real bug and two consistency gaps, all now fixed:
+- **Real bug:** `unignoreVideo` didn't clear `watchedAt`, so calling
+  `POST /videos/:id/unignore` against a video whose status happened to be `watched`
+  (reachable via the same unguarded-by-id pattern fix #3 above already diagnosed for
+  three other functions) would violate the `watched_at_check` constraint and throw —
+  an uncaught 500, not just a silent bad state. Fixed by having `unignoreVideo`
+  unconditionally clear `watchedAt` too, matching `ignoreVideo`'s existing defensive
+  clear. A dedicated regression test bullet was added to Testing.
+- `reconcileIgnoreRules`'s two-pass loop issued individual synchronous updates with no
+  transaction — unlike `applyFeedToChannel`'s per-channel upserts (which self-heal on
+  the next hourly scheduled poll regardless of a mid-run failure), this function only
+  reruns on the next explicit rule CRUD action, so a mid-loop crash could leave
+  inconsistent state indefinitely. Fixed by wrapping both passes in one
+  `db.transaction(...)`.
+- `toggleQueueStatus`/`toggleWatchedFromWatchingPage`'s `ignoreMethod: null` addition
+  and `IgnoreRulesPage`'s shape were both left as prose rather than fully sketched —
+  the exact "described only in prose" gap category this spec already criticizes itself
+  for elsewhere. Both are now fully sketched in their respective Design subsections.
+
+Also confirmed, not a gap: `POST /videos/:id/ignore` against an already-`ignored` video
+(reachable only by directly hitting the route with a known id, no UI surface does this)
+harmlessly re-sets `ignoreMethod: 'manual'` — this is exactly the deferred "lock in"
+behavior from Context, just reachable through the raw route rather than any UI this
+spec builds; left as-is since nothing breaks and no UI triggers it.
+
+The one deferred item from Context (the "lock in"/convert-to-manual action, as a real
+UI surface) remains an accepted scope cut, not an open question — it can be picked up
+in a follow-up spec if auto-ignored videos accumulating without a lock-in path proves
+annoying in real use.
