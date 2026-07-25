@@ -55,7 +55,7 @@ Generated: 2026-07-24
   category=<a real category id>` from inside the devcontainer returns HTML scoped to
   that category only.
 
-- [ ] 4. Wire category filtering into the `GET /continue-watching` and `GET /watched`
+- [x] 4. Wire category filtering into the `GET /continue-watching` and `GET /watched`
   handlers (locate by route path — prior tasks' edits mean their line numbers have
   shifted from the pre-task-1 `queue.tsx:186`/`:198`) the same way task 3 did for
   `/queue`: add

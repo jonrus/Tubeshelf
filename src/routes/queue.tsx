@@ -243,13 +243,34 @@ queueRoute.get("/queue", (c) => {
   );
 });
 
+function buildContinueWatchingHref(category?: number): string {
+  const params = new URLSearchParams();
+  if (category !== undefined) params.set("category", String(category));
+  const qs = params.toString();
+  return `/continue-watching${qs ? `?${qs}` : ""}`;
+}
+
+function buildWatchedHref(category?: number): string {
+  const params = new URLSearchParams();
+  if (category !== undefined) params.set("category", String(category));
+  const qs = params.toString();
+  return `/watched${qs ? `?${qs}` : ""}`;
+}
+
 queueRoute.get("/continue-watching", (c) => {
   const user = getCurrentUser();
+  const category = resolveCategoryFilter(c.req.query("category"));
   return c.html(
     <Layout title="Continue Watching">
+      <CategoryFilterLinks
+        categories={allCategories()}
+        current={category}
+        buildHref={buildContinueWatchingHref}
+      />
       <QueueList
         view="continue-watching"
-        rows={continueWatchingVideos(user.id)}
+        category={category}
+        rows={continueWatchingVideos(user.id, category)}
       />
     </Layout>,
   );
@@ -257,9 +278,19 @@ queueRoute.get("/continue-watching", (c) => {
 
 queueRoute.get("/watched", (c) => {
   const user = getCurrentUser();
+  const category = resolveCategoryFilter(c.req.query("category"));
   return c.html(
     <Layout title="Watched">
-      <QueueList view="watched" rows={watchedVideos(user.id)} />
+      <CategoryFilterLinks
+        categories={allCategories()}
+        current={category}
+        buildHref={buildWatchedHref}
+      />
+      <QueueList
+        view="watched"
+        category={category}
+        rows={watchedVideos(user.id, category)}
+      />
     </Layout>,
   );
 });
