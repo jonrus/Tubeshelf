@@ -118,7 +118,7 @@ Generated: 2026-07-25
   `/ignored` and `POST /videos/:id/ignore`/`POST /videos/:id/unignore` from inside the
   devcontainer behave as the spec describes.
 
-- [ ] 6. Add core functional test coverage to `test/routes/queue.test.ts` per the spec's
+- [x] 6. Add core functional test coverage to `test/routes/queue.test.ts` per the spec's
   Testing > `test/routes/queue.test.ts` extension bullets (excluding the end-to-end
   round-trip bullet — that's task 7): `POST /videos/:id/ignore?view=queue&...` and
   `?view=continue-watching&...` both set the video to `ignored`/`manual` and remove it

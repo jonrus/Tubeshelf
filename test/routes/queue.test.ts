@@ -84,6 +84,7 @@ function makeVideo(
     status?: "unwatched" | "watching" | "watched" | "ignored";
     publishedAt?: Date | null;
     watchedAt?: Date | null;
+    ignoreMethod?: "manual" | "auto" | null;
   } = {},
 ) {
   videoCounter += 1;
@@ -96,6 +97,7 @@ function makeVideo(
       status: opts.status ?? "unwatched",
       publishedAt: opts.publishedAt,
       watchedAt: opts.watchedAt ?? null,
+      ignoreMethod: opts.ignoreMethod ?? null,
     })
     .returning()
     .get();
@@ -360,8 +362,8 @@ test("GET /watched?category=<id> only returns that category's videos, including 
   expect(html).not.toContain(otherVideo.title);
 });
 
-test("GET /queue, /continue-watching, /watched each render a link per existing category plus All", async () => {
-  for (const path of ["/queue", "/continue-watching", "/watched"]) {
+test("GET /queue, /continue-watching, /watched, /ignored each render a link per existing category plus All", async () => {
+  for (const path of ["/queue", "/continue-watching", "/watched", "/ignored"]) {
     const res = await queueRoute.request(path);
     expect(res.status).toBe(200);
     const html = await res.text();
@@ -869,4 +871,199 @@ test("POST /videos/:id/toggle?view=continue-watching&category=<id> keeps the re-
   const html = await res.text();
   expect(html).not.toContain(toggled.title);
   expect(html).not.toContain(otherCategoryVideo.title);
+});
+
+test("POST /videos/:id/ignore?view=queue sets ignored/manual and removes the row from the re-rendered queue", async () => {
+  const channel = makeChannel("Ignore Queue View Channel");
+  makeSubscription(channel.id);
+  const ignored = makeVideo(channel.id, { status: "unwatched" });
+  const stays = makeVideo(channel.id, { status: "watching" });
+
+  const res = await queueRoute.request(
+    `/videos/${ignored.id}/ignore?view=queue&sort=newest`,
+    { method: "POST" },
+  );
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).not.toContain(ignored.title);
+  expect(html).toContain(stays.title);
+  expect(videoRow(ignored.id).status).toBe("ignored");
+  expect(videoRow(ignored.id).ignoreMethod).toBe("manual");
+});
+
+test("POST /videos/:id/ignore?view=continue-watching sets ignored/manual and removes the row from the re-rendered continue-watching list", async () => {
+  const channel = makeChannel("Ignore Continue Watching View Channel");
+  makeSubscription(channel.id);
+  const video = makeVideo(channel.id, { status: "watching" });
+
+  const res = await queueRoute.request(
+    `/videos/${video.id}/ignore?view=continue-watching`,
+    { method: "POST" },
+  );
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).not.toContain(video.title);
+  expect(videoRow(video.id).status).toBe("ignored");
+  expect(videoRow(video.id).ignoreMethod).toBe("manual");
+});
+
+test("POST /videos/:id/ignore 404s for a nonexistent video", async () => {
+  const res = await queueRoute.request("/videos/999999/ignore", {
+    method: "POST",
+  });
+  expect(res.status).toBe(404);
+});
+
+test("GET /ignored lists only ignored videos for active subscriptions, excluding a since-unsubscribed channel's", async () => {
+  const channel = makeChannel("Ignored View Channel");
+  makeSubscription(channel.id);
+  const manualIgnored = makeVideo(channel.id, {
+    status: "ignored",
+    ignoreMethod: "manual",
+  });
+  const autoIgnored = makeVideo(channel.id, {
+    status: "ignored",
+    ignoreMethod: "auto",
+  });
+  const unwatched = makeVideo(channel.id, { status: "unwatched" });
+
+  const unsubChannel = makeChannel("Ignored Then Unsubscribed Channel");
+  const unsubSub = makeSubscription(unsubChannel.id);
+  const historyIgnored = makeVideo(unsubChannel.id, {
+    status: "ignored",
+    ignoreMethod: "auto",
+  });
+  db.update(subscriptions)
+    .set({ unsubscribedAt: new Date() })
+    .where(eq(subscriptions.id, unsubSub.id))
+    .run();
+
+  const res = await queueRoute.request("/ignored");
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).toContain(manualIgnored.title);
+  expect(html).toContain("[manual]");
+  expect(html).toContain(autoIgnored.title);
+  expect(html).toContain("[auto]");
+  expect(html).not.toContain(unwatched.title);
+  expect(html).not.toContain(historyIgnored.title);
+});
+
+test("GET /ignored?category=<id> only returns that category's videos, including the Uncategorized category", async () => {
+  const uncategorizedChannel = makeChannel("Ignored Uncategorized Channel");
+  makeSubscription(uncategorizedChannel.id, {
+    categoryId: systemCategory.id,
+  });
+  const uncategorizedVideo = makeVideo(uncategorizedChannel.id, {
+    status: "ignored",
+    ignoreMethod: "auto",
+  });
+
+  const categorizedChannel = makeChannel("Ignored Categorized Channel");
+  makeSubscription(categorizedChannel.id, { categoryId: category.id });
+  const categorizedVideo = makeVideo(categorizedChannel.id, {
+    status: "ignored",
+    ignoreMethod: "auto",
+  });
+
+  const uncategorizedRes = await queueRoute.request(
+    `/ignored?category=${systemCategory.id}`,
+  );
+  const uncategorizedHtml = await uncategorizedRes.text();
+  expect(uncategorizedHtml).toContain(uncategorizedVideo.title);
+  expect(uncategorizedHtml).not.toContain(categorizedVideo.title);
+
+  const categorizedRes = await queueRoute.request(
+    `/ignored?category=${category.id}`,
+  );
+  const categorizedHtml = await categorizedRes.text();
+  expect(categorizedHtml).toContain(categorizedVideo.title);
+  expect(categorizedHtml).not.toContain(uncategorizedVideo.title);
+});
+
+test("GET /ignored?category=<invalid or nonexistent> falls back to unfiltered, same as no category param", async () => {
+  const channel = makeChannel("Ignored Category Fallback Channel");
+  makeSubscription(channel.id, { categoryId: otherCategory.id });
+  const video = makeVideo(channel.id, {
+    status: "ignored",
+    ignoreMethod: "auto",
+  });
+
+  const noParamRes = await queueRoute.request("/ignored");
+  const noParamHtml = await noParamRes.text();
+  expect(noParamHtml).toContain(video.title);
+
+  const invalidRes = await queueRoute.request("/ignored?category=not-a-number");
+  const invalidHtml = await invalidRes.text();
+  expect(invalidHtml).toContain(video.title);
+
+  const nonexistentRes = await queueRoute.request("/ignored?category=999999");
+  const nonexistentHtml = await nonexistentRes.text();
+  expect(nonexistentHtml).toContain(video.title);
+});
+
+test("GET /ignored's category links preserve the current filter, same pattern as the other views", async () => {
+  const res = await queueRoute.request(`/ignored?category=${category.id}`);
+  const html = await res.text();
+  expect(html).toContain(`href="/ignored?category=${category.id}"`);
+  expect(html).toContain('href="/ignored"');
+});
+
+test("POST /videos/:id/unignore reverts a manually-ignored video to unwatched with ignoreMethod null", async () => {
+  const channel = makeChannel("Unignore Manual Channel");
+  makeSubscription(channel.id);
+  const video = makeVideo(channel.id, {
+    status: "ignored",
+    ignoreMethod: "manual",
+  });
+
+  const res = await queueRoute.request(`/videos/${video.id}/unignore`, {
+    method: "POST",
+  });
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).not.toContain(video.title);
+  expect(videoRow(video.id).status).toBe("unwatched");
+  expect(videoRow(video.id).ignoreMethod).toBeNull();
+});
+
+test("POST /videos/:id/unignore reverts an auto-ignored video to unwatched with ignoreMethod null", async () => {
+  const channel = makeChannel("Unignore Auto Channel");
+  makeSubscription(channel.id);
+  const video = makeVideo(channel.id, {
+    status: "ignored",
+    ignoreMethod: "auto",
+  });
+
+  const res = await queueRoute.request(`/videos/${video.id}/unignore`, {
+    method: "POST",
+  });
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).not.toContain(video.title);
+  expect(videoRow(video.id).status).toBe("unwatched");
+  expect(videoRow(video.id).ignoreMethod).toBeNull();
+});
+
+test("POST /videos/:id/unignore against a watched video does not throw and clears watchedAt", async () => {
+  const channel = makeChannel("Unignore Watched Regression Channel");
+  makeSubscription(channel.id);
+  const video = makeVideo(channel.id, {
+    status: "watched",
+    watchedAt: new Date("2026-07-01T00:00:00Z"),
+  });
+
+  const res = await queueRoute.request(`/videos/${video.id}/unignore`, {
+    method: "POST",
+  });
+  expect(res.status).toBe(200);
+  expect(videoRow(video.id).status).toBe("unwatched");
+  expect(videoRow(video.id).watchedAt).toBeNull();
+});
+
+test("POST /videos/:id/unignore 404s for a nonexistent video", async () => {
+  const res = await queueRoute.request("/videos/999999/unignore", {
+    method: "POST",
+  });
+  expect(res.status).toBe(404);
 });
