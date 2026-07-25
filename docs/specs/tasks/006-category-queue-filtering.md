@@ -163,7 +163,7 @@ Generated: 2026-07-24
   `/queue?category=<id>` — repeat once each for `continue-watching` and `watched`.
   Done when: `bun test test/routes/queue.test.ts` passes covering all of the above.
 
-- [ ] 10. Run full verification: `bun test`, `bun run lint`, and `bunx tsc --noEmit`
+- [x] 10. Run full verification: `bun test`, `bun run lint`, and `bunx tsc --noEmit`
   clean across the whole repo — done when: all three commands exit 0 with no failures
   (the typecheck in particular catches issues neither `bun test` nor `bun run lint`
   run a full type-check for, e.g. the pre-existing `noUncheckedIndexedAccess` error
