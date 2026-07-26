@@ -10,7 +10,7 @@ Generated: 2026-07-26
   done when: the paragraph renders above or below the `channelInput` field and `bun run
   lint` is clean. No route/schema change in this step.
 
-- [ ] 2. Schema changes per the spec's Design #2 and #4, all in `src/db/schema.ts`:
+- [x] 2. Schema changes per the spec's Design #2 and #4, all in `src/db/schema.ts`:
   - Export `CATEGORY_NAME_MAX_LENGTH = 100` as a top-level constant in this file (not in
     `src/routes/categories.tsx` — see the spec's task-decomposition retrospective in Open
     Questions for why).
