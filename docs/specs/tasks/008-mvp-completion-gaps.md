@@ -2,7 +2,7 @@
 Spec: docs/specs/008-mvp-completion-gaps.md
 Generated: 2026-07-26
 
-- [ ] 1. Add subscribe-page channel ID discovery copy per the spec's Design #1: in
+- [x] 1. Add subscribe-page channel ID discovery copy per the spec's Design #1: in
   `src/views/subscribe-confirm.tsx`'s `BlankSubscribeForm`, add a short instructional
   paragraph (the spec's suggested wording is fine, adjust only for clarity) explaining that
   the input accepts a bare channel ID (`UC...`), a URL containing `/channel/UC.../`, or the

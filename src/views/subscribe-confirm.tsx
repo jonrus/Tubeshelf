@@ -11,6 +11,12 @@ export const BlankSubscribeForm: FC<{ categories: Category[] }> = (props) => {
         hx-target="#confirm-panel"
         hx-swap="outerHTML"
       >
+        <p>
+          Paste the channel's ID (starts with <code>UC</code>), a URL containing{" "}
+          <code>/channel/UC.../</code>, or the channel's RSS feed URL. To find
+          the ID: open the channel's page, view source, and search for{" "}
+          <code>channelId</code>.
+        </p>
         <input
           type="text"
           name="channelInput"
