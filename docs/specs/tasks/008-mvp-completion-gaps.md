@@ -28,7 +28,7 @@ Generated: 2026-07-26
   will show errors in `src/lib/ingest.ts` (still references `possibleMissedVideos`) at this
   point — expected, fixed in task 4; don't try to make this step tsc-clean in isolation.
 
-- [ ] 3. Generate and hand-fix the migration for task 2's schema changes:
+- [x] 3. Generate and hand-fix the migration for task 2's schema changes:
   - Run `bun run db:generate` (via `devcontainer exec`, per CLAUDE.md). If `drizzle-kit`
     prompts interactively to disambiguate a column/table rename vs. drop+add (the same
     class of TTY prompt CLAUDE.md documents for `drizzle-kit generate`), stop and hand the

@@ -278,6 +278,18 @@ drop-old-column/add-new-columns sequence (matching the table-rebuild pattern alr
 `videos`' `CHECK` constraints in `drizzle/0003_redundant_sprite.sql`), and explicitly reject
 any "rename" disambiguation the tool offers instead.
 
+Confirmed at implementation time (task 3): no rename prompt actually occurred — the
+generated migration (`drizzle/0004_perpetual_lucky_pierre.sql`) resolved
+`possible_missed_videos` → `possible_missed_videos_detected_at` as a plain `ADD
+possible_missed_videos_detected_at` / `DROP COLUMN possible_missed_videos` pair with no
+TTY disambiguation needed, and *not* the `__new_youtube_channels` table-rebuild pattern
+this note assumed — that rebuild shape only applies to `categories` here (which needs the
+new `CHECK` constraint; SQLite has no `ALTER TABLE ADD CHECK`), whereas plain `ADD`/`DROP
+COLUMN` needs no rebuild since `youtube_channels` has no `CHECK` constraint of its own.
+The drop+add-not-rename safety property held regardless of which shape it took, and the
+backfill `UPDATE` (below) was hand-inserted between the generated `ADD` and `DROP COLUMN`
+statements rather than into a rebuild's `INSERT ... SELECT` list.
+
 **Backfill step, before the old column is dropped:** any channel currently flagged
 `possible_missed_videos = true` represents a real, never-yet-acknowledged notice — nothing
 today can dismiss it, so a `true` value always means "a user has not seen this." Dropping the

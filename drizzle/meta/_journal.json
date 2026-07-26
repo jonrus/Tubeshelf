@@ -29,6 +29,13 @@
       "when": 1784904030670,
       "tag": "0003_redundant_sprite",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1785083660438,
+      "tag": "0004_perpetual_lucky_pierre",
+      "breakpoints": true
     }
   ]
 }
