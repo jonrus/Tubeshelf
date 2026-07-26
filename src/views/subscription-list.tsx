@@ -4,6 +4,7 @@ export type Subscription = {
   id: number;
   channelName: string;
   categoryName: string;
+  showMissedVideosBadge: boolean;
 };
 
 export const SubscriptionList: FC<{
@@ -17,6 +18,20 @@ export const SubscriptionList: FC<{
         {props.subscriptions.map((subscription) => (
           <li key={subscription.id}>
             {subscription.channelName} ({subscription.categoryName})
+            {subscription.showMissedVideosBadge ? (
+              <>
+                {" "}
+                <span>⚠ Possible missed videos</span>
+                <button
+                  type="button"
+                  hx-post={`/subscriptions/${subscription.id}/dismiss-missed-videos`}
+                  hx-target="#subscription-list"
+                  hx-swap="outerHTML"
+                >
+                  Dismiss
+                </button>
+              </>
+            ) : null}
             <button
               type="button"
               hx-delete={`/subscriptions/${subscription.id}`}

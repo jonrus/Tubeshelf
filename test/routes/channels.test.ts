@@ -92,6 +92,12 @@ function deleteSubscription(id: number) {
   return channelsRoute.request(`/subscriptions/${id}`, { method: "DELETE" });
 }
 
+function dismissMissedVideos(id: number) {
+  return channelsRoute.request(`/subscriptions/${id}/dismiss-missed-videos`, {
+    method: "POST",
+  });
+}
+
 // Extracts the categoryId hidden field's value out of a preview response's
 // HTML, so tests round-trip through the real rendered value instead of
 // hardcoding a guess at what preview would have produced.
@@ -100,6 +106,17 @@ function extractCategoryId(previewHtml: string): string {
   if (!match || match[1] === undefined)
     throw new Error("preview response has no categoryId hidden field");
   return match[1];
+}
+
+// The subscription list HTML accumulates every subscription created across
+// this whole test file (no per-test isolation of the shared in-memory DB), so
+// asserting the badge's presence/absence must scope to a single channel's
+// <li> rather than the full document.
+function extractSubscriptionRow(html: string, channelName: string): string {
+  const escaped = channelName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = html.match(new RegExp(`<li[^>]*>${escaped}[\\s\\S]*?</li>`));
+  if (!match) throw new Error(`no subscription row found for "${channelName}"`);
+  return match[0];
 }
 
 let fetchSpy: ReturnType<typeof spyOn> | undefined;
@@ -497,4 +514,206 @@ test("unsubscribe never touches videos rows", async () => {
     .where(eq(videos.id, video.id))
     .get();
   expect(videoAfter).toEqual(video);
+});
+
+test("a subscription to a channel with a detected gap and no dismissal shows the badge", async () => {
+  const channel = db
+    .insert(youtubeChannels)
+    .values({
+      youtubeChannelId: "UCgapNoDismAAAAAAAAAAAAA",
+      name: "Gap No Dismiss Channel",
+      rssUrl:
+        "https://www.youtube.com/feeds/videos.xml?channel_id=UCgapNoDismAAAAAAAAAAAAA",
+      possibleMissedVideosDetectedAt: new Date("2026-01-01T00:00:00Z"),
+    })
+    .returning()
+    .get();
+
+  db.insert(subscriptions)
+    .values({
+      userId: defaultUser.id,
+      youtubeChannelId: channel.id,
+      categoryId: systemCategory.id,
+      missedVideosDismissedAt: null,
+    })
+    .run();
+
+  const res = await channelsRoute.request("/channels");
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  const row = extractSubscriptionRow(html, "Gap No Dismiss Channel");
+  expect(row).toContain("Possible missed videos");
+});
+
+test("dismissing a missed-videos notice removes the badge and re-renders the list", async () => {
+  const channel = db
+    .insert(youtubeChannels)
+    .values({
+      youtubeChannelId: "UCgapDismissAAAAAAAAAAAA",
+      name: "Gap Dismiss Channel",
+      rssUrl:
+        "https://www.youtube.com/feeds/videos.xml?channel_id=UCgapDismissAAAAAAAAAAAA",
+      possibleMissedVideosDetectedAt: new Date("2026-01-01T00:00:00Z"),
+    })
+    .returning()
+    .get();
+
+  const sub = db
+    .insert(subscriptions)
+    .values({
+      userId: defaultUser.id,
+      youtubeChannelId: channel.id,
+      categoryId: systemCategory.id,
+      missedVideosDismissedAt: null,
+    })
+    .returning()
+    .get();
+
+  const res = await dismissMissedVideos(sub.id);
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  const row = extractSubscriptionRow(html, "Gap Dismiss Channel");
+  expect(row).not.toContain("Possible missed videos");
+
+  const updated = db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.id, sub.id))
+    .get();
+  expect(updated?.missedVideosDismissedAt).not.toBeNull();
+});
+
+test("a dismissal older than the channel's (re-)detection timestamp still shows the badge", async () => {
+  const channel = db
+    .insert(youtubeChannels)
+    .values({
+      youtubeChannelId: "UCgapRetrigAAAAAAAAAAAAA",
+      name: "Gap Retrigger Channel",
+      rssUrl:
+        "https://www.youtube.com/feeds/videos.xml?channel_id=UCgapRetrigAAAAAAAAAAAAA",
+      possibleMissedVideosDetectedAt: new Date("2026-02-01T00:00:00Z"),
+    })
+    .returning()
+    .get();
+
+  db.insert(subscriptions)
+    .values({
+      userId: defaultUser.id,
+      youtubeChannelId: channel.id,
+      categoryId: systemCategory.id,
+      missedVideosDismissedAt: new Date("2026-01-01T00:00:00Z"),
+    })
+    .run();
+
+  const res = await channelsRoute.request("/channels");
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  const row = extractSubscriptionRow(html, "Gap Retrigger Channel");
+  expect(row).toContain("Possible missed videos");
+});
+
+test("dismissing another user's subscription 404s", async () => {
+  const otherUser = db
+    .insert(users)
+    .values({ username: "dismiss-other" })
+    .returning()
+    .get();
+
+  const channel = db
+    .insert(youtubeChannels)
+    .values({
+      youtubeChannelId: "UCdismOtherAAAAAAAAAAAAA",
+      name: "Dismiss Other Owner Channel",
+      rssUrl:
+        "https://www.youtube.com/feeds/videos.xml?channel_id=UCdismOtherAAAAAAAAAAAAA",
+      possibleMissedVideosDetectedAt: new Date("2026-01-01T00:00:00Z"),
+    })
+    .returning()
+    .get();
+
+  const othersSub = db
+    .insert(subscriptions)
+    .values({
+      userId: otherUser.id,
+      youtubeChannelId: channel.id,
+      categoryId: systemCategory.id,
+      missedVideosDismissedAt: null,
+    })
+    .returning()
+    .get();
+
+  const res = await dismissMissedVideos(othersSub.id);
+  expect(res.status).toBe(404);
+
+  const untouched = db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.id, othersSub.id))
+    .get();
+  expect(untouched?.missedVideosDismissedAt).toBeNull();
+});
+
+test("dismissing an already-unsubscribed subscription 404s", async () => {
+  const channel = db
+    .insert(youtubeChannels)
+    .values({
+      youtubeChannelId: "UCdismUnsubAAAAAAAAAAAAA",
+      name: "Dismiss Unsubscribed Channel",
+      rssUrl:
+        "https://www.youtube.com/feeds/videos.xml?channel_id=UCdismUnsubAAAAAAAAAAAAA",
+      possibleMissedVideosDetectedAt: new Date("2026-01-01T00:00:00Z"),
+    })
+    .returning()
+    .get();
+
+  const sub = db
+    .insert(subscriptions)
+    .values({
+      userId: defaultUser.id,
+      youtubeChannelId: channel.id,
+      categoryId: systemCategory.id,
+      unsubscribedAt: new Date(),
+      missedVideosDismissedAt: null,
+    })
+    .returning()
+    .get();
+
+  const res = await dismissMissedVideos(sub.id);
+  expect(res.status).toBe(404);
+
+  const untouched = db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.id, sub.id))
+    .get();
+  expect(untouched?.missedVideosDismissedAt).toBeNull();
+});
+
+test("a brand-new subscription to a channel with a pre-existing old gap does not show the badge", async () => {
+  const id = channelId("preExistingGap");
+  const channel = db
+    .insert(youtubeChannels)
+    .values({
+      youtubeChannelId: id,
+      name: "Pre-Existing Gap Channel",
+      rssUrl: rssUrlFor(id),
+      possibleMissedVideosDetectedAt: new Date("2020-01-01T00:00:00Z"),
+    })
+    .returning()
+    .get();
+
+  fetchSpy = mockFetch(feedXml("Pre-Existing Gap Channel", []));
+
+  const res = await postConfirm({ channelId: id, categoryId: "" });
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  const row = extractSubscriptionRow(html, "Pre-Existing Gap Channel");
+  expect(row).not.toContain("Possible missed videos");
+
+  const sub = db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.youtubeChannelId, channel.id))
+    .get();
+  expect(sub?.missedVideosDismissedAt).not.toBeNull();
 });

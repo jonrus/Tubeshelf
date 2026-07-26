@@ -54,12 +54,24 @@ function listNonSystemCategories() {
     .all();
 }
 
+function hasUndismissedGap(
+  detectedAt: Date | null,
+  dismissedAt: Date | null,
+): boolean {
+  return (
+    detectedAt !== null && (dismissedAt === null || dismissedAt < detectedAt)
+  );
+}
+
 function listActiveSubscriptions(userId: number) {
   return db
     .select({
       id: subscriptions.id,
       channelName: youtubeChannels.name,
       categoryName: categories.name,
+      possibleMissedVideosDetectedAt:
+        youtubeChannels.possibleMissedVideosDetectedAt,
+      missedVideosDismissedAt: subscriptions.missedVideosDismissedAt,
     })
     .from(subscriptions)
     .innerJoin(
@@ -74,7 +86,20 @@ function listActiveSubscriptions(userId: number) {
       ),
     )
     .orderBy(asc(youtubeChannels.name))
-    .all();
+    .all()
+    .map(
+      ({
+        possibleMissedVideosDetectedAt,
+        missedVideosDismissedAt,
+        ...rest
+      }) => ({
+        ...rest,
+        showMissedVideosBadge: hasUndismissedGap(
+          possibleMissedVideosDetectedAt,
+          missedVideosDismissedAt,
+        ),
+      }),
+    );
 }
 
 export const channelsRoute = new Hono();
@@ -193,6 +218,32 @@ channelsRoute.delete("/subscriptions/:id", (c) => {
   const updated = db
     .update(subscriptions)
     .set({ unsubscribedAt: new Date() })
+    .where(
+      and(
+        eq(subscriptions.id, id),
+        eq(subscriptions.userId, user.id),
+        isNull(subscriptions.unsubscribedAt),
+      ),
+    )
+    .returning()
+    .get();
+
+  if (!updated) {
+    return c.notFound();
+  }
+
+  return c.html(
+    <SubscriptionList subscriptions={listActiveSubscriptions(user.id)} />,
+  );
+});
+
+channelsRoute.post("/subscriptions/:id/dismiss-missed-videos", (c) => {
+  const user = getCurrentUser();
+  const id = Number(c.req.param("id"));
+
+  const updated = db
+    .update(subscriptions)
+    .set({ missedVideosDismissedAt: new Date() })
     .where(
       and(
         eq(subscriptions.id, id),

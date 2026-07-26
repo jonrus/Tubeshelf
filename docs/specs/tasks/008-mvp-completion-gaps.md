@@ -136,7 +136,7 @@ Generated: 2026-07-26
   - Done when: `bun test test/routes/categories.test.ts` passes covering all of the above
     and `bun run lint` is clean.
 
-- [ ] 8. Wire up per-subscription missed-videos display and dismissal in
+- [x] 8. Wire up per-subscription missed-videos display and dismissal in
   `src/routes/channels.tsx` and `src/views/subscription-list.tsx`, per the spec's Design #4:
   - Add a small helper (e.g. `hasUndismissedGap(detectedAt: Date | null, dismissedAt: Date |
     null): boolean`) returning `detectedAt !== null && (dismissedAt === null || dismissedAt <
