@@ -36,6 +36,18 @@ function findCategory(name: string) {
   return db.select().from(categories).where(eq(categories.name, name)).get();
 }
 
+function postRename(id: number, name: string) {
+  return categoriesRoute.request(`/categories/${id}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ name }),
+  });
+}
+
+function getEdit(id: number) {
+  return categoriesRoute.request(`/categories/${id}/edit`);
+}
+
 test("creating a category over the length limit is rejected and not inserted", async () => {
   const name = "a".repeat(CATEGORY_NAME_MAX_LENGTH + 1);
   const res = await postCategory(name);
@@ -87,4 +99,102 @@ test("creating a category with a duplicate name is rejected", async () => {
     .where(eq(categories.name, name))
     .all();
   expect(matches).toHaveLength(1);
+});
+
+test("renaming a non-system category succeeds and the new name appears in the list", async () => {
+  const original = "Rename Me";
+  await postCategory(original);
+  const category = findCategory(original);
+  if (!category) throw new Error("setup: category not created");
+
+  const res = await postRename(category.id, "Renamed");
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).toContain("Renamed");
+  expect(html).not.toContain(original);
+  expect(findCategory("Renamed")).toBeTruthy();
+  expect(findCategory(original)).toBeUndefined();
+});
+
+test("renaming to a name over the length limit is rejected and the name is unchanged", async () => {
+  const original = "Rename Too Long";
+  await postCategory(original);
+  const category = findCategory(original);
+  if (!category) throw new Error("setup: category not created");
+
+  const tooLong = "a".repeat(CATEGORY_NAME_MAX_LENGTH + 1);
+  const res = await postRename(category.id, tooLong);
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).toContain(
+    `Category name must be ${CATEGORY_NAME_MAX_LENGTH} characters or fewer.`,
+  );
+  expect(findCategory(original)).toBeTruthy();
+  expect(findCategory(tooLong)).toBeUndefined();
+});
+
+test("renaming to an empty name is rejected and the name is unchanged", async () => {
+  const original = "Rename Empty";
+  await postCategory(original);
+  const category = findCategory(original);
+  if (!category) throw new Error("setup: category not created");
+
+  const res = await postRename(category.id, "   ");
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).toContain("Category name is required.");
+  expect(findCategory(original)).toBeTruthy();
+});
+
+test("renaming to the reserved name is rejected and the name is unchanged", async () => {
+  const original = "Rename Reserved";
+  await postCategory(original);
+  const category = findCategory(original);
+  if (!category) throw new Error("setup: category not created");
+
+  const res = await postRename(category.id, "UnCategorized");
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).toContain("&quot;Uncategorized&quot; is a reserved name.");
+  expect(findCategory(original)).toBeTruthy();
+});
+
+test("renaming to an already-used name is rejected and the name is unchanged", async () => {
+  const takenName = "Rename Taken";
+  await postCategory(takenName);
+  const original = "Rename Collide";
+  await postCategory(original);
+  const category = findCategory(original);
+  if (!category) throw new Error("setup: category not created");
+
+  const res = await postRename(category.id, takenName);
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).toContain("A category with that name already exists.");
+  expect(findCategory(original)).toBeTruthy();
+});
+
+test("attempting to rename the system category via POST is rejected without changing its name", async () => {
+  const res = await postRename(systemCategory.id, "Not Uncategorized");
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).toContain("Cannot rename the system category.");
+  const stillThere = db
+    .select()
+    .from(categories)
+    .where(eq(categories.id, systemCategory.id))
+    .get();
+  expect(stillThere?.name).toBe(systemCategory.name);
+});
+
+test("attempting to edit the system category via GET /categories/:id/edit no-ops", async () => {
+  const res = await getEdit(systemCategory.id);
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).not.toContain(`hx-post="/categories/${systemCategory.id}"`);
+});
+
+test("renaming a nonexistent id 404s", async () => {
+  const res = await postRename(999999, "Whatever");
+  expect(res.status).toBe(404);
 });

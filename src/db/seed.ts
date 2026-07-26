@@ -6,7 +6,7 @@ export function seed(db: BunSQLiteDatabase) {
   const uncategorized = db
     .select()
     .from(categories)
-    .where(eq(categories.name, "Uncategorized"))
+    .where(eq(categories.isSystem, true))
     .get();
   if (!uncategorized) {
     db.insert(categories)

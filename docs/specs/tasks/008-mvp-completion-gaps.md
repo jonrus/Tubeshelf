@@ -102,7 +102,7 @@ Generated: 2026-07-26
   but currently untested) all still pass — done when: `bun test test/routes/categories.test.ts`
   passes covering all of the above and `bun run lint` is clean.
 
-- [ ] 7. Add category rename per the spec's Design #3:
+- [x] 7. Add category rename per the spec's Design #3:
   - `src/views/categories-list.tsx`: add an `editingId?: number` prop to `CategoriesList`.
     When a row's `category.id === editingId`, render the inline edit `<form>` (`hx-post
     /categories/{id}`, `hx-target #category-list`, `hx-swap outerHTML`, text input
