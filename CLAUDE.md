@@ -77,6 +77,25 @@ A spec's frontmatter `status` progresses `draft` → `in-progress` (once tasks e
 `implemented` (once `/work-task` finishes the last step). Don't hand-write code against a
 spec without going through a task file — that's what defeats the point of the pattern.
 
+### Manual verification sections in task files
+
+When a task file has a "Manual end-to-end verification" section, split it explicitly into
+two labeled parts instead of one blended "confirm in a browser" list — that ambiguity (who
+does which step) has caused rework before.
+
+- **Claude performs directly** — anything checkable via `curl` from inside the devcontainer
+  (per the port-forwarding gotcha above) or a direct SQLite read/write against the dev DB
+  file. This covers server-rendered HTML content, response status/error text, and DB state
+  — i.e. everything except how it actually looks/feels live in a browser. Claude runs these
+  itself; no user action needed.
+- **User performs live in a browser** — anything `curl` genuinely can't observe: real HTMX
+  partial-swap behavior (no full-page reload), visual layout/rendering, and the actual
+  click-through experience. Claude gives the exact URL and click/type target for each step
+  and says what to look for; the user drives the browser and reports back what they saw.
+
+See spec008's task file (`docs/specs/tasks/008-mvp-completion-gaps.md`) for a worked example
+of the split.
+
 Every spec's final task-file step (and matching manual-verification section, if the spec
 has one) must run all three of `bun test`, `bun run lint`, **and `bunx tsc --noEmit`**
 clean across the repo — not just the first two. `bun test`/`bun run lint` don't do a full

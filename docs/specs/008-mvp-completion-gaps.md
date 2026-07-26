@@ -1,5 +1,5 @@
 ---
-status: draft
+status: in-progress
 created: 2026-07-26
 ---
 
@@ -107,11 +107,13 @@ schema change; this is a `BlankSubscribeForm` template edit only.
 
 ### 2. Category name length limit
 
-Add `CATEGORY_NAME_MAX_LENGTH = 100` as a constant in `src/routes/categories.tsx` (no
-existing shared `lib/categories.ts` module exists yet, and one constant used by two routes
-in the same file doesn't warrant creating one). 100 is a reasonable default for a free-text
-label used in `<select>` dropdowns and filter links — `app_idea.md` doesn't specify a number,
-only "reasonable."
+Add `CATEGORY_NAME_MAX_LENGTH = 100` as an exported constant in `src/db/schema.ts`, not
+`src/routes/categories.tsx` (the DB layer below needs it inside the `CHECK` constraint
+expression, and `schema.ts` must not import from a route file — every existing dependency
+in this codebase runs routes → schema, never the reverse; `categories.tsx` imports the
+constant from `../db/schema` alongside the `categories` table it already imports from
+there). 100 is a reasonable default for a free-text label used in `<select>` dropdowns and
+filter links — `app_idea.md` doesn't specify a number, only "reasonable."
 
 - **Application layer:** both `POST /categories` (create) and the new `POST
   /categories/:id` (rename, see #3) reject (with the existing `CategoriesList` error-message
@@ -344,3 +346,13 @@ internally consistent with the rest of the Design section and doesn't reopen any
 areas the first pass explicitly cleared (the four Context claims, spec006's stale "already
 built" assertion, the FK-live-join rename propagation, and the edit-toggle pattern match
 against spec007). No second full pass was run.
+
+**Task-decomposition pass retrospective (`/spec-tasks`):** while breaking this spec into
+steps, re-reading Design #2 against the codebase's actual import graph surfaced a real spec
+bug the red-team pass hadn't caught: the draft placed `CATEGORY_NAME_MAX_LENGTH` in
+`src/routes/categories.tsx`, but the `CHECK` constraint in `src/db/schema.ts` also needs
+that same constant — which would have required `schema.ts` to import from a route file,
+backwards from every existing dependency direction in this codebase (routes import from
+`db/schema`, never the reverse). Fixed directly in Design #2 above: the constant now lives
+in `schema.ts`, exported for `categories.tsx` to import alongside the `categories` table it
+already imports from there.
