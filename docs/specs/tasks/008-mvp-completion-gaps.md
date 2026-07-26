@@ -166,7 +166,7 @@ Generated: 2026-07-26
   - Done when: `bun test test/routes/channels.test.ts` passes covering all of the above and
     `bun run lint` is clean.
 
-- [ ] 9. Run full verification across the repo: `bun test`, `bun run lint`, and `bunx tsc
+- [x] 9. Run full verification across the repo: `bun test`, `bun run lint`, and `bunx tsc
   --noEmit` — done when: all three exit 0 with no failures/errors (per CLAUDE.md, this spec
   isn't done until all three are clean, not just the first two).
 

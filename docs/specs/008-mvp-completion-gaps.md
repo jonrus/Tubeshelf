@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: implemented
 created: 2026-07-26
 ---
 
@@ -140,6 +140,28 @@ filter links — `app_idea.md` doesn't specify a number, only "reasonable."
   TABLE ... ADD CONSTRAINT`); Drizzle's generated migration will handle this as a
   create-new/copy-data/drop-old/rename sequence. Confirm the generated SQL actually copies
   existing `categories` rows before treating the migration as correct.
+
+  Confirmed at implementation time (task 9's manual verification): the copy step itself was
+  correct, but the rebuild's `DROP TABLE categories` failed against the real dev DB (which had
+  a live `subscriptions.category_id` row referencing it) with `SQLITE_CONSTRAINT_FOREIGNKEY`,
+  even though the generated migration wraps the rebuild in `PRAGMA foreign_keys=OFF` /
+  `PRAGMA foreign_keys=ON`. Root cause: `drizzle-orm`'s `migrate()` (`sqlite-core/dialect.js`)
+  wraps every statement in the migration run inside a single `BEGIN`/`COMMIT`, and SQLite
+  documents `PRAGMA foreign_keys` as a no-op while a transaction is open — so the pragma in the
+  generated SQL silently does nothing, and enforcement stays on for the whole migration
+  regardless of what the file says. This didn't surface in `bun test` because every test starts
+  from a fresh, empty in-memory DB (no child rows to violate the constraint), and it didn't
+  surface for `videos`' equivalent rebuild in `drizzle/0003_redundant_sprite.sql` because
+  `videos` is a leaf table with nothing referencing it as a parent — `categories` is the first
+  rebuilt table in this project with a live incoming FK (`subscriptions.category_id`). Worked
+  around here by deleting the dev DB file and letting a fresh one re-seed (acceptable per
+  CLAUDE.md: the devcontainer DB is disposable, not a data volume) rather than by fixing the
+  migration file, so **this gotcha will resurface unfixed** for any future migration that
+  rebuilds a table with a real incoming foreign key. Not fixed in this spec — out of scope for
+  an MVP-completion-gaps spec that doesn't otherwise touch migration tooling; worth its own
+  fix (e.g. running the rebuild outside `drizzle-orm`'s `migrate()` transaction, or documenting
+  a required manual `PRAGMA foreign_keys=OFF;` pre-step) before the next spec that rebuilds a
+  referenced table.
 
 ### 3. Category rename
 
@@ -334,6 +356,13 @@ drafting (see Context for the per-subscription-dismissal design rationale in par
 which was the one genuinely open design question — resolved in favor of building the
 correct shape now rather than deferring to a future multi-user spec, since the schema change
 is small and this spec already touches the relevant read/display path).
+
+One item surfaced during implementation, not before: task 9's manual verification found that
+`drizzle-orm`'s `migrate()` wraps a whole migration run in one transaction, making the
+generated `PRAGMA foreign_keys=OFF` in a table-rebuild migration a documented SQLite no-op —
+see the "Confirmed at implementation time (task 9's manual verification)" note under Design
+#2. Left unfixed here as out of scope; flagged for whoever writes the next spec that rebuilds
+a table with a live incoming foreign key.
 
 **Red-team retrospective:** One independent pass (subagent, no memory of the drafting
 conversation, given only CLAUDE.md/app_idea.md/spec007/the draft/the actual source files to
