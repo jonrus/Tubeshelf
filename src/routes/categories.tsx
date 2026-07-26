@@ -1,7 +1,7 @@
 import { asc, desc } from "drizzle-orm";
 import { Hono } from "hono";
 import { db } from "../db/client";
-import { categories } from "../db/schema";
+import { CATEGORY_NAME_MAX_LENGTH, categories } from "../db/schema";
 import { CategoriesList } from "../views/categories-list";
 import { CategoriesPage } from "../views/categories-page";
 
@@ -23,6 +23,14 @@ categoriesRoute.post("/categories", async (c) => {
   const body = await c.req.parseBody();
   const name = typeof body.name === "string" ? body.name.trim() : "";
 
+  if (name.length > CATEGORY_NAME_MAX_LENGTH) {
+    return c.html(
+      <CategoriesList
+        categories={listCategories()}
+        error={`Category name must be ${CATEGORY_NAME_MAX_LENGTH} characters or fewer.`}
+      />,
+    );
+  }
   if (!name) {
     return c.html(
       <CategoriesList

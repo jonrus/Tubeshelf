@@ -88,7 +88,7 @@ Generated: 2026-07-26
   — done when: `bun test test/lib/subscribe.test.ts` passes including this new case and
   `bun run lint` is clean.
 
-- [ ] 6. Add category name length-limit validation to the existing `POST /categories`
+- [x] 6. Add category name length-limit validation to the existing `POST /categories`
   create route in `src/routes/categories.tsx`, per the spec's Design #2: import
   `CATEGORY_NAME_MAX_LENGTH` from `../db/schema`, and reject a trimmed `name` longer than it
   (using the existing `CategoriesList` error-message pattern, e.g. `` `Category name must be
