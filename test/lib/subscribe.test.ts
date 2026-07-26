@@ -149,6 +149,34 @@ test("upsertSubscription recovers by reactivating when a concurrent insert wins 
   expect(rows).toHaveLength(1);
 });
 
+test("upsertSubscription dismisses a pre-existing gap for a first-time subscriber", () => {
+  const channel = db
+    .insert(youtubeChannels)
+    .values({
+      youtubeChannelId: "UCpreExistingGapChannel1",
+      name: "Pre-Existing Gap Channel",
+      rssUrl:
+        "https://www.youtube.com/feeds/videos.xml?channel_id=UCpreExistingGapChannel1",
+    })
+    .returning()
+    .get();
+
+  const detectedAt = new Date(Date.now() - 60_000);
+  db.update(youtubeChannels)
+    .set({ possibleMissedVideosDetectedAt: detectedAt })
+    .where(eq(youtubeChannels.id, channel.id))
+    .run();
+
+  const result = upsertSubscription(user.id, channel.id, category.id);
+
+  expect(result.outcome).toBe("created");
+  if (result.outcome === "created") {
+    const dismissedAt = result.subscription.missedVideosDismissedAt;
+    expect(dismissedAt).not.toBeNull();
+    expect(dismissedAt?.getTime()).toBeGreaterThanOrEqual(detectedAt.getTime());
+  }
+});
+
 test("upsertSubscription returns already-subscribed when the recovered row is still active", () => {
   const channel = db
     .insert(youtubeChannels)

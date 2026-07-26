@@ -75,7 +75,7 @@ Generated: 2026-07-26
   proves the value isn't reset, not merely that it's still non-null — done when: `bun test
   test/lib/ingest.test.ts` passes with these updated assertions and `bun run lint` is clean.
 
-- [ ] 5. Update `src/lib/subscribe.ts`'s `upsertSubscription` per the spec's Design #4
+- [x] 5. Update `src/lib/subscribe.ts`'s `upsertSubscription` per the spec's Design #4
   ("New subscriptions must not inherit a pre-existing, pre-subscription gap"): in the
   `"created"` branch's `db.insert(subscriptions).values({...})` call, add
   `missedVideosDismissedAt: new Date()` to the inserted values (the `"reactivated"` branch

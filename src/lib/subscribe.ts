@@ -86,7 +86,12 @@ export function upsertSubscription(
   try {
     const subscription = db
       .insert(subscriptions)
-      .values({ userId, youtubeChannelId, categoryId })
+      .values({
+        userId,
+        youtubeChannelId,
+        categoryId,
+        missedVideosDismissedAt: new Date(),
+      })
       .returning()
       .get();
     return { outcome: "created", subscription };
