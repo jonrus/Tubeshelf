@@ -78,9 +78,9 @@ export function applyFeedToChannel(channelId: number, feed: ChannelFeed): void {
     .set({
       lastFetchedAt: now,
       nextFetchDueAt: nextDueAt(now),
-      // Never auto-clears an existing true flag -- only a future manual-dismiss
-      // action (out of scope here) does that.
-      ...(gapDetected ? { possibleMissedVideos: true } : {}),
+      // Never auto-clears an existing detection timestamp -- dismissal is a
+      // per-subscription action that lives on the subscriptions table, not here.
+      ...(gapDetected ? { possibleMissedVideosDetectedAt: now } : {}),
     })
     .where(eq(youtubeChannels.id, channelId))
     .run();

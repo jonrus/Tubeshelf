@@ -210,10 +210,10 @@ test("gap detection does not fire on a channel's first-ever ingest", () => {
     ]),
   );
 
-  expect(channelRow(channel.id).possibleMissedVideos).toBe(false);
+  expect(channelRow(channel.id).possibleMissedVideosDetectedAt).toBeNull();
 });
 
-test("gap detection sets possibleMissedVideos when the feed's oldest entry postdates the previously-newest stored video", () => {
+test("gap detection sets possibleMissedVideosDetectedAt when the feed's oldest entry postdates the previously-newest stored video", () => {
   const channel = makeChannel("UCingest0004");
 
   applyFeedToChannel(
@@ -227,7 +227,7 @@ test("gap detection sets possibleMissedVideos when the feed's oldest entry postd
       },
     ]),
   );
-  expect(channelRow(channel.id).possibleMissedVideos).toBe(false);
+  expect(channelRow(channel.id).possibleMissedVideosDetectedAt).toBeNull();
 
   applyFeedToChannel(
     channel.id,
@@ -241,7 +241,9 @@ test("gap detection sets possibleMissedVideos when the feed's oldest entry postd
     ]),
   );
 
-  expect(channelRow(channel.id).possibleMissedVideos).toBe(true);
+  expect(channelRow(channel.id).possibleMissedVideosDetectedAt).toBeInstanceOf(
+    Date,
+  );
 });
 
 test("gap detection does not clear an already-true flag on a subsequent gap-free ingest", () => {
@@ -269,12 +271,13 @@ test("gap detection does not clear an already-true flag on a subsequent gap-free
       },
     ]),
   );
-  expect(channelRow(channel.id).possibleMissedVideos).toBe(true);
+  const detectedAt = channelRow(channel.id).possibleMissedVideosDetectedAt;
+  expect(detectedAt).toBeInstanceOf(Date);
 
   // Gap-free: this entry's publishedAt predates the previously-newest stored
   // video (vid-gf-gap at 07-05), so gap detection itself does not fire here --
-  // the flag should stay true only because it's never cleared, not because
-  // this ingest re-triggers it.
+  // the timestamp should stay unchanged only because it's never cleared, not
+  // because this ingest re-triggers it.
   applyFeedToChannel(
     channel.id,
     feedOf([
@@ -287,7 +290,9 @@ test("gap detection does not clear an already-true flag on a subsequent gap-free
     ]),
   );
 
-  expect(channelRow(channel.id).possibleMissedVideos).toBe(true);
+  expect(channelRow(channel.id).possibleMissedVideosDetectedAt).toEqual(
+    detectedAt,
+  );
 });
 
 test("ingestChannel advances nextFetchDueAt and resolves ok:false when the fetch fails", async () => {

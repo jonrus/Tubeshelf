@@ -61,7 +61,7 @@ Generated: 2026-07-26
     smoke test and every `*.test.ts` module that runs `migrate(db, { migrationsFolder:
     "./drizzle" })` against a fresh in-memory DB will fail otherwise).
 
-- [ ] 4. Update `src/lib/ingest.ts`'s `applyFeedToChannel` per the spec's Design #4: change
+- [x] 4. Update `src/lib/ingest.ts`'s `applyFeedToChannel` per the spec's Design #4: change
   `...(gapDetected ? { possibleMissedVideos: true } : {})` to `...(gapDetected ?
   { possibleMissedVideosDetectedAt: now } : {})`, and update the adjacent comment ("Never
   auto-clears an existing true flag...") to say dismissal now lives on `subscriptions`, not
