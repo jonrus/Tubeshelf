@@ -92,7 +92,7 @@ Generated: 2026-07-27
   Done when: `bunx tsc --noEmit` passes, `bun test` passes, and the new channels.test.ts
   assertion passes.
 
-- [ ] 5. Final verification. Run `bun test`, `bun run lint`, and `bunx tsc --noEmit` clean
+- [x] 5. Final verification. Run `bun test`, `bun run lint`, and `bunx tsc --noEmit` clean
   across the repo. Then do manual end-to-end verification, split per CLAUDE.md's convention:
   - **Claude performs directly** (via `curl` inside the devcontainer, per the
     port-forwarding gotcha in CLAUDE.md): `GET /queue`, `/continue-watching`, `/watched`,
