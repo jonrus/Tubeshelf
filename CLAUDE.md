@@ -59,19 +59,35 @@ workflow, only to a Claude Code session using the CLI directly:
 This project does not vibe-code. Every scoped piece of work gets a spec before
 implementation, and decisions live in tracked files instead of conversation history:
 
-1. `/new-spec` — write a spec to `docs/specs/NNN-name.md` (committed, versioned, the single
-   source of truth for that scope of work).
-2. `/spec-tasks` — derive an execution checklist at `docs/specs/tasks/name.md`. Committed
+1. `/new-feature` (optional, for larger or ambiguous asks) — copy
+   `docs/features/000-feature_template.md` to `docs/features/NNN-slug.md` and fill in what
+   you can yourself first. The skill reads that file, researches the current codebase, asks
+   batched clarifying questions grounded in what it finds, and edits the file in place (a
+   `Resolved Decisions` section grows, `status: draft` → `refined`) until scope is fully
+   settled — durable and resumable across sessions/machines, same as a task file. Skip this
+   step entirely for smaller/obvious work; `/new-spec` below works exactly as it always has
+   when invoked directly, with no feature file involved.
+2. `/new-spec` — write a spec to `docs/specs/NNN-name.md` (committed, versioned, the single
+   source of truth for that scope of work). When pointed at a `refined` feature file
+   (`/new-spec docs/features/NNN-slug.md`), it starts from that file's resolved scope
+   instead of interviewing from scratch, reuses its slug for the spec's title, and — once
+   the spec is written — updates the feature file to `status: promoted` with a pointer to
+   the new spec. `docs/features/` and `docs/specs/` are numbered **independently**; a
+   feature can split into multiple specs, get deferred, or never be promoted, so don't
+   expect their numbers to match. Promoted feature files are kept in the repo permanently,
+   same rationale as task files below.
+3. `/spec-tasks` — derive an execution checklist at `docs/specs/tasks/name.md`. Committed
    while the spec is `in-progress` — that's what makes it possible to resume work from a
    different machine, not just a different session. Kept in the repo once every step is
    checked off and the spec reaches `implemented`; the spec is the durable record of what
    and why, but the task file remains as a record of how the work was broken down.
-3. `/work-task` — resume the checklist in a **fresh session**, execute only the next
+4. `/work-task` — resume the checklist in a **fresh session**, execute only the next
    unchecked step, check it off, stop. One step per session, deliberately, to avoid context
    drift across a long-running conversation.
 
-These are personal skills (`~/.claude/skills/`), so the same pattern carries over to other
-projects — this file just pins the project-specific paths above.
+These are personal skills (`~/.claude/skills/`: `new-feature`, `new-spec`, `spec-tasks`,
+`work-task`), so the same pattern carries over to other projects — this file just pins the
+project-specific paths above.
 
 A spec's frontmatter `status` progresses `draft` → `in-progress` (once tasks exist) →
 `implemented` (once `/work-task` finishes the last step). Don't hand-write code against a
