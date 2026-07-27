@@ -56,7 +56,7 @@ Generated: 2026-07-27
   Done when: `bunx tsc --noEmit` passes (proves no call site was missed, since `navCounts` is
   required), `bun test` passes, and the new queue.test.ts assertion passes.
 
-- [ ] 3. Categories page count + link, per the spec's "Categories page: count + link"
+- [x] 3. Categories page count + link, per the spec's "Categories page: count + link"
   section:
   - `src/routes/categories.tsx`: add `categoryUnwatchedCount(userId, categoryId)`; change
     `listCategories()` to `listCategories(userId: number)` returning each category plus

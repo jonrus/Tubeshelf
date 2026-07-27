@@ -1,7 +1,9 @@
 import type { FC } from "hono/jsx";
 import type { categories } from "../db/schema";
 
-type Category = typeof categories.$inferSelect;
+export type Category = typeof categories.$inferSelect & {
+  unwatchedCount: number;
+};
 
 export const CategoriesList: FC<{
   categories: Category[];
@@ -34,7 +36,9 @@ export const CategoriesList: FC<{
             </li>
           ) : (
             <li key={category.id}>
-              {category.name}
+              <a href={`/queue?category=${category.id}`}>
+                {category.name} ({category.unwatchedCount})
+              </a>
               {category.isSystem ? " [system]" : ""}{" "}
               {category.isSystem ? null : (
                 <button

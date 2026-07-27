@@ -8,9 +8,14 @@ process.env.DB_FILE_NAME = ":memory:";
 
 const { db } = await import("../../src/db/client");
 const { migrate } = await import("drizzle-orm/bun-sqlite/migrator");
-const { CATEGORY_NAME_MAX_LENGTH, categories } = await import(
-  "../../src/db/schema"
-);
+const {
+  CATEGORY_NAME_MAX_LENGTH,
+  categories,
+  subscriptions,
+  users,
+  videos,
+  youtubeChannels,
+} = await import("../../src/db/schema");
 const { seed } = await import("../../src/db/seed");
 const { categoriesRoute } = await import("../../src/routes/categories");
 
@@ -23,6 +28,61 @@ const systemCategory = db
   .where(eq(categories.isSystem, true))
   .get();
 if (!systemCategory) throw new Error("seed did not create the system category");
+
+const defaultUserRow = db
+  .select()
+  .from(users)
+  .where(eq(users.username, "default"))
+  .get();
+if (!defaultUserRow) throw new Error("seed did not create the default user");
+const defaultUser = defaultUserRow;
+
+let channelCounter = 0;
+function makeChannel(name: string) {
+  channelCounter += 1;
+  const youtubeChannelId = `UCcategoriesTest${String(channelCounter).padStart(9, "0")}`;
+  return db
+    .insert(youtubeChannels)
+    .values({
+      youtubeChannelId,
+      name,
+      rssUrl: `https://www.youtube.com/feeds/videos.xml?channel_id=${youtubeChannelId}`,
+    })
+    .returning()
+    .get();
+}
+
+function makeSubscription(channelId: number, categoryId: number) {
+  return db
+    .insert(subscriptions)
+    .values({
+      userId: defaultUser.id,
+      youtubeChannelId: channelId,
+      categoryId,
+    })
+    .returning()
+    .get();
+}
+
+let videoCounter = 0;
+function makeVideo(
+  channelId: number,
+  status: "unwatched" | "watching" | "watched" | "ignored",
+) {
+  videoCounter += 1;
+  return db
+    .insert(videos)
+    .values({
+      channelId,
+      youtubeVideoId: `vid-categories-test-${videoCounter}`,
+      title: `Categories Test Video ${videoCounter}`,
+      status,
+      watchedAt: status === "watched" ? new Date() : null,
+      ignoreMethod: status === "ignored" ? "manual" : null,
+    })
+    .returning()
+    .get();
+}
 
 function postCategory(name: string) {
   return categoriesRoute.request("/categories", {
@@ -197,4 +257,25 @@ test("attempting to edit the system category via GET /categories/:id/edit no-ops
 test("renaming a nonexistent id 404s", async () => {
   const res = await postRename(999999, "Whatever");
   expect(res.status).toBe(404);
+});
+
+test("GET / renders a category's unwatched count and a link to its filtered queue", async () => {
+  const category = db
+    .insert(categories)
+    .values({ name: "Count Category" })
+    .returning()
+    .get();
+  const channel = makeChannel("Count Category Channel");
+  makeSubscription(channel.id, category.id);
+  makeVideo(channel.id, "unwatched");
+  makeVideo(channel.id, "watching");
+  makeVideo(channel.id, "watched");
+  makeVideo(channel.id, "ignored");
+
+  const res = await categoriesRoute.request("/");
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).toContain(
+    `<a href="/queue?category=${category.id}">${category.name} (2)</a>`,
+  );
 });
