@@ -2,7 +2,7 @@
 Spec: docs/specs/009-unwatched-counters-and-category-links.md
 Generated: 2026-07-27
 
-- [ ] 1. Create `src/lib/nav-counts.ts` exporting `NavCounts` and `getNavCounts(userId)`,
+- [x] 1. Create `src/lib/nav-counts.ts` exporting `NavCounts` and `getNavCounts(userId)`,
   exactly as specified in the spec's "New file: `src/lib/nav-counts.ts`" section (three
   `count()` queries joining `subscriptions` directly against `videos.channelId`, no
   `youtubeChannels`/`categories` join). Add `test/lib/nav-counts.test.ts` covering: (a) an
