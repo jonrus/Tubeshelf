@@ -2,14 +2,22 @@ import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { db } from "../db/client";
 import { ignoreRules } from "../db/schema";
+import { getCurrentUser } from "../lib/current-user";
 import { listIgnoreRules, reconcileIgnoreRules } from "../lib/ignore-rules";
+import { getNavCounts } from "../lib/nav-counts";
 import { IgnoreRulesList } from "../views/ignore-rules-list";
 import { IgnoreRulesPage } from "../views/ignore-rules-page";
 
 export const ignoreRulesRoute = new Hono();
 
 ignoreRulesRoute.get("/ignore-rules", (c) => {
-  return c.html(<IgnoreRulesPage rules={listIgnoreRules()} />);
+  const user = getCurrentUser();
+  return c.html(
+    <IgnoreRulesPage
+      rules={listIgnoreRules()}
+      navCounts={getNavCounts(user.id)}
+    />,
+  );
 });
 
 ignoreRulesRoute.post("/ignore-rules", async (c) => {

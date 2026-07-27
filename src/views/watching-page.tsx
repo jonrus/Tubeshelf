@@ -1,5 +1,6 @@
 import type { FC } from "hono/jsx";
 import type { videos } from "../db/schema";
+import type { NavCounts } from "../lib/nav-counts";
 import { Layout } from "./layout";
 
 type VideoStatus = (typeof videos.$inferSelect)["status"];
@@ -50,6 +51,7 @@ export type WatchingPageProps = {
   category: string | undefined;
   returnUrl: string;
   returnLabel: string;
+  navCounts: NavCounts;
 };
 
 export const WatchingPage: FC<WatchingPageProps> = (props) => {
@@ -58,7 +60,7 @@ export const WatchingPage: FC<WatchingPageProps> = (props) => {
     props.status === "watched" ? "Mark Unwatched" : "Mark Watched";
 
   return (
-    <Layout title={props.title}>
+    <Layout title={props.title} navCounts={props.navCounts}>
       <h1>{props.title}</h1>
       <img src={thumbnailUrl(props.youtubeVideoId)} alt={props.title} />
       <p>

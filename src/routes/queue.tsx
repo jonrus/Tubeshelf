@@ -8,6 +8,7 @@ import {
   youtubeChannels,
 } from "../db/schema";
 import { getCurrentUser } from "../lib/current-user";
+import { getNavCounts } from "../lib/nav-counts";
 import {
   ignoreVideo,
   setWatching,
@@ -277,7 +278,7 @@ queueRoute.get("/queue", (c) => {
   const sort = resolveSort(c.req.query("sort"));
   const category = resolveCategoryFilter(c.req.query("category"));
   return c.html(
-    <Layout title="Queue">
+    <Layout title="Queue" navCounts={getNavCounts(user.id)}>
       <p>
         <a href={buildQueueHref("newest", category)}>Newest first</a> ·{" "}
         <a href={buildQueueHref("oldest", category)}>Oldest first</a>
@@ -322,7 +323,7 @@ queueRoute.get("/continue-watching", (c) => {
   const user = getCurrentUser();
   const category = resolveCategoryFilter(c.req.query("category"));
   return c.html(
-    <Layout title="Continue Watching">
+    <Layout title="Continue Watching" navCounts={getNavCounts(user.id)}>
       <CategoryFilterLinks
         categories={allCategories()}
         current={category}
@@ -341,7 +342,7 @@ queueRoute.get("/watched", (c) => {
   const user = getCurrentUser();
   const category = resolveCategoryFilter(c.req.query("category"));
   return c.html(
-    <Layout title="Watched">
+    <Layout title="Watched" navCounts={getNavCounts(user.id)}>
       <CategoryFilterLinks
         categories={allCategories()}
         current={category}
@@ -360,7 +361,7 @@ queueRoute.get("/ignored", (c) => {
   const user = getCurrentUser();
   const category = resolveCategoryFilter(c.req.query("category"));
   return c.html(
-    <Layout title="Ignored">
+    <Layout title="Ignored" navCounts={getNavCounts(user.id)}>
       <CategoryFilterLinks
         categories={allCategories()}
         current={category}
@@ -380,6 +381,7 @@ queueRoute.get("/watching/:id", (c) => {
   const video = videoForWatchingPage(id);
   if (!video) return c.notFound();
 
+  const user = getCurrentUser();
   const from = c.req.query("from");
   const sort = c.req.query("sort");
   const category = c.req.query("category");
@@ -396,6 +398,7 @@ queueRoute.get("/watching/:id", (c) => {
       category={category}
       returnUrl={returnTarget.url}
       returnLabel={returnTarget.label}
+      navCounts={getNavCounts(user.id)}
     />,
   );
 });

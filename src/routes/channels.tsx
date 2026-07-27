@@ -9,6 +9,7 @@ import {
 } from "../lib/channel-input";
 import { getCurrentUser } from "../lib/current-user";
 import { applyFeedToChannel, ingestChannel } from "../lib/ingest";
+import { getNavCounts } from "../lib/nav-counts";
 import { fetchChannelFeed } from "../lib/rss";
 import { upsertSubscription, upsertYoutubeChannel } from "../lib/subscribe";
 import { ChannelsPage } from "../views/channels-page";
@@ -110,6 +111,7 @@ channelsRoute.get("/channels", (c) => {
     <ChannelsPage
       categories={listNonSystemCategories()}
       subscriptions={listActiveSubscriptions(user.id)}
+      navCounts={getNavCounts(user.id)}
     />,
   );
 });

@@ -1,4 +1,5 @@
 import type { Child, FC } from "hono/jsx";
+import type { NavCounts } from "../lib/nav-counts";
 
 const WATCH_LINK_CLICK_SCRIPT = `
 function handleWatchLinkClick(e) {
@@ -12,7 +13,11 @@ document.addEventListener("click", handleWatchLinkClick);
 document.addEventListener("auxclick", handleWatchLinkClick);
 `;
 
-export const Layout: FC<{ title: string; children?: Child }> = (props) => {
+export const Layout: FC<{
+  title: string;
+  navCounts: NavCounts;
+  children?: Child;
+}> = (props) => {
   return (
     <html lang="en">
       <head>
@@ -25,9 +30,12 @@ export const Layout: FC<{ title: string; children?: Child }> = (props) => {
       <body class="bg-gray-50 text-gray-900">
         <nav>
           <a href="/">Categories</a> | <a href="/channels">Channels</a> |{" "}
-          <a href="/queue">Queue</a> |{" "}
-          <a href="/continue-watching">Continue Watching</a> |{" "}
-          <a href="/watched">Watched</a> | <a href="/ignored">Ignored</a> |{" "}
+          <a href="/queue">Queue ({props.navCounts.queueCount})</a> |{" "}
+          <a href="/continue-watching">
+            Continue Watching ({props.navCounts.continueWatchingCount})
+          </a>{" "}
+          | <a href="/watched">Watched ({props.navCounts.watchedCount})</a> |{" "}
+          <a href="/ignored">Ignored</a> |{" "}
           <a href="/ignore-rules">Ignore Rules</a>
         </nav>
         {props.children}

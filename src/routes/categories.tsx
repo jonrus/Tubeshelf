@@ -2,6 +2,8 @@ import { asc, desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { db } from "../db/client";
 import { CATEGORY_NAME_MAX_LENGTH, categories } from "../db/schema";
+import { getCurrentUser } from "../lib/current-user";
+import { getNavCounts } from "../lib/nav-counts";
 import { CategoriesList } from "../views/categories-list";
 import { CategoriesPage } from "../views/categories-page";
 
@@ -16,7 +18,13 @@ function listCategories() {
 export const categoriesRoute = new Hono();
 
 categoriesRoute.get("/", (c) => {
-  return c.html(<CategoriesPage categories={listCategories()} />);
+  const user = getCurrentUser();
+  return c.html(
+    <CategoriesPage
+      categories={listCategories()}
+      navCounts={getNavCounts(user.id)}
+    />,
+  );
 });
 
 categoriesRoute.post("/categories", async (c) => {

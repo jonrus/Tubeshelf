@@ -13,7 +13,10 @@ export function getNavCounts(userId: number): NavCounts {
     db
       .select({ count: count() })
       .from(videos)
-      .innerJoin(subscriptions, eq(subscriptions.youtubeChannelId, videos.channelId))
+      .innerJoin(
+        subscriptions,
+        eq(subscriptions.youtubeChannelId, videos.channelId),
+      )
       .where(
         and(
           eq(subscriptions.userId, userId),
@@ -27,7 +30,10 @@ export function getNavCounts(userId: number): NavCounts {
     db
       .select({ count: count() })
       .from(videos)
-      .innerJoin(subscriptions, eq(subscriptions.youtubeChannelId, videos.channelId))
+      .innerJoin(
+        subscriptions,
+        eq(subscriptions.youtubeChannelId, videos.channelId),
+      )
       .where(
         and(
           eq(subscriptions.userId, userId),
@@ -41,8 +47,13 @@ export function getNavCounts(userId: number): NavCounts {
     db
       .select({ count: count() })
       .from(videos)
-      .innerJoin(subscriptions, eq(subscriptions.youtubeChannelId, videos.channelId))
-      .where(and(eq(subscriptions.userId, userId), eq(videos.status, "watched")))
+      .innerJoin(
+        subscriptions,
+        eq(subscriptions.youtubeChannelId, videos.channelId),
+      )
+      .where(
+        and(eq(subscriptions.userId, userId), eq(videos.status, "watched")),
+      )
       .get()?.count ?? 0;
 
   return { queueCount, continueWatchingCount, watchedCount };

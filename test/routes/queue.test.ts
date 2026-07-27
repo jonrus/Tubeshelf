@@ -12,6 +12,7 @@ const { categories, subscriptions, users, videos, youtubeChannels } =
   await import("../../src/db/schema");
 const { seed } = await import("../../src/db/seed");
 const { queueRoute } = await import("../../src/routes/queue");
+const { getNavCounts } = await import("../../src/lib/nav-counts");
 
 migrate(db, { migrationsFolder: "./drizzle" });
 seed(db);
@@ -1148,4 +1149,15 @@ test("End-to-end: an ignored row's rendered Un-ignore button round-trips through
   const freshQueueHtml = await freshQueueRes.text();
   expect(freshQueueHtml).toContain(video.title);
   expect(videoRow(video.id).status).toBe("unwatched");
+});
+
+test("GET /queue renders the nav with Queue/Continue Watching/Watched counts from getNavCounts", async () => {
+  const counts = getNavCounts(defaultUser.id);
+
+  const res = await queueRoute.request("/queue");
+  const html = await res.text();
+
+  expect(html).toContain(`Queue (${counts.queueCount})`);
+  expect(html).toContain(`Continue Watching (${counts.continueWatchingCount})`);
+  expect(html).toContain(`Watched (${counts.watchedCount})`);
 });

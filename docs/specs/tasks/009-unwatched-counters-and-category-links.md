@@ -14,7 +14,7 @@ Generated: 2026-07-27
   subscription. Done when: `bun test test/lib/nav-counts.test.ts` passes and exercises all
   three cases above.
 
-- [ ] 2. Wire `navCounts` through `Layout` and all 8 render call sites, per the spec's
+- [x] 2. Wire `navCounts` through `Layout` and all 8 render call sites, per the spec's
   "`Layout` gains a required `navCounts` prop" table:
   - `src/views/layout.tsx`: `Layout` takes a required `navCounts: NavCounts` prop (import
     the type from `../lib/nav-counts`); render `Queue (N)`, `Continue Watching (N)`,
