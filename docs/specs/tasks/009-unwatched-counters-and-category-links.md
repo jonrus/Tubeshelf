@@ -77,7 +77,7 @@ Generated: 2026-07-27
   Done when: `bunx tsc --noEmit` passes, `bun test` passes, and the new categories.test.ts
   assertions pass.
 
-- [ ] 4. Channels page count, per the spec's "Channels page: count only, no link" section:
+- [x] 4. Channels page count, per the spec's "Channels page: count only, no link" section:
   - `src/routes/channels.tsx`: add `youtubeChannelId: youtubeChannels.id` to
     `listActiveSubscriptions`'s select object; add `channelUnwatchedCount(youtubeChannelId)`;
     in the `.map(...)`, destructure `youtubeChannelId` out of `rest` and add

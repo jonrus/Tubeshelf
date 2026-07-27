@@ -1,7 +1,12 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import { db } from "../db/client";
-import { categories, subscriptions, youtubeChannels } from "../db/schema";
+import {
+  categories,
+  subscriptions,
+  videos,
+  youtubeChannels,
+} from "../db/schema";
 import {
   CHANNEL_ID_PATTERN,
   parseChannelInput,
@@ -64,12 +69,27 @@ function hasUndismissedGap(
   );
 }
 
+function channelUnwatchedCount(youtubeChannelId: number): number {
+  const row = db
+    .select({ count: count() })
+    .from(videos)
+    .where(
+      and(
+        eq(videos.channelId, youtubeChannelId),
+        inArray(videos.status, ["unwatched", "watching"]),
+      ),
+    )
+    .get();
+  return row?.count ?? 0;
+}
+
 function listActiveSubscriptions(userId: number) {
   return db
     .select({
       id: subscriptions.id,
       channelName: youtubeChannels.name,
       categoryName: categories.name,
+      youtubeChannelId: youtubeChannels.id,
       possibleMissedVideosDetectedAt:
         youtubeChannels.possibleMissedVideosDetectedAt,
       missedVideosDismissedAt: subscriptions.missedVideosDismissedAt,
@@ -90,11 +110,13 @@ function listActiveSubscriptions(userId: number) {
     .all()
     .map(
       ({
+        youtubeChannelId,
         possibleMissedVideosDetectedAt,
         missedVideosDismissedAt,
         ...rest
       }) => ({
         ...rest,
+        unwatchedCount: channelUnwatchedCount(youtubeChannelId),
         showMissedVideosBadge: hasUndismissedGap(
           possibleMissedVideosDetectedAt,
           missedVideosDismissedAt,

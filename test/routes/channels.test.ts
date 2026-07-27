@@ -689,6 +689,57 @@ test("dismissing an already-unsubscribed subscription 404s", async () => {
   expect(untouched?.missedVideosDismissedAt).toBeNull();
 });
 
+test("a channel's row shows its unwatched video count", async () => {
+  const channel = db
+    .insert(youtubeChannels)
+    .values({
+      youtubeChannelId: "UCunwatchCntAAAAAAAAAAAA",
+      name: "Unwatched Count Channel",
+      rssUrl:
+        "https://www.youtube.com/feeds/videos.xml?channel_id=UCunwatchCntAAAAAAAAAAAA",
+    })
+    .returning()
+    .get();
+
+  db.insert(subscriptions)
+    .values({
+      userId: defaultUser.id,
+      youtubeChannelId: channel.id,
+      categoryId: systemCategory.id,
+    })
+    .run();
+
+  db.insert(videos)
+    .values([
+      {
+        channelId: channel.id,
+        youtubeVideoId: "unwatch-cnt-vid1",
+        title: "Unwatched Video",
+        status: "unwatched",
+      },
+      {
+        channelId: channel.id,
+        youtubeVideoId: "unwatch-cnt-vid2",
+        title: "Watching Video",
+        status: "watching",
+      },
+      {
+        channelId: channel.id,
+        youtubeVideoId: "unwatch-cnt-vid3",
+        title: "Watched Video",
+        status: "watched",
+        watchedAt: new Date(),
+      },
+    ])
+    .run();
+
+  const res = await channelsRoute.request("/channels");
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  const row = extractSubscriptionRow(html, "Unwatched Count Channel");
+  expect(row).toContain("Unwatched Count Channel (2)");
+});
+
 test("a brand-new subscription to a channel with a pre-existing old gap does not show the badge", async () => {
   const id = channelId("preExistingGap");
   const channel = db

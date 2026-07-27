@@ -4,6 +4,7 @@ export type Subscription = {
   id: number;
   channelName: string;
   categoryName: string;
+  unwatchedCount: number;
   showMissedVideosBadge: boolean;
 };
 
@@ -17,7 +18,8 @@ export const SubscriptionList: FC<{
       <ul>
         {props.subscriptions.map((subscription) => (
           <li key={subscription.id}>
-            {subscription.channelName} ({subscription.categoryName})
+            {subscription.channelName} ({subscription.unwatchedCount}) (
+            {subscription.categoryName})
             {subscription.showMissedVideosBadge ? (
               <>
                 {" "}
