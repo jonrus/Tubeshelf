@@ -20,7 +20,7 @@ Generated: 2026-07-28
   Done when: `bun test test/routes/categories.test.ts` passes, and
   `categoriesRoute.request("/")` no longer appears anywhere in the test suite.
 
-- [ ] 2. Add the root redirect on `queueRoute`:
+- [x] 2. Add the root redirect on `queueRoute`:
   - `src/routes/queue.tsx`: immediately before the existing
     `queueRoute.get("/queue", (c) => { ... })` handler (currently at line 276), add:
     ```ts

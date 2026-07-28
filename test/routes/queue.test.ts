@@ -110,6 +110,12 @@ function videoRow(id: number) {
   return row;
 }
 
+test("GET / redirects to /queue", async () => {
+  const res = await queueRoute.request("/");
+  expect(res.status).toBe(302);
+  expect(res.headers.get("location")).toBe("/queue");
+});
+
 test("GET /queue returns unwatched/watching videos for active subscriptions, newest-first by default", async () => {
   const channel = makeChannel("Queue Channel A");
   makeSubscription(channel.id);

@@ -273,6 +273,8 @@ function buildQueueHref(sort: "newest" | "oldest", category?: number): string {
   return `/queue${qs ? `?${qs}` : ""}`;
 }
 
+queueRoute.get("/", (c) => c.redirect("/queue", 302));
+
 queueRoute.get("/queue", (c) => {
   const user = getCurrentUser();
   const sort = resolveSort(c.req.query("sort"));
