@@ -46,7 +46,7 @@ function listCategories(userId: number) {
 
 export const categoriesRoute = new Hono();
 
-categoriesRoute.get("/", (c) => {
+categoriesRoute.get("/categories", (c) => {
   const user = getCurrentUser();
   return c.html(
     <CategoriesPage

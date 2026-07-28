@@ -29,7 +29,7 @@ export const Layout: FC<{
       </head>
       <body class="bg-gray-50 text-gray-900">
         <nav>
-          <a href="/">Categories</a> | <a href="/channels">Channels</a> |{" "}
+          <a href="/categories">Categories</a> | <a href="/channels">Channels</a> |{" "}
           <a href="/queue">Queue ({props.navCounts.queueCount})</a> |{" "}
           <a href="/continue-watching">
             Continue Watching ({props.navCounts.continueWatchingCount})

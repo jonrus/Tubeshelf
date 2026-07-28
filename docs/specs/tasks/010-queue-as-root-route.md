@@ -2,7 +2,7 @@
 Spec: docs/specs/010-queue-as-root-route.md
 Generated: 2026-07-28
 
-- [ ] 1. Move Categories' index page from `GET /` to `GET /categories`, and repoint its nav
+- [x] 1. Move Categories' index page from `GET /` to `GET /categories`, and repoint its nav
   link:
   - `src/routes/categories.tsx`: change `categoriesRoute.get("/", (c) => { ... })` (currently
     lines 49-57) to `categoriesRoute.get("/categories", (c) => { ... })`, body unchanged.

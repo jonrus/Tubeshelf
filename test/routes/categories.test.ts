@@ -259,7 +259,7 @@ test("renaming a nonexistent id 404s", async () => {
   expect(res.status).toBe(404);
 });
 
-test("GET / renders a category's unwatched count and a link to its filtered queue", async () => {
+test("GET /categories renders a category's unwatched count and a link to its filtered queue", async () => {
   const category = db
     .insert(categories)
     .values({ name: "Count Category" })
@@ -272,7 +272,7 @@ test("GET / renders a category's unwatched count and a link to its filtered queu
   makeVideo(channel.id, "watched");
   makeVideo(channel.id, "ignored");
 
-  const res = await categoriesRoute.request("/");
+  const res = await categoriesRoute.request("/categories");
   expect(res.status).toBe(200);
   const html = await res.text();
   expect(html).toContain(
