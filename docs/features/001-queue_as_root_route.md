@@ -1,6 +1,7 @@
 ---
-status: refined
+status: promoted
 created: 2026-07-28
+promoted_to: docs/specs/010-queue-as-root-route.md
 ---
 
 # Adjust Root Path to Queue Page
@@ -53,6 +54,12 @@ will be to _watch_ content. The shortest path to watching is from the queue page
   logic grows (e.g. a future `/login` redirect for unauthenticated users, or a per-user
   path). `/` becomes a thin redirect (303, matching the existing precedent at
   src/routes/queue.tsx:422) with no business logic of its own.
+
+  *Superseded during spec writing* — the status code was changed to 302. See
+  docs/specs/010-queue-as-root-route.md's Design section: the 303 precedent is
+  specifically a POST-then-redirect-to-GET (PRG) pattern, which doesn't apply to this
+  plain GET-to-GET redirect; 302 is the conventional choice there instead. Confirmed with
+  the user while writing the spec.
 
 - **Categories moves to `/categories`.** Matches the existing `/channels`/`/queue`
   plural-noun path convention. `categoriesRoute` already owns a `/categories` sub-path
