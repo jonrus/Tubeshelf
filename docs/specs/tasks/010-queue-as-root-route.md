@@ -41,7 +41,7 @@ Generated: 2026-07-28
     (e.g. the `POST /videos/:id/watched-toggle` redirect tests around line 532).
   Done when: `bun test test/routes/queue.test.ts` passes, including the new test above.
 
-- [ ] 3. Final verification. Run `bun test`, `bun run lint`, and `bunx tsc --noEmit` clean
+- [x] 3. Final verification. Run `bun test`, `bun run lint`, and `bunx tsc --noEmit` clean
   across the repo (all three, per CLAUDE.md's requirement on a spec's last task-file step).
   Then do manual end-to-end verification, split per CLAUDE.md's convention:
   - **Claude performs directly** (via `curl` inside the devcontainer, per the
