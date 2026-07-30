@@ -249,7 +249,7 @@ Generated: 2026-07-30
     three new empty-state assertions and every existing test in these three route test files
     (interaction behavior — add/edit/delete — must be unaffected).
 
-- [ ] 8. Watching page restyle, per the spec's "Watching page" section. Depends on task 1
+- [x] 8. Watching page restyle, per the spec's "Watching page" section. Depends on task 1
   (`youtube.ts`) and task 2 (design tokens). No behavioral change — purely visual.
   - `src/views/watching-page.tsx`: delete the local `thumbnailUrl` function; import
     `youtubeThumbnailUrl` from `../lib/youtube`. Restyle the thumbnail `<img>` as a bounded

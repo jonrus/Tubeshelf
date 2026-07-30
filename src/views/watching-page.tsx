@@ -2,6 +2,7 @@ import type { FC } from "hono/jsx";
 import type { videos } from "../db/schema";
 import type { CategoryWithCount } from "../lib/categories";
 import type { NavCounts } from "../lib/nav-counts";
+import { youtubeThumbnailUrl } from "../lib/youtube";
 import { Layout, type SidebarView } from "./layout";
 
 type VideoStatus = (typeof videos.$inferSelect)["status"];
@@ -12,10 +13,6 @@ const STATUS_LABELS: Record<VideoStatus, string> = {
   watched: "Watched",
   ignored: "Ignored",
 };
-
-function thumbnailUrl(youtubeVideoId: string): string {
-  return `https://i.ytimg.com/vi/${youtubeVideoId}/hqdefault.jpg`;
-}
 
 function watchedToggleAction(
   id: number,
@@ -37,7 +34,15 @@ function watchedToggleAction(
 export const WatchStatusBadge: FC<{ status: VideoStatus; oob?: boolean }> = (
   props,
 ) => (
-  <span id="watch-status-badge" hx-swap-oob={props.oob ? "true" : undefined}>
+  <span
+    id="watch-status-badge"
+    hx-swap-oob={props.oob ? "true" : undefined}
+    class={`inline-block rounded-full px-2 py-0.5 text-sm ${
+      props.status === "watching"
+        ? "bg-accent text-bg"
+        : "bg-surface-raised text-text-muted"
+    }`}
+  >
     {STATUS_LABELS[props.status]}
   </span>
 );
@@ -69,9 +74,13 @@ export const WatchingPage: FC<WatchingPageProps> = (props) => {
       categories={props.categories}
       currentView={props.currentView}
     >
-      <h1>{props.title}</h1>
-      <img src={thumbnailUrl(props.youtubeVideoId)} alt={props.title} />
-      <p>
+      <h1 class="text-xl font-semibold text-text">{props.title}</h1>
+      <img
+        src={youtubeThumbnailUrl(props.youtubeVideoId)}
+        alt={props.title}
+        class="mt-3 aspect-video w-full max-w-2xl rounded-lg object-cover bg-surface-raised"
+      />
+      <p class="mt-3">
         Status: <WatchStatusBadge status={props.status} />
       </p>
       {showAutoTimer ? (
@@ -81,30 +90,39 @@ export const WatchingPage: FC<WatchingPageProps> = (props) => {
           hx-swap="none"
         />
       ) : null}
-      <button
-        type="button"
-        hx-post={`/videos/${props.id}/watching`}
-        hx-swap="none"
-      >
-        Mark Watching
-      </button>
-      <form
-        action={watchedToggleAction(
-          props.id,
-          props.from,
-          props.sort,
-          props.category,
-        )}
-        method="post"
-        onsubmit="this.querySelector('button').disabled = true"
-      >
-        <button type="submit">
-          {togglePrefix} & Return to {props.returnLabel}
+      <div class="mt-4 flex flex-wrap gap-2">
+        <button
+          type="button"
+          hx-post={`/videos/${props.id}/watching`}
+          hx-swap="none"
+          class="rounded bg-accent-strong px-3 py-1 text-sm text-bg hover:bg-accent"
+        >
+          Mark Watching
         </button>
-      </form>
-      <p>
-        <a href={props.returnUrl}>Return to {props.returnLabel}</a>
-      </p>
+        <form
+          action={watchedToggleAction(
+            props.id,
+            props.from,
+            props.sort,
+            props.category,
+          )}
+          method="post"
+          onsubmit="this.querySelector('button').disabled = true"
+        >
+          <button
+            type="submit"
+            class="rounded bg-accent-strong px-3 py-1 text-sm text-bg hover:bg-accent"
+          >
+            {togglePrefix} & Return to {props.returnLabel}
+          </button>
+        </form>
+        <a
+          href={props.returnUrl}
+          class="rounded border border-border px-3 py-1 text-sm hover:bg-surface-raised"
+        >
+          Return to {props.returnLabel}
+        </a>
+      </div>
       <script
         dangerouslySetInnerHTML={{
           __html:
