@@ -1,4 +1,4 @@
-// Shared by both the sort-toggle links and CategoryFilterLinks's buildHref below --
+// Shared by both the sort-toggle links and the sidebar's category links (layout.tsx) --
 // one place that knows how to assemble a /queue URL from its two optional params, so
 // there's exactly one `?` vs. no-`?` decision instead of two ad hoc ones that could
 // drift.

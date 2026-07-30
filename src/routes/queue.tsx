@@ -7,14 +7,10 @@ import {
   videos,
   youtubeChannels,
 } from "../db/schema";
+import { listCategoriesWithCounts } from "../lib/categories";
 import { getCurrentUser } from "../lib/current-user";
 import { getNavCounts } from "../lib/nav-counts";
-import {
-  buildContinueWatchingHref,
-  buildIgnoredHref,
-  buildQueueHref,
-  buildWatchedHref,
-} from "../lib/queue-urls";
+import { buildQueueHref } from "../lib/queue-urls";
 import {
   ignoreVideo,
   setWatching,
@@ -23,7 +19,7 @@ import {
   unignoreVideo,
 } from "../lib/watch-status";
 import { Layout } from "../views/layout";
-import { CategoryFilterLinks, QueueList } from "../views/queue-list";
+import { QueueList } from "../views/queue-list";
 import { WatchingPage, WatchStatusBadge } from "../views/watching-page";
 
 function queueVideos(
@@ -175,18 +171,6 @@ function resolveCategoryFilter(raw: string | undefined): number | undefined {
   return exists ? id : undefined;
 }
 
-function allCategories() {
-  return db
-    .select({
-      id: categories.id,
-      name: categories.name,
-      isSystem: categories.isSystem,
-    })
-    .from(categories)
-    .orderBy(desc(categories.isSystem), asc(categories.name))
-    .all();
-}
-
 function resolveToggleView(
   view: string | undefined,
 ): "queue" | "continue-watching" {
@@ -274,16 +258,18 @@ queueRoute.get("/queue", (c) => {
   const sort = resolveSort(c.req.query("sort"));
   const category = resolveCategoryFilter(c.req.query("category"));
   return c.html(
-    <Layout title="Queue" navCounts={getNavCounts(user.id)}>
+    <Layout
+      title="Queue"
+      navCounts={getNavCounts(user.id)}
+      categories={listCategoriesWithCounts(user.id)}
+      currentView="queue"
+      currentCategory={category}
+      currentSort={sort}
+    >
       <p>
         <a href={buildQueueHref("newest", category)}>Newest first</a> ·{" "}
         <a href={buildQueueHref("oldest", category)}>Oldest first</a>
       </p>
-      <CategoryFilterLinks
-        categories={allCategories()}
-        current={category}
-        buildHref={(catId) => buildQueueHref(sort, catId)}
-      />
       <QueueList
         view="queue"
         sort={sort}
@@ -298,12 +284,13 @@ queueRoute.get("/continue-watching", (c) => {
   const user = getCurrentUser();
   const category = resolveCategoryFilter(c.req.query("category"));
   return c.html(
-    <Layout title="Continue Watching" navCounts={getNavCounts(user.id)}>
-      <CategoryFilterLinks
-        categories={allCategories()}
-        current={category}
-        buildHref={buildContinueWatchingHref}
-      />
+    <Layout
+      title="Continue Watching"
+      navCounts={getNavCounts(user.id)}
+      categories={listCategoriesWithCounts(user.id)}
+      currentView="continue-watching"
+      currentCategory={category}
+    >
       <QueueList
         view="continue-watching"
         category={category}
@@ -317,12 +304,13 @@ queueRoute.get("/watched", (c) => {
   const user = getCurrentUser();
   const category = resolveCategoryFilter(c.req.query("category"));
   return c.html(
-    <Layout title="Watched" navCounts={getNavCounts(user.id)}>
-      <CategoryFilterLinks
-        categories={allCategories()}
-        current={category}
-        buildHref={buildWatchedHref}
-      />
+    <Layout
+      title="Watched"
+      navCounts={getNavCounts(user.id)}
+      categories={listCategoriesWithCounts(user.id)}
+      currentView="watched"
+      currentCategory={category}
+    >
       <QueueList
         view="watched"
         category={category}
@@ -336,12 +324,13 @@ queueRoute.get("/ignored", (c) => {
   const user = getCurrentUser();
   const category = resolveCategoryFilter(c.req.query("category"));
   return c.html(
-    <Layout title="Ignored" navCounts={getNavCounts(user.id)}>
-      <CategoryFilterLinks
-        categories={allCategories()}
-        current={category}
-        buildHref={buildIgnoredHref}
-      />
+    <Layout
+      title="Ignored"
+      navCounts={getNavCounts(user.id)}
+      categories={listCategoriesWithCounts(user.id)}
+      currentView="ignored"
+      currentCategory={category}
+    >
       <QueueList
         view="ignored"
         category={category}
@@ -374,6 +363,8 @@ queueRoute.get("/watching/:id", (c) => {
       returnUrl={returnTarget.url}
       returnLabel={returnTarget.label}
       navCounts={getNavCounts(user.id)}
+      categories={listCategoriesWithCounts(user.id)}
+      currentView={undefined}
     />,
   );
 });

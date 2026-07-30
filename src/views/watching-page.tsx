@@ -1,7 +1,8 @@
 import type { FC } from "hono/jsx";
 import type { videos } from "../db/schema";
+import type { CategoryWithCount } from "../lib/categories";
 import type { NavCounts } from "../lib/nav-counts";
-import { Layout } from "./layout";
+import { Layout, type SidebarView } from "./layout";
 
 type VideoStatus = (typeof videos.$inferSelect)["status"];
 
@@ -52,6 +53,8 @@ export type WatchingPageProps = {
   returnUrl: string;
   returnLabel: string;
   navCounts: NavCounts;
+  categories: CategoryWithCount[];
+  currentView?: SidebarView;
 };
 
 export const WatchingPage: FC<WatchingPageProps> = (props) => {
@@ -60,7 +63,12 @@ export const WatchingPage: FC<WatchingPageProps> = (props) => {
     props.status === "watched" ? "Mark Unwatched" : "Mark Watched";
 
   return (
-    <Layout title={props.title} navCounts={props.navCounts}>
+    <Layout
+      title={props.title}
+      navCounts={props.navCounts}
+      categories={props.categories}
+      currentView={props.currentView}
+    >
       <h1>{props.title}</h1>
       <img src={thumbnailUrl(props.youtubeVideoId)} alt={props.title} />
       <p>

@@ -7,6 +7,7 @@ import {
   videos,
   youtubeChannels,
 } from "../db/schema";
+import { listCategoriesWithCounts } from "../lib/categories";
 import {
   CHANNEL_ID_PATTERN,
   parseChannelInput,
@@ -131,9 +132,11 @@ channelsRoute.get("/channels", (c) => {
   const user = getCurrentUser();
   return c.html(
     <ChannelsPage
-      categories={listNonSystemCategories()}
+      subscribeCategories={listNonSystemCategories()}
+      categories={listCategoriesWithCounts(user.id)}
       subscriptions={listActiveSubscriptions(user.id)}
       navCounts={getNavCounts(user.id)}
+      currentView="channels"
     />,
   );
 });

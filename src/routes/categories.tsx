@@ -16,6 +16,7 @@ categoriesRoute.get("/categories", (c) => {
     <CategoriesPage
       categories={listCategoriesWithCounts(user.id)}
       navCounts={getNavCounts(user.id)}
+      currentView="categories"
     />,
   );
 });

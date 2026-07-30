@@ -80,6 +80,16 @@ function deleteRule(id: number) {
   });
 }
 
+test("GET /ignore-rules highlights the Ignore Rules sidebar link and no other top-level link", async () => {
+  const res = await ignoreRulesRoute.request("/ignore-rules");
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  const activeLinks = [
+    ...html.matchAll(/<a href="[^"]*" data-active="true">([^(<]*)/g),
+  ].map((m) => m[1]?.trim());
+  expect(activeLinks).toEqual(["Ignore Rules"]);
+});
+
 test("GET /ignore-rules lists existing rules", async () => {
   makeRule("list-test-keyword");
 

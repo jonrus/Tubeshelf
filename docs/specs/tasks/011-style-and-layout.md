@@ -89,7 +89,7 @@ Generated: 2026-07-30
     all pass with no behavioral change (existing category-picker/sort-toggle assertions in
     that file still pass unmodified).
 
-- [ ] 5. Sidebar: `layout.tsx` rewrite + wire all 8 `<Layout>`-rendering call sites + delete
+- [x] 5. Sidebar: `layout.tsx` rewrite + wire all 8 `<Layout>`-rendering call sites + delete
   `CategoryFilterLinks`/`allCategories`, per the spec's "Sidebar", "Sidebar category links are
   view-aware", "Sidebar structure and reachability", and "Mobile collapse" sections. This is
   the largest task — `Layout`'s new props are required, so every caller must be updated in

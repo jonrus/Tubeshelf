@@ -79,22 +79,6 @@ function unignoreHref(id: number, category?: number): string {
   return `/videos/${id}/unignore${qs ? `?${qs}` : ""}`;
 }
 
-export const CategoryFilterLinks: FC<{
-  categories: { id: number; name: string }[];
-  buildHref: (categoryId?: number) => string;
-  current?: number;
-}> = (props) => (
-  <p>
-    <a href={props.buildHref()}>All</a>
-    {props.categories.map((cat) => (
-      <>
-        {" "}
-        · <a href={props.buildHref(cat.id)}>{cat.name}</a>
-      </>
-    ))}
-  </p>
-);
-
 type QueueListProps =
   | {
       view: "queue";

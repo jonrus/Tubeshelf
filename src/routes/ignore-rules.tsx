@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { db } from "../db/client";
 import { ignoreRules } from "../db/schema";
+import { listCategoriesWithCounts } from "../lib/categories";
 import { getCurrentUser } from "../lib/current-user";
 import { listIgnoreRules, reconcileIgnoreRules } from "../lib/ignore-rules";
 import { getNavCounts } from "../lib/nav-counts";
@@ -16,6 +17,8 @@ ignoreRulesRoute.get("/ignore-rules", (c) => {
     <IgnoreRulesPage
       rules={listIgnoreRules()}
       navCounts={getNavCounts(user.id)}
+      categories={listCategoriesWithCounts(user.id)}
+      currentView="ignore-rules"
     />,
   );
 });

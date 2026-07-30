@@ -108,6 +108,16 @@ function getEdit(id: number) {
   return categoriesRoute.request(`/categories/${id}/edit`);
 }
 
+test("GET /categories highlights the Categories sidebar link and no other top-level link", async () => {
+  const res = await categoriesRoute.request("/categories");
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  const activeLinks = [
+    ...html.matchAll(/<a href="[^"]*" data-active="true">([^(<]*)/g),
+  ].map((m) => m[1]?.trim());
+  expect(activeLinks).toEqual(["Categories"]);
+});
+
 test("creating a category over the length limit is rejected and not inserted", async () => {
   const name = "a".repeat(CATEGORY_NAME_MAX_LENGTH + 1);
   const res = await postCategory(name);

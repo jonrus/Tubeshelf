@@ -369,16 +369,51 @@ test("GET /watched?category=<id> only returns that category's videos, including 
   expect(html).not.toContain(otherVideo.title);
 });
 
-test("GET /queue, /continue-watching, /watched, /ignored each render a link per existing category plus All", async () => {
+test("GET /queue, /continue-watching, /watched, /ignored each render a sidebar link per existing category", async () => {
   for (const path of ["/queue", "/continue-watching", "/watched", "/ignored"]) {
     const res = await queueRoute.request(path);
     expect(res.status).toBe(200);
     const html = await res.text();
-    expect(html).toContain(">All</a>");
-    expect(html).toContain(`>${category.name}</a>`);
-    expect(html).toContain(`>${otherCategory.name}</a>`);
-    expect(html).toContain(">Uncategorized</a>");
+    expect(html).toContain(`>${category.name} (`);
+    expect(html).toContain(`>${otherCategory.name} (`);
+    expect(html).toContain(">Uncategorized (");
   }
+});
+
+test("GET /queue, /continue-watching, /watched, /ignored each highlight exactly the matching top-level sidebar link", async () => {
+  const routes: Record<string, string> = {
+    "/queue": "Queue",
+    "/continue-watching": "Continue Watching",
+    "/watched": "Watched",
+    "/ignored": "Ignored",
+  };
+  for (const [path, activeLabel] of Object.entries(routes)) {
+    const res = await queueRoute.request(path);
+    const html = await res.text();
+    const activeLinks = [
+      ...html.matchAll(/<a href="[^"]*" data-active="true">([^(<]*)/g),
+    ].map((m) => m[1]?.trim());
+    expect(activeLinks).toEqual([activeLabel]);
+  }
+});
+
+test("GET /watched?category=<id> highlights that category's sidebar sub-item, but not /categories's own link", async () => {
+  const res = await queueRoute.request(`/watched?category=${category.id}`);
+  const html = await res.text();
+  expect(html).toContain(
+    `href="/watched?category=${category.id}" data-active="true"`,
+  );
+  expect(html).toContain('href="/categories" data-active="false"');
+});
+
+test("A sidebar category link on /ignored?category=<id> stays view-aware, pointing at /ignored (not /queue)", async () => {
+  const res = await queueRoute.request(`/ignored?category=${category.id}`);
+  const html = await res.text();
+  const linkMatch = html.match(
+    new RegExp(`href="(/ignored\\?category=${otherCategory.id})"`),
+  );
+  expect(linkMatch).not.toBeNull();
+  expect(html).not.toContain(`href="/queue?category=${otherCategory.id}"`);
 });
 
 test("GET /queue's category links preserve sort, and sort links preserve category", async () => {
