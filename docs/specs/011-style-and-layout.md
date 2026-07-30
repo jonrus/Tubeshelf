@@ -609,6 +609,14 @@ libs above) instead of a locally-declared copy. No behavioral change — the exi
 `hx-trigger="load delay:10s"` auto-timer, `hx-swap-oob` badge update, bfcache `pageshow`
 reload script, and double-submit guard are all unchanged.
 
+Purely-visual as this subsection is, `WatchingPageProps` still isn't untouched: like
+`CategoriesPage`/`ChannelsPage`/`IgnoreRulesPage`, it's one of the four wrapper components
+covered by Design → *Sidebar*'s wrapper-component table, and gains the same
+`categories: CategoryWithCount[]` prop plus a literal `currentView: undefined` — see that
+section (not repeated here) for the full requirement; `GET /watching/:id`
+(`queue.tsx:381-406`) passes both through to its `<WatchingPage>` call alongside its
+existing props.
+
 ## Testing
 
 Given the scale of markup change, this section splits explicitly into what needs
@@ -764,15 +772,28 @@ also flagged that the Design section's eight-call-site table reads as if all eig
 prop-type change — fixed by adding an explicit subsection naming all four files and the
 two-hop prop-forwarding shape (Design → *Sidebar*).
 
-Everything else the pass checked — every other `file:NN` line citation, the
+Everything else the first pass checked — every other `file:NN` line citation, the
 `formatRelativeTime`/`sidebarCategoryHref`/`isFilterableView` logic, `CategoryFilterLinks`/
 `allCategories` deletion completeness (grepped whole-repo, exactly matching this spec's
 accounting), the `data-active` boolean-attribute-to-string Hono JSX rendering claim (verified
 directly against the installed `hono` package's source), Tailwind v4's `@theme` mechanics,
 and the Testing section's "no change needed" vs. "needs updating" characterization (spot-checked
-against the actual current `test/routes/queue.test.ts` assertions) — came back clean. Given
-the three real fixes above are straightforward, localized corrections rather than new design
-questions the fixes themselves raise, a second full pass was judged unnecessary per this
-skill's stopping rule; a narrower follow-up check scoped only to the four edited sections
-(Video-card grid, Shared libs, Sidebar, Testing) would be a reasonable substitute if further
-scrutiny is wanted before implementation begins.
+against the actual current `test/routes/queue.test.ts` assertions) — came back clean.
+
+Because the first pass found three real, high-severity issues, a second independent pass was
+run (not skipped in favor of self-review — anchoring on one's own just-written fixes is
+exactly what an independent pass exists to counteract, per this skill's stopping rule: "run a
+second if the first pass finds anything substantive"). The second pass, with no memory of the
+first pass's drafting or fixes, cross-checked all three fixes directly against the current
+source (`data-youtube-url`'s attribute-name/DOM-mapping correctness against
+`handleWatchLinkClick`; grepped the whole repo, including `test/`, for any remaining consumer
+of the old narrow `CategoryWithCount` shape or `ChannelsPage`'s old `categories` prop name)
+and confirmed all three correct and complete, with zero hidden breakage in tests or other call
+sites. It found one low-severity documentation-locality gap, now fixed: the "Watching page"
+Design subsection didn't cross-reference that `WatchingPageProps` is also covered by the
+Sidebar section's wrapper-component prop requirement, readable as self-contained ("no
+behavioral change") in a way that could mislead an implementer reading only that subsection.
+Fixed by adding an explicit cross-reference there.
+
+A second pass finding nothing beyond one minor doc nit — no new bugs, no incomplete fixes —
+is the stopping signal this skill's process is built around. No third pass was run.
