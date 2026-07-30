@@ -1,1 +1,13 @@
 @import "tailwindcss";
+
+@theme {
+  --color-bg: #020617; /* page background */
+  --color-surface: #0f172a; /* cards, sidebar, panels */
+  --color-surface-raised: #1e293b; /* hover/elevated surfaces, input backgrounds */
+  --color-border: #334155; /* borders, dividers */
+  --color-text: #f1f5f9; /* primary text */
+  --color-text-muted: #94a3b8; /* secondary text (metadata, timestamps) */
+  --color-accent: #2dd4bf; /* links, active nav state, watching indicator */
+  --color-accent-strong: #14b8a6; /* button backgrounds/hover */
+  --color-danger: #f87171; /* errors, warnings -- replaces text-red-600 */
+}

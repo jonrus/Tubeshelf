@@ -25,7 +25,7 @@ Generated: 2026-07-30
     test/lib/youtube.test.ts` all pass. (No other file imports either new module yet — that's
     expected and doesn't affect this task's own compile/test status.)
 
-- [ ] 2. Design tokens, per the spec's "Design tokens" section.
+- [x] 2. Design tokens, per the spec's "Design tokens" section.
   - Replace `src/styles/input.css`'s content with the `@theme` block exactly as specified:
     `@import "tailwindcss";` followed by a `@theme { ... }` block defining `--color-bg:
     #020617`, `--color-surface: #0f172a`, `--color-surface-raised: #1e293b`,
