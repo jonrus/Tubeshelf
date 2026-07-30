@@ -2,7 +2,7 @@
 Spec: docs/specs/011-style-and-layout.md
 Generated: 2026-07-30
 
-- [ ] 1. Shared libs: YouTube URL builders + relative-time formatting, per the spec's
+- [x] 1. Shared libs: YouTube URL builders + relative-time formatting, per the spec's
   "Shared libs" section. No consumers wired yet — this task only creates the two new files
   and their tests, isolated from anything that currently duplicates this logic.
   - Create `src/lib/youtube.ts` exporting `youtubeWatchUrl(youtubeVideoId: string): string`

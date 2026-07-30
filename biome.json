@@ -7,7 +7,13 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["**", "!drizzle", "!public/css", "!.claude"]
+    "includes": [
+      "**",
+      "!drizzle",
+      "!public/css",
+      "!.claude",
+      "!docs/features/**/*.html"
+    ]
   },
   "formatter": {
     "enabled": true,
