@@ -72,7 +72,7 @@ Generated: 2026-07-30
     (including the existing `test/routes/categories.test.ts` suite unchanged — this task must
     not alter `GET /categories`'s rendered output, only where its data comes from).
 
-- [ ] 4. `src/lib/queue-urls.ts`, per the spec's "`src/lib/queue-urls.ts` (new)" section. A
+- [x] 4. `src/lib/queue-urls.ts`, per the spec's "`src/lib/queue-urls.ts` (new)" section. A
   pure relocation — `CategoryFilterLinks` and its four render call sites in `queue.tsx` still
   exist after this task and still work identically; only the four helper functions' file
   location changes.

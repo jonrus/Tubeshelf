@@ -10,6 +10,12 @@ import {
 import { getCurrentUser } from "../lib/current-user";
 import { getNavCounts } from "../lib/nav-counts";
 import {
+  buildContinueWatchingHref,
+  buildIgnoredHref,
+  buildQueueHref,
+  buildWatchedHref,
+} from "../lib/queue-urls";
+import {
   ignoreVideo,
   setWatching,
   toggleQueueStatus,
@@ -261,18 +267,6 @@ function videoForWatchingPage(videoId: number) {
 
 export const queueRoute = new Hono();
 
-// Shared by both the sort-toggle links and CategoryFilterLinks's buildHref below --
-// one place that knows how to assemble a /queue URL from its two optional params, so
-// there's exactly one `?` vs. no-`?` decision instead of two ad hoc ones that could
-// drift.
-function buildQueueHref(sort: "newest" | "oldest", category?: number): string {
-  const params = new URLSearchParams();
-  if (sort === "oldest") params.set("sort", "oldest");
-  if (category !== undefined) params.set("category", String(category));
-  const qs = params.toString();
-  return `/queue${qs ? `?${qs}` : ""}`;
-}
-
 queueRoute.get("/", (c) => c.redirect("/queue", 302));
 
 queueRoute.get("/queue", (c) => {
@@ -299,27 +293,6 @@ queueRoute.get("/queue", (c) => {
     </Layout>,
   );
 });
-
-function buildContinueWatchingHref(category?: number): string {
-  const params = new URLSearchParams();
-  if (category !== undefined) params.set("category", String(category));
-  const qs = params.toString();
-  return `/continue-watching${qs ? `?${qs}` : ""}`;
-}
-
-function buildWatchedHref(category?: number): string {
-  const params = new URLSearchParams();
-  if (category !== undefined) params.set("category", String(category));
-  const qs = params.toString();
-  return `/watched${qs ? `?${qs}` : ""}`;
-}
-
-function buildIgnoredHref(category?: number): string {
-  const params = new URLSearchParams();
-  if (category !== undefined) params.set("category", String(category));
-  const qs = params.toString();
-  return `/ignored${qs ? `?${qs}` : ""}`;
-}
 
 queueRoute.get("/continue-watching", (c) => {
   const user = getCurrentUser();
