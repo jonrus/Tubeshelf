@@ -1,6 +1,7 @@
 ---
-status: refined
+status: promoted
 created: 2026-07-30
+promoted_to: docs/specs/011-style-and-layout.md
 ---
 
 # Style and Layout Foundation
