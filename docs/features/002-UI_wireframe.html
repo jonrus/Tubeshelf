@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Architects+Daughter&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f0eee9;font-family:'Patrick Hand',cursive}
+.dv-turn{padding:40px 44px 32px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 15px 'Architects Daughter',cursive;color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 12px 'Patrick Hand',cursive;color:rgba(0,0,0,.6)}
+.dv-card{max-width:100%;background:#fff;border:2px solid #1a1a1a;border-radius:6px;box-shadow:2px 3px 0 rgba(0,0,0,.15);overflow:hidden}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-next{margin:22px 0 0;font:14px/1.5 'Patrick Hand',cursive;color:rgba(0,0,0,.55)}
+.sb-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:5px;font-size:13px}
+.sb-item.active{background:#eee}
+.avatar{width:22px;height:22px;border-radius:50%;border:1.5px solid #1a1a1a;background:repeating-linear-gradient(45deg,#ddd,#ddd 3px,#eee 3px,#eee 6px);flex-shrink:0}
+.thumb{width:100%;background:repeating-linear-gradient(135deg,#e2e2e2,#e2e2e2 8px,#ececec 8px,#ececec 16px);border-bottom:2px solid #1a1a1a;position:relative;display:flex;align-items:center;justify-content:center;color:#999;font:11px ui-monospace,monospace}
+.ignore-btn{border:1.5px solid #1a1a1a;border-radius:5px;background:#fff;font:12px 'Patrick Hand',cursive;padding:2px 8px;cursor:pointer;white-space:nowrap}
+.watching-tag{font:11px 'Patrick Hand',cursive;color:#e02020;display:flex;align-items:center;gap:3px}
+.sec-title{font:600 13px 'Architects Daughter',cursive;color:#1a1a1a;margin:0}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Subscription feed — dense grid</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1b">
+<div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Dense grid, small cards</div>
+<div class="dv-card" style="width:900px">
+  <div style="display:flex;height:560px">
+    <div style="width:170px;border-right:2px solid #1a1a1a;padding:14px 10px;display:flex;flex-direction:column;gap:10px;flex-shrink:0">
+      <div style="font:700 15px 'Architects Daughter',cursive">☰ Tubeshelf</div>
+      <div style="display:flex;flex-direction:column;gap:1px">
+        <div class="sb-item active" style="font-size:12px;justify-content:space-between">Queue<span style="color:#999">(x)</span></div>
+        <div class="sb-item" style="font-size:12px;justify-content:space-between">Continue Watching<span style="color:#999">(x)</span></div>
+        <div class="sb-item" style="font-size:12px;justify-content:space-between">Watched<span style="color:#999">(x)</span></div>
+        <div class="sb-item" style="font-size:12px">Categories</div>
+        <div class="sb-item" style="font-size:12px;padding-left:22px;color:#777">Podcasts</div>
+        <div class="sb-item" style="font-size:12px;padding-left:22px;color:#777">Tech</div>
+        <div class="sb-item" style="font-size:12px;padding-left:22px;color:#777">News</div>
+        <div class="sb-item" style="font-size:12px;padding-left:22px;color:#777">Development</div>
+        <div class="sb-item" style="font-size:12px">Ignored</div>
+        <div class="sb-item" style="font-size:12px;padding-left:22px;color:#777">Ignore Rules</div>
+        <div class="sb-item" style="font-size:12px">Channels</div>
+      </div>
+    </div>
+    <div style="flex:1;padding:14px;overflow:hidden">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+        <div style="border:1.5px solid #1a1a1a;border-radius:5px;overflow:hidden">
+          <div class="thumb" style="height:90px;font-size:10px">thumb</div>
+          <div style="padding:6px 7px">
+            <div style="font-size:11.5px;line-height:1.2">How to Sketch Faster</div>
+            <div style="font-size:10px;color:#777">Ch. One · 12K · 2h</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:3px">
+              <span class="watching-tag" style="font-size:10px">▶ watching</span>
+              <button class="ignore-btn" style="font-size:10px;padding:1px 5px">🗑</button>
+            </div>
+          </div>
+        </div>
+        <div style="border:1.5px solid #1a1a1a;border-radius:5px;overflow:hidden">
+          <div class="thumb" style="height:90px;font-size:10px">thumb</div>
+          <div style="padding:6px 7px">
+            <div style="font-size:11.5px;line-height:1.2">Studio tour setup</div>
+            <div style="font-size:10px;color:#777">Ch. Two · 4.3K · 1d</div>
+            <div style="display:flex;justify-content:flex-end;margin-top:3px"><button class="ignore-btn" style="font-size:10px;padding:1px 5px">🗑</button></div>
+          </div>
+        </div>
+        <div style="border:1.5px solid #1a1a1a;border-radius:5px;overflow:hidden">
+          <div class="thumb" style="height:90px;font-size:10px">thumb</div>
+          <div style="padding:6px 7px">
+            <div style="font-size:11.5px;line-height:1.2">Typography essay</div>
+            <div style="font-size:10px;color:#777">Ch. Three · 890 · 3d</div>
+            <div style="display:flex;justify-content:flex-end;margin-top:3px"><button class="ignore-btn" style="font-size:10px;padding:1px 5px">🗑</button></div>
+          </div>
+        </div>
+        <div style="border:1.5px solid #1a1a1a;border-radius:5px;overflow:hidden">
+          <div class="thumb" style="height:90px;font-size:10px">thumb</div>
+          <div style="padding:6px 7px">
+            <div style="font-size:11.5px;line-height:1.2">Weekly roundup #44</div>
+            <div style="font-size:10px;color:#777">Ch. Four · 21K · 5d</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:3px">
+              <span class="watching-tag" style="font-size:10px">▶ watching</span>
+              <button class="ignore-btn" style="font-size:10px;padding:1px 5px">🗑</button>
+            </div>
+          </div>
+        </div>
+        <div style="border:1.5px solid #1a1a1a;border-radius:5px;overflow:hidden">
+          <div class="thumb" style="height:90px;font-size:10px">thumb</div>
+          <div style="padding:6px 7px">
+            <div style="font-size:11.5px;line-height:1.2">Behind the mix</div>
+            <div style="font-size:10px;color:#777">Ch. Five · 3.1K · 6d</div>
+            <div style="display:flex;justify-content:flex-end;margin-top:3px"><button class="ignore-btn" style="font-size:10px;padding:1px 5px">🗑</button></div>
+          </div>
+        </div>
+        <div style="border:1.5px solid #1a1a1a;border-radius:5px;overflow:hidden">
+          <div class="thumb" style="height:90px;font-size:10px">thumb</div>
+          <div style="padding:6px 7px">
+            <div style="font-size:11.5px;line-height:1.2">Q&A live recap</div>
+            <div style="font-size:10px;color:#777">Ch. Six · 780 · 1w</div>
+            <div style="display:flex;justify-content:flex-end;margin-top:3px"><button class="ignore-btn" style="font-size:10px;padding:1px 5px">🗑</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+</div>
+</section>
+
+</x-dc>
+</body>
+</html>
