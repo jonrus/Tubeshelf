@@ -180,7 +180,7 @@ Generated: 2026-07-30
     `Layout`/wrapper-component prop is required), `bun run lint` passes, and `bun test` passes
     including all new/updated assertions above.
 
-- [ ] 6. Video-card grid, per the spec's "Video-card grid" and "Empty states" sections
+- [x] 6. Video-card grid, per the spec's "Video-card grid" and "Empty states" sections
   (video-list portion). Depends on tasks 1 (youtube.ts/relative-time.ts) and 5 (Layout no
   longer imports `CategoryFilterLinks` from this file).
   - `src/routes/queue.tsx`: add `youtubeVideoId: videos.youtubeVideoId` to `ignoredVideos()`'s

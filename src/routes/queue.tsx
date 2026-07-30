@@ -133,6 +133,7 @@ function ignoredVideos(userId: number, categoryId?: number) {
   return db
     .select({
       id: videos.id,
+      youtubeVideoId: videos.youtubeVideoId,
       title: videos.title,
       channelName: youtubeChannels.name,
       categoryName: categories.name,

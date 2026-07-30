@@ -13,6 +13,9 @@ const { categories, subscriptions, users, videos, youtubeChannels } =
 const { seed } = await import("../../src/db/seed");
 const { queueRoute } = await import("../../src/routes/queue");
 const { getNavCounts } = await import("../../src/lib/nav-counts");
+const { youtubeThumbnailUrl, youtubeWatchUrl } = await import(
+  "../../src/lib/youtube"
+);
 
 migrate(db, { migrationsFolder: "./drizzle" });
 seed(db);
@@ -984,9 +987,9 @@ test("GET /ignored lists only ignored videos for active subscriptions, excluding
   expect(res.status).toBe(200);
   const html = await res.text();
   expect(html).toContain(manualIgnored.title);
-  expect(html).toContain("[manual]");
+  expect(html).toContain(">manual<");
   expect(html).toContain(autoIgnored.title);
-  expect(html).toContain("[auto]");
+  expect(html).toContain(">auto<");
   expect(html).not.toContain(unwatched.title);
   expect(html).not.toContain(historyIgnored.title);
 });
@@ -1201,4 +1204,111 @@ test("GET /queue renders the nav with Queue/Continue Watching/Watched counts fro
   expect(html).toContain(`Queue (${counts.queueCount})`);
   expect(html).toContain(`Continue Watching (${counts.continueWatchingCount})`);
   expect(html).toContain(`Watched (${counts.watchedCount})`);
+});
+
+test("Queue/Continue Watching/Watched cards carry data-youtube-url matching youtubeWatchUrl", async () => {
+  const channel = makeChannel("Data Youtube Url Channel");
+  makeSubscription(channel.id);
+  const watchingVideo = makeVideo(channel.id, { status: "watching" });
+  const watchedVideo = makeVideo(channel.id, {
+    status: "watched",
+    watchedAt: new Date("2026-07-01T00:00:00Z"),
+  });
+
+  const queueHtml = await (await queueRoute.request("/queue")).text();
+  expect(queueHtml).toContain(
+    `data-youtube-url="${youtubeWatchUrl(watchingVideo.youtubeVideoId)}"`,
+  );
+
+  const continueHtml = await (
+    await queueRoute.request("/continue-watching")
+  ).text();
+  expect(continueHtml).toContain(
+    `data-youtube-url="${youtubeWatchUrl(watchingVideo.youtubeVideoId)}"`,
+  );
+
+  const watchedHtml = await (await queueRoute.request("/watched")).text();
+  expect(watchedHtml).toContain(
+    `data-youtube-url="${youtubeWatchUrl(watchedVideo.youtubeVideoId)}"`,
+  );
+});
+
+test("Queue/Continue Watching/Watched/Ignored cards render a thumbnail img matching youtubeThumbnailUrl", async () => {
+  const channel = makeChannel("Thumbnail Src Channel");
+  makeSubscription(channel.id);
+  const watchingVideo = makeVideo(channel.id, { status: "watching" });
+  const watchedVideo = makeVideo(channel.id, {
+    status: "watched",
+    watchedAt: new Date("2026-07-02T00:00:00Z"),
+  });
+  const ignoredVideo = makeVideo(channel.id, {
+    status: "ignored",
+    ignoreMethod: "manual",
+  });
+
+  const queueHtml = await (await queueRoute.request("/queue")).text();
+  expect(queueHtml).toContain(
+    `src="${youtubeThumbnailUrl(watchingVideo.youtubeVideoId)}"`,
+  );
+
+  const continueHtml = await (
+    await queueRoute.request("/continue-watching")
+  ).text();
+  expect(continueHtml).toContain(
+    `src="${youtubeThumbnailUrl(watchingVideo.youtubeVideoId)}"`,
+  );
+
+  const watchedHtml = await (await queueRoute.request("/watched")).text();
+  expect(watchedHtml).toContain(
+    `src="${youtubeThumbnailUrl(watchedVideo.youtubeVideoId)}"`,
+  );
+
+  const ignoredHtml = await (await queueRoute.request("/ignored")).text();
+  expect(ignoredHtml).toContain(
+    `src="${youtubeThumbnailUrl(ignoredVideo.youtubeVideoId)}"`,
+  );
+});
+
+test("Each video-list view renders its empty-state message when zero rows match the filter, and not when a row exists", async () => {
+  const emptyCategory = db
+    .insert(categories)
+    .values({ name: "Empty State Test Category" })
+    .returning()
+    .get();
+
+  const queueEmptyHtml = await (
+    await queueRoute.request(`/queue?category=${emptyCategory.id}`)
+  ).text();
+  expect(queueEmptyHtml).toContain(
+    "Nothing in your queue — your subscriptions are all caught up.",
+  );
+
+  const continueEmptyHtml = await (
+    await queueRoute.request(`/continue-watching?category=${emptyCategory.id}`)
+  ).text();
+  expect(continueEmptyHtml).toContain(
+    "Nothing in progress — start watching something from your queue.",
+  );
+
+  const watchedEmptyHtml = await (
+    await queueRoute.request(`/watched?category=${emptyCategory.id}`)
+  ).text();
+  expect(watchedEmptyHtml).toContain("Nothing watched yet.");
+
+  const ignoredEmptyHtml = await (
+    await queueRoute.request(`/ignored?category=${emptyCategory.id}`)
+  ).text();
+  expect(ignoredEmptyHtml).toContain("Nothing ignored.");
+
+  const channel = makeChannel("Empty State Nonempty Channel");
+  makeSubscription(channel.id, { categoryId: emptyCategory.id });
+  const video = makeVideo(channel.id, { status: "unwatched" });
+
+  const queueNonemptyHtml = await (
+    await queueRoute.request(`/queue?category=${emptyCategory.id}`)
+  ).text();
+  expect(queueNonemptyHtml).toContain(video.title);
+  expect(queueNonemptyHtml).not.toContain(
+    "Nothing in your queue — your subscriptions are all caught up.",
+  );
 });

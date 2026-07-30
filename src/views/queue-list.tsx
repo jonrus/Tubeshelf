@@ -1,5 +1,7 @@
 import type { FC } from "hono/jsx";
 import type { videos } from "../db/schema";
+import { formatRelativeTime } from "../lib/relative-time";
+import { youtubeThumbnailUrl, youtubeWatchUrl } from "../lib/youtube";
 
 type VideoStatus = (typeof videos.$inferSelect)["status"];
 
@@ -26,15 +28,12 @@ export type WatchedRow = {
 
 export type IgnoredRow = {
   id: number;
+  youtubeVideoId: string;
   title: string;
   channelName: string;
   categoryName: string;
   ignoreMethod: "manual" | "auto" | null;
 };
-
-function youtubeUrl(youtubeVideoId: string): string {
-  return `https://www.youtube.com/watch?v=${youtubeVideoId}`;
-}
 
 function watchingHref(
   id: number,
@@ -90,102 +89,148 @@ type QueueListProps =
   | { view: "watched"; category?: number; rows: WatchedRow[] }
   | { view: "ignored"; category?: number; rows: IgnoredRow[] };
 
+const EMPTY_MESSAGES: Record<QueueListProps["view"], string> = {
+  queue: "Nothing in your queue — your subscriptions are all caught up.",
+  "continue-watching":
+    "Nothing in progress — start watching something from your queue.",
+  watched: "Nothing watched yet.",
+  ignored: "Nothing ignored.",
+};
+
+const EmptyState: FC<{ message: string }> = ({ message }) => (
+  <p class="text-text-muted col-span-full py-12 text-center">{message}</p>
+);
+
+const THUMBNAIL_CLASS = "aspect-video w-full object-cover bg-surface-raised";
+const CARD_CLASS = "rounded-lg border border-border bg-surface overflow-hidden";
+
 export const QueueList: FC<QueueListProps> = (props) => {
+  const isEmpty = props.rows.length === 0;
   return (
-    <div id="queue-list">
-      <ul>
-        {props.view === "watched"
-          ? props.rows.map((row) => (
-              <li key={row.id}>
-                <a
-                  href={watchingHref(
-                    row.id,
-                    "watched",
-                    undefined,
-                    props.category,
-                  )}
-                  class="watch-link"
-                  data-youtube-url={youtubeUrl(row.youtubeVideoId)}
-                >
-                  {row.title}
-                </a>{" "}
-                — {row.channelName} ({row.categoryName})
-                {row.watchedAt
-                  ? ` · watched ${row.watchedAt.toLocaleDateString()}`
-                  : ""}
-              </li>
-            ))
-          : props.view === "ignored"
-            ? props.rows.map((row) => (
-                <li key={row.id}>
-                  {row.title}
-                  {row.ignoreMethod ? ` [${row.ignoreMethod}]` : ""} —{" "}
-                  {row.channelName} ({row.categoryName})
-                  <button
-                    type="button"
-                    hx-post={unignoreHref(row.id, props.category)}
-                    hx-target="#queue-list"
-                    hx-swap="outerHTML"
-                    hx-disabled-elt="this"
-                  >
-                    Un-ignore
-                  </button>
-                </li>
-              ))
-            : props.rows.map((row) => {
-                const sort = props.view === "queue" ? props.sort : undefined;
-                return (
-                  <li key={row.id}>
-                    <a
-                      href={watchingHref(
-                        row.id,
-                        props.view,
-                        sort,
-                        props.category,
-                      )}
-                      class="watch-link"
-                      data-youtube-url={youtubeUrl(row.youtubeVideoId)}
-                    >
-                      {row.title}
-                    </a>{" "}
-                    — {row.channelName} ({row.categoryName})
+    <div
+      id="queue-list"
+      class="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]"
+    >
+      {isEmpty ? (
+        <EmptyState message={EMPTY_MESSAGES[props.view]} />
+      ) : props.view === "watched" ? (
+        props.rows.map((row) => (
+          <div key={row.id} class={CARD_CLASS}>
+            <a
+              href={watchingHref(row.id, "watched", undefined, props.category)}
+              class="watch-link block"
+              data-youtube-url={youtubeWatchUrl(row.youtubeVideoId)}
+            >
+              <img
+                src={youtubeThumbnailUrl(row.youtubeVideoId)}
+                alt={row.title}
+                loading="lazy"
+                onerror="this.style.visibility='hidden'"
+                class={THUMBNAIL_CLASS}
+              />
+              <div class="p-3">
+                <p class="font-medium text-text">{row.title}</p>
+                <p class="mt-1 text-sm text-text-muted">
+                  {row.channelName} · {row.categoryName}
+                  {row.watchedAt
+                    ? ` · watched ${formatRelativeTime(row.watchedAt)}`
+                    : ""}
+                </p>
+              </div>
+            </a>
+          </div>
+        ))
+      ) : props.view === "ignored" ? (
+        props.rows.map((row) => (
+          <div key={row.id} class={CARD_CLASS}>
+            <img
+              src={youtubeThumbnailUrl(row.youtubeVideoId)}
+              alt={row.title}
+              loading="lazy"
+              onerror="this.style.visibility='hidden'"
+              class={THUMBNAIL_CLASS}
+            />
+            <div class="p-3">
+              <p class="font-medium text-text">{row.title}</p>
+              <p class="mt-1 text-sm text-text-muted">
+                {row.channelName} · {row.categoryName}
+                {row.ignoreMethod ? (
+                  <span class="ml-2 inline-block rounded-full bg-surface-raised px-2 py-0.5 text-xs text-text-muted">
+                    {row.ignoreMethod}
+                  </span>
+                ) : null}
+              </p>
+              <button
+                type="button"
+                hx-post={unignoreHref(row.id, props.category)}
+                hx-target="#queue-list"
+                hx-swap="outerHTML"
+                hx-disabled-elt="this"
+                class="mt-2 rounded border border-border px-3 py-1 text-sm hover:bg-surface-raised"
+              >
+                Un-ignore
+              </button>
+            </div>
+          </div>
+        ))
+      ) : (
+        props.rows.map((row) => {
+          const sort = props.view === "queue" ? props.sort : undefined;
+          return (
+            <div key={row.id} class={CARD_CLASS}>
+              <a
+                href={watchingHref(row.id, props.view, sort, props.category)}
+                class="watch-link block"
+                data-youtube-url={youtubeWatchUrl(row.youtubeVideoId)}
+              >
+                <img
+                  src={youtubeThumbnailUrl(row.youtubeVideoId)}
+                  alt={row.title}
+                  loading="lazy"
+                  onerror="this.style.visibility='hidden'"
+                  class={THUMBNAIL_CLASS}
+                />
+                <div class="p-3">
+                  <p class="font-medium text-text">{row.title}</p>
+                  <p class="mt-1 text-sm text-text-muted">
+                    {row.channelName} · {row.categoryName}
                     {row.publishedAt
-                      ? ` · published ${row.publishedAt.toLocaleDateString()}`
+                      ? ` · ${formatRelativeTime(row.publishedAt)}`
                       : ""}
-                    <button
-                      type="button"
-                      hx-post={toggleHref(
-                        row.id,
-                        props.view,
-                        sort,
-                        props.category,
-                      )}
-                      hx-target="#queue-list"
-                      hx-swap="outerHTML"
-                      hx-disabled-elt="this"
-                    >
-                      {row.status === "watching"
-                        ? "Clear to Unwatched"
-                        : "Mark Watched"}
-                    </button>
-                    <button
-                      type="button"
-                      hx-post={ignoreHref(
-                        row.id,
-                        props.view,
-                        sort,
-                        props.category,
-                      )}
-                      hx-target="#queue-list"
-                      hx-swap="outerHTML"
-                      hx-disabled-elt="this"
-                    >
-                      Ignore
-                    </button>
-                  </li>
-                );
-              })}
-      </ul>
+                  </p>
+                </div>
+              </a>
+              {row.status === "watching" ? (
+                <span class="mx-3 text-sm text-accent">▶ Watching</span>
+              ) : null}
+              <div class="flex gap-2 p-3 pt-2">
+                <button
+                  type="button"
+                  hx-post={toggleHref(row.id, props.view, sort, props.category)}
+                  hx-target="#queue-list"
+                  hx-swap="outerHTML"
+                  hx-disabled-elt="this"
+                  class="rounded bg-accent-strong px-3 py-1 text-sm text-bg hover:bg-accent"
+                >
+                  {row.status === "watching"
+                    ? "Clear to Unwatched"
+                    : "Mark Watched"}
+                </button>
+                <button
+                  type="button"
+                  hx-post={ignoreHref(row.id, props.view, sort, props.category)}
+                  hx-target="#queue-list"
+                  hx-swap="outerHTML"
+                  hx-disabled-elt="this"
+                  class="rounded border border-border px-3 py-1 text-sm hover:bg-surface-raised"
+                >
+                  Ignore
+                </button>
+              </div>
+            </div>
+          );
+        })
+      )}
     </div>
   );
 };
