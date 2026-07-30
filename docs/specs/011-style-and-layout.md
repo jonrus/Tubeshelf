@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: implemented
 created: 2026-07-30
 ---
 
@@ -797,3 +797,42 @@ Fixed by adding an explicit cross-reference there.
 
 A second pass finding nothing beyond one minor doc nit — no new bugs, no incomplete fixes —
 is the stopping signal this skill's process is built around. No third pass was run.
+
+**Task 9 verification retrospective:** automated checks (tests/lint/tsc, curl-based sidebar/
+empty-state/DB checks) all passed cleanly against the task 5/6/8 implementation, but the
+user's live-browser pass caught four real defects that no automated check was positioned to
+catch, all in already-"done" tasks:
+- The sidebar never actually docked beside content at desktop width — `<body>` had no flex
+  layout, so `<aside>` (once `lg:static` took it out of fixed positioning) just stacked above
+  `{props.children}` in normal block flow instead of sitting beside it. Fixed by making
+  `<body>` `lg:flex` and wrapping page content in a `<main class="flex-1">`.
+- The `<aside>` itself carried no `bg-*`, width, or `z-*` class at all — only positioning/
+  transform utilities — so the open drawer was a transparent overlay with page content
+  showing through its links, and (combined with DOM order) the fixed `#sidebar-backdrop`
+  painted on top of `#sidebar-toggle` when open, silently eating clicks meant for the
+  hamburger button. Fixed by adding `bg-surface`/`w-64` to the sidebar and explicit
+  `z-*` layering (toggle 50 > sidebar 40 > backdrop 30) plus a visible `bg-bg/70` fill on the
+  backdrop (previously colorless, despite Design calling it a "semi-transparent backdrop").
+- `data-active`'s boolean-attribute plumbing (Sidebar structure task, task 5) was wired
+  correctly end-to-end — confirmed by curl and by this spec's own new tests — but the
+  `data-[active=true]:...` Tailwind classes the Design section's own sketch called out
+  ("`data-[active=true]:text-accent data-[active=true]:font-semibold` or similar") were never
+  actually added to the rendered `<a>` elements, so the attribute had no visible effect. Fixed
+  by adding `NAV_LINK_CLASS`/`NAV_SUBLINK_CLASS` constants carrying that styling.
+- Blocking a thumbnail host and triggering `onerror="this.style.visibility='hidden'"` hid the
+  entire card's thumbnail area as a blank box, not the colored placeholder Design's "Broken/
+  missing thumbnail fallback" subsection described — because `bg-surface-raised` was a class
+  on the `<img>` itself, and `visibility:hidden` suppresses an element's own background along
+  with its content. Fixed by moving that background onto a wrapping `<div>` around each
+  thumbnail `<img>` (`queue-list.tsx`'s three card variants and `watching-page.tsx`, which had
+  the identical latent bug plus a missing `onerror` handler it should have had all along per
+  Design's "every thumbnail `<img>`" wording).
+
+None of these were design decisions — in every case the Design section already specified the
+correct end state; task 5/6/8 wired the structural/behavioral half (the attribute, the
+transform, the element hierarchy) but dropped the accompanying visual class(es) that made it
+actually visible. Four of the existing sidebar tests (`queue.test.ts`, `categories.test.ts`,
+`ignore-rules.test.ts`, `channels.test.ts`) had their `data-active="true">` regex loosened to
+`data-active="true"[^>]*>` to tolerate the now-present `class` attribute; no test assertions
+changed in intent, only in tolerance for markup this fix legitimately added. No regressions
+elsewhere: full `bun test`/`lint`/`tsc --noEmit` re-ran clean after the fixes.

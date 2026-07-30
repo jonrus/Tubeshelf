@@ -394,7 +394,7 @@ test("GET /queue, /continue-watching, /watched, /ignored each highlight exactly 
     const res = await queueRoute.request(path);
     const html = await res.text();
     const activeLinks = [
-      ...html.matchAll(/<a href="[^"]*" data-active="true">([^(<]*)/g),
+      ...html.matchAll(/<a href="[^"]*" data-active="true"[^>]*>([^(<]*)/g),
     ].map((m) => m[1]?.trim());
     expect(activeLinks).toEqual([activeLabel]);
   }

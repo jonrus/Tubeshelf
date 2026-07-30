@@ -34,6 +34,12 @@ document.getElementById("sidebar-toggle").addEventListener("click", toggleSideba
 document.getElementById("sidebar-backdrop").addEventListener("click", toggleSidebar);
 `;
 
+const NAV_LINK_CLASS =
+  "block rounded px-3 py-2 text-sm font-medium text-text-muted hover:bg-surface-raised hover:text-text data-[active=true]:bg-surface-raised data-[active=true]:text-accent";
+
+const NAV_SUBLINK_CLASS =
+  "block rounded px-2 py-1 text-sm text-text-muted hover:bg-surface-raised hover:text-text data-[active=true]:text-accent data-[active=true]:font-semibold";
+
 export type SidebarView =
   | "queue"
   | "continue-watching"
@@ -96,50 +102,57 @@ export const Layout: FC<{
         <link rel="stylesheet" href="/css/tailwind.css" />
         <script src="https://unpkg.com/htmx.org@2.0.4" />
       </head>
-      <body class="bg-bg text-text">
+      <body class="bg-bg text-text lg:flex lg:min-h-screen">
         <button
           type="button"
           id="sidebar-toggle"
           aria-expanded="false"
           aria-controls="sidebar"
-          class="lg:hidden"
+          class="lg:hidden fixed top-4 left-4 z-50 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text shadow"
         >
           Menu
         </button>
         <div
           id="sidebar-backdrop"
           data-open="false"
-          class="lg:hidden fixed inset-0 hidden data-[open=true]:block"
+          class="lg:hidden fixed inset-0 z-30 hidden bg-bg/70 data-[open=true]:block"
         />
         <aside
           id="sidebar"
           data-open="false"
-          class="fixed inset-y-0 left-0 -translate-x-full transition-transform data-[open=true]:translate-x-0 lg:translate-x-0 lg:static"
+          class="fixed inset-y-0 left-0 z-40 w-64 -translate-x-full overflow-y-auto border-r border-border bg-surface transition-transform data-[open=true]:translate-x-0 lg:z-auto lg:w-64 lg:shrink-0 lg:translate-x-0 lg:static"
         >
-          <nav>
+          <nav class="flex h-full flex-col gap-1 p-4 pt-16 lg:pt-4">
             <a
               href={buildQueueHref(props.currentSort ?? "newest")}
               data-active={props.currentView === "queue"}
+              class={NAV_LINK_CLASS}
             >
               Queue ({props.navCounts.queueCount})
             </a>
             <a
               href="/continue-watching"
               data-active={props.currentView === "continue-watching"}
+              class={NAV_LINK_CLASS}
             >
               Continue Watching ({props.navCounts.continueWatchingCount})
             </a>
-            <a href="/watched" data-active={props.currentView === "watched"}>
+            <a
+              href="/watched"
+              data-active={props.currentView === "watched"}
+              class={NAV_LINK_CLASS}
+            >
               Watched ({props.navCounts.watchedCount})
             </a>
 
             <a
               href="/categories"
               data-active={props.currentView === "categories"}
+              class={NAV_LINK_CLASS}
             >
               Categories
             </a>
-            <ul>
+            <ul class="ml-3 flex flex-col gap-1 border-l border-border pl-3">
               {props.categories.map((cat) => (
                 <li key={cat.id}>
                   <a
@@ -152,6 +165,7 @@ export const Layout: FC<{
                       isFilterableView(props.currentView) &&
                       props.currentCategory === cat.id
                     }
+                    class={NAV_SUBLINK_CLASS}
                   >
                     {cat.name} ({cat.unwatchedCount})
                   </a>
@@ -159,26 +173,35 @@ export const Layout: FC<{
               ))}
             </ul>
 
-            <a href="/ignored" data-active={props.currentView === "ignored"}>
+            <a
+              href="/ignored"
+              data-active={props.currentView === "ignored"}
+              class={NAV_LINK_CLASS}
+            >
               Ignored
             </a>
-            <ul>
+            <ul class="ml-3 flex flex-col gap-1 border-l border-border pl-3">
               <li>
                 <a
                   href="/ignore-rules"
                   data-active={props.currentView === "ignore-rules"}
+                  class={NAV_SUBLINK_CLASS}
                 >
                   Ignore Rules
                 </a>
               </li>
             </ul>
 
-            <a href="/channels" data-active={props.currentView === "channels"}>
+            <a
+              href="/channels"
+              data-active={props.currentView === "channels"}
+              class={NAV_LINK_CLASS}
+            >
               Channels
             </a>
           </nav>
         </aside>
-        {props.children}
+        <main class="min-w-0 flex-1 p-4 pt-20 lg:pt-6">{props.children}</main>
         <script dangerouslySetInnerHTML={{ __html: WATCH_LINK_CLICK_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: SIDEBAR_TOGGLE_SCRIPT }} />
       </body>

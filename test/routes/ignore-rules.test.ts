@@ -85,7 +85,7 @@ test("GET /ignore-rules highlights the Ignore Rules sidebar link and no other to
   expect(res.status).toBe(200);
   const html = await res.text();
   const activeLinks = [
-    ...html.matchAll(/<a href="[^"]*" data-active="true">([^(<]*)/g),
+    ...html.matchAll(/<a href="[^"]*" data-active="true"[^>]*>([^(<]*)/g),
   ].map((m) => m[1]?.trim());
   expect(activeLinks).toEqual(["Ignore Rules"]);
 });

@@ -75,11 +75,14 @@ export const WatchingPage: FC<WatchingPageProps> = (props) => {
       currentView={props.currentView}
     >
       <h1 class="text-xl font-semibold text-text">{props.title}</h1>
-      <img
-        src={youtubeThumbnailUrl(props.youtubeVideoId)}
-        alt={props.title}
-        class="mt-3 aspect-video w-full max-w-2xl rounded-lg object-cover bg-surface-raised"
-      />
+      <div class="mt-3 aspect-video w-full max-w-2xl overflow-hidden rounded-lg bg-surface-raised">
+        <img
+          src={youtubeThumbnailUrl(props.youtubeVideoId)}
+          alt={props.title}
+          onerror="this.style.visibility='hidden'"
+          class="h-full w-full object-cover"
+        />
+      </div>
       <p class="mt-3">
         Status: <WatchStatusBadge status={props.status} />
       </p>

@@ -264,7 +264,7 @@ Generated: 2026-07-30
     existing Watching-page test (auto-timer presence, badge label, return-navigation,
     double-submit guard) unaffected.
 
-- [ ] 9. Final verification. Run `bun test`, `bun run lint`, and `bunx tsc --noEmit` clean
+- [x] 9. Final verification. Run `bun test`, `bun run lint`, and `bunx tsc --noEmit` clean
   across the repo, then `bun run css:build` once more to confirm the final generated
   stylesheet reflects every class used across all touched views. Then do manual end-to-end
   verification, split per CLAUDE.md's convention:

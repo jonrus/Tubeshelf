@@ -130,7 +130,7 @@ test("GET /channels highlights the Channels sidebar link and no other top-level 
   expect(res.status).toBe(200);
   const html = await res.text();
   const activeLinks = [
-    ...html.matchAll(/<a href="[^"]*" data-active="true">([^(<]*)/g),
+    ...html.matchAll(/<a href="[^"]*" data-active="true"[^>]*>([^(<]*)/g),
   ].map((m) => m[1]?.trim());
   expect(activeLinks).toEqual(["Channels"]);
 });

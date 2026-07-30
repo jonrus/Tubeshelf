@@ -98,7 +98,9 @@ const EMPTY_MESSAGES: Record<QueueListProps["view"], string> = {
   ignored: "Nothing ignored.",
 };
 
-const THUMBNAIL_CLASS = "aspect-video w-full object-cover bg-surface-raised";
+const THUMBNAIL_WRAPPER_CLASS =
+  "aspect-video w-full overflow-hidden bg-surface-raised";
+const THUMBNAIL_IMG_CLASS = "h-full w-full object-cover";
 const CARD_CLASS = "rounded-lg border border-border bg-surface overflow-hidden";
 
 export const QueueList: FC<QueueListProps> = (props) => {
@@ -118,13 +120,15 @@ export const QueueList: FC<QueueListProps> = (props) => {
               class="watch-link block"
               data-youtube-url={youtubeWatchUrl(row.youtubeVideoId)}
             >
-              <img
-                src={youtubeThumbnailUrl(row.youtubeVideoId)}
-                alt={row.title}
-                loading="lazy"
-                onerror="this.style.visibility='hidden'"
-                class={THUMBNAIL_CLASS}
-              />
+              <div class={THUMBNAIL_WRAPPER_CLASS}>
+                <img
+                  src={youtubeThumbnailUrl(row.youtubeVideoId)}
+                  alt={row.title}
+                  loading="lazy"
+                  onerror="this.style.visibility='hidden'"
+                  class={THUMBNAIL_IMG_CLASS}
+                />
+              </div>
               <div class="p-3">
                 <p class="font-medium text-text">{row.title}</p>
                 <p class="mt-1 text-sm text-text-muted">
@@ -140,13 +144,15 @@ export const QueueList: FC<QueueListProps> = (props) => {
       ) : props.view === "ignored" ? (
         props.rows.map((row) => (
           <div key={row.id} class={CARD_CLASS}>
-            <img
-              src={youtubeThumbnailUrl(row.youtubeVideoId)}
-              alt={row.title}
-              loading="lazy"
-              onerror="this.style.visibility='hidden'"
-              class={THUMBNAIL_CLASS}
-            />
+            <div class={THUMBNAIL_WRAPPER_CLASS}>
+              <img
+                src={youtubeThumbnailUrl(row.youtubeVideoId)}
+                alt={row.title}
+                loading="lazy"
+                onerror="this.style.visibility='hidden'"
+                class={THUMBNAIL_IMG_CLASS}
+              />
+            </div>
             <div class="p-3">
               <p class="font-medium text-text">{row.title}</p>
               <p class="mt-1 text-sm text-text-muted">
@@ -180,13 +186,15 @@ export const QueueList: FC<QueueListProps> = (props) => {
                 class="watch-link block"
                 data-youtube-url={youtubeWatchUrl(row.youtubeVideoId)}
               >
-                <img
-                  src={youtubeThumbnailUrl(row.youtubeVideoId)}
-                  alt={row.title}
-                  loading="lazy"
-                  onerror="this.style.visibility='hidden'"
-                  class={THUMBNAIL_CLASS}
-                />
+                <div class={THUMBNAIL_WRAPPER_CLASS}>
+                  <img
+                    src={youtubeThumbnailUrl(row.youtubeVideoId)}
+                    alt={row.title}
+                    loading="lazy"
+                    onerror="this.style.visibility='hidden'"
+                    class={THUMBNAIL_IMG_CLASS}
+                  />
+                </div>
                 <div class="p-3">
                   <p class="font-medium text-text">{row.title}</p>
                   <p class="mt-1 text-sm text-text-muted">
