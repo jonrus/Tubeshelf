@@ -135,6 +135,19 @@ test("GET /channels highlights the Channels sidebar link and no other top-level 
   expect(activeLinks).toEqual(["Channels"]);
 });
 
+test("GET /channels shows the empty-state message when there are no subscriptions yet", async () => {
+  // The dev DB is a single shared `:memory:` connection across every test
+  // file in this `bun test` run (src/db/client.ts reads DB_FILE_NAME once
+  // per process), so an earlier-run file may have already left rows behind
+  // -- clear the table explicitly rather than relying on file/test order.
+  db.delete(subscriptions).run();
+
+  const res = await channelsRoute.request("/channels");
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).toContain("No subscriptions yet — add a channel above.");
+});
+
 test("subscribe -> unsubscribe -> resubscribe cycle", async () => {
   const id = channelId("cycleChannel");
   const rssUrl = rssUrlFor(id);
@@ -748,6 +761,7 @@ test("a channel's row shows its unwatched video count", async () => {
   const html = await res.text();
   const row = extractSubscriptionRow(html, "Unwatched Count Channel");
   expect(row).toContain("Unwatched Count Channel (2)");
+  expect(html).not.toContain("No subscriptions yet — add a channel above.");
 });
 
 test("a brand-new subscription to a channel with a pre-existing old gap does not show the badge", async () => {

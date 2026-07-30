@@ -288,4 +288,26 @@ test("GET /categories renders a category's unwatched count and a link to its fil
   expect(html).toContain(
     `<a href="/queue?category=${category.id}">${category.name} (2)</a>`,
   );
+  expect(html).not.toContain("No categories yet — add one below.");
+});
+
+// Kept as the final test in this file (routes/categories.test.ts also runs
+// last across the whole `bun test` run, per the shared in-memory DB note
+// below) since it empties the categories table -- including the system
+// category every other test above relies on existing -- to exercise the
+// true zero-row render path. subscriptions.categoryId FK's to categories,
+// so subscriptions accumulated by other test files against this same
+// shared DB (see src/db/client.ts: DB_FILE_NAME=":memory:" is read once per
+// process, so every test file's dynamic `import("../../src/db/client")`
+// resolves to the same module instance/connection) must be cleared first.
+test("GET /categories shows the empty-state message when there are no categories", async () => {
+  db.delete(subscriptions).run();
+  db.delete(categories).run();
+
+  const res = await categoriesRoute.request("/categories");
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).toContain("No categories yet — add one below.");
+
+  db.insert(categories).values({ name: "Uncategorized", isSystem: true }).run();
 });

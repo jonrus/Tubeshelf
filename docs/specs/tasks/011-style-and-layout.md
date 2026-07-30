@@ -221,7 +221,7 @@ Generated: 2026-07-30
   - Done when: `bunx tsc --noEmit`, `bun run lint`, and `bun test` all pass, including the new
     assertions above and the existing (now-updated, per task 5) queue.test.ts suite.
 
-- [ ] 7. CRUD list/table treatment + empty states, per the spec's "CRUD list/table treatment"
+- [x] 7. CRUD list/table treatment + empty states, per the spec's "CRUD list/table treatment"
   section and the empty-state portion covering Categories/Ignore Rules/Channels. Depends on
   task 2 (design tokens must exist to reference `bg-surface`/`divide-border`/`text-danger`
   etc.). Independent of tasks 5/6 otherwise.

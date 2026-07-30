@@ -2,6 +2,7 @@ import type { FC } from "hono/jsx";
 import type { videos } from "../db/schema";
 import { formatRelativeTime } from "../lib/relative-time";
 import { youtubeThumbnailUrl, youtubeWatchUrl } from "../lib/youtube";
+import { EmptyState } from "./empty-state";
 
 type VideoStatus = (typeof videos.$inferSelect)["status"];
 
@@ -96,10 +97,6 @@ const EMPTY_MESSAGES: Record<QueueListProps["view"], string> = {
   watched: "Nothing watched yet.",
   ignored: "Nothing ignored.",
 };
-
-const EmptyState: FC<{ message: string }> = ({ message }) => (
-  <p class="text-text-muted col-span-full py-12 text-center">{message}</p>
-);
 
 const THUMBNAIL_CLASS = "aspect-video w-full object-cover bg-surface-raised";
 const CARD_CLASS = "rounded-lg border border-border bg-surface overflow-hidden";

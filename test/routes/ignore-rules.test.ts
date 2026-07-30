@@ -90,6 +90,19 @@ test("GET /ignore-rules highlights the Ignore Rules sidebar link and no other to
   expect(activeLinks).toEqual(["Ignore Rules"]);
 });
 
+test("GET /ignore-rules shows the empty-state message when there are no rules yet", async () => {
+  // The dev DB is a single shared `:memory:` connection across every test
+  // file in this `bun test` run (src/db/client.ts reads DB_FILE_NAME once
+  // per process), so an earlier-run file may have already left rows behind
+  // -- clear the table explicitly rather than relying on file/test order.
+  db.delete(ignoreRules).run();
+
+  const res = await ignoreRulesRoute.request("/ignore-rules");
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).toContain("No ignore rules yet — add one below.");
+});
+
 test("GET /ignore-rules lists existing rules", async () => {
   makeRule("list-test-keyword");
 
@@ -98,6 +111,7 @@ test("GET /ignore-rules lists existing rules", async () => {
 
   expect(res.status).toBe(200);
   expect(html).toContain("list-test-keyword");
+  expect(html).not.toContain("No ignore rules yet — add one below.");
 });
 
 test("POST /ignore-rules rejects an empty keyword with an inline error and adds no rule", async () => {
@@ -145,7 +159,7 @@ test("GET /ignore-rules/:id/edit renders that row in edit mode", async () => {
 
   expect(res.status).toBe(200);
   expect(html).toContain(
-    '<input type="text" name="keyword" value="edit-mode-keyword"/>',
+    '<input type="text" name="keyword" value="edit-mode-keyword" class="rounded border border-border bg-surface-raised px-3 py-1.5 text-sm text-text placeholder:text-text-muted"/>',
   );
 });
 
@@ -185,7 +199,7 @@ test("POST /ignore-rules/:id rejects an empty keyword, staying in edit mode with
 
   expect(html).toContain("Keyword is required.");
   expect(html).toContain(
-    '<input type="text" name="keyword" value="rename-empty-reject-keyword"/>',
+    '<input type="text" name="keyword" value="rename-empty-reject-keyword" class="rounded border border-border bg-surface-raised px-3 py-1.5 text-sm text-text placeholder:text-text-muted"/>',
   );
 
   const unchangedRule = db
