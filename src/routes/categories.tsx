@@ -1,48 +1,12 @@
-import { and, asc, count, desc, eq, inArray, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { db } from "../db/client";
-import {
-  CATEGORY_NAME_MAX_LENGTH,
-  categories,
-  subscriptions,
-  videos,
-} from "../db/schema";
+import { CATEGORY_NAME_MAX_LENGTH, categories } from "../db/schema";
+import { listCategoriesWithCounts } from "../lib/categories";
 import { getCurrentUser } from "../lib/current-user";
 import { getNavCounts } from "../lib/nav-counts";
 import { CategoriesList } from "../views/categories-list";
 import { CategoriesPage } from "../views/categories-page";
-
-function categoryUnwatchedCount(userId: number, categoryId: number): number {
-  const row = db
-    .select({ count: count() })
-    .from(videos)
-    .innerJoin(
-      subscriptions,
-      eq(subscriptions.youtubeChannelId, videos.channelId),
-    )
-    .where(
-      and(
-        eq(subscriptions.userId, userId),
-        eq(subscriptions.categoryId, categoryId),
-        isNull(subscriptions.unsubscribedAt),
-        inArray(videos.status, ["unwatched", "watching"]),
-      ),
-    )
-    .get();
-  return row?.count ?? 0;
-}
-
-function listCategories(userId: number) {
-  return db
-    .select()
-    .from(categories)
-    .orderBy(desc(categories.isSystem), asc(categories.name))
-    .all()
-    .map((category) => ({
-      ...category,
-      unwatchedCount: categoryUnwatchedCount(userId, category.id),
-    }));
-}
 
 export const categoriesRoute = new Hono();
 
@@ -50,7 +14,7 @@ categoriesRoute.get("/categories", (c) => {
   const user = getCurrentUser();
   return c.html(
     <CategoriesPage
-      categories={listCategories(user.id)}
+      categories={listCategoriesWithCounts(user.id)}
       navCounts={getNavCounts(user.id)}
     />,
   );
@@ -64,7 +28,7 @@ categoriesRoute.post("/categories", async (c) => {
   if (name.length > CATEGORY_NAME_MAX_LENGTH) {
     return c.html(
       <CategoriesList
-        categories={listCategories(user.id)}
+        categories={listCategoriesWithCounts(user.id)}
         error={`Category name must be ${CATEGORY_NAME_MAX_LENGTH} characters or fewer.`}
       />,
     );
@@ -72,7 +36,7 @@ categoriesRoute.post("/categories", async (c) => {
   if (!name) {
     return c.html(
       <CategoriesList
-        categories={listCategories(user.id)}
+        categories={listCategoriesWithCounts(user.id)}
         error="Category name is required."
       />,
     );
@@ -80,7 +44,7 @@ categoriesRoute.post("/categories", async (c) => {
   if (name.toLowerCase() === "uncategorized") {
     return c.html(
       <CategoriesList
-        categories={listCategories(user.id)}
+        categories={listCategoriesWithCounts(user.id)}
         error='"Uncategorized" is a reserved name.'
       />,
     );
@@ -93,7 +57,7 @@ categoriesRoute.post("/categories", async (c) => {
     if (message.includes("UNIQUE constraint failed")) {
       return c.html(
         <CategoriesList
-          categories={listCategories(user.id)}
+          categories={listCategoriesWithCounts(user.id)}
           error="A category with that name already exists."
         />,
       );
@@ -101,7 +65,9 @@ categoriesRoute.post("/categories", async (c) => {
     throw err;
   }
 
-  return c.html(<CategoriesList categories={listCategories(user.id)} />);
+  return c.html(
+    <CategoriesList categories={listCategoriesWithCounts(user.id)} />,
+  );
 });
 
 categoriesRoute.get("/categories/:id/edit", (c) => {
@@ -113,10 +79,15 @@ categoriesRoute.get("/categories/:id/edit", (c) => {
     .where(eq(categories.id, id))
     .get();
   if (!category || category.isSystem) {
-    return c.html(<CategoriesList categories={listCategories(user.id)} />);
+    return c.html(
+      <CategoriesList categories={listCategoriesWithCounts(user.id)} />,
+    );
   }
   return c.html(
-    <CategoriesList categories={listCategories(user.id)} editingId={id} />,
+    <CategoriesList
+      categories={listCategoriesWithCounts(user.id)}
+      editingId={id}
+    />,
   );
 });
 
@@ -133,7 +104,7 @@ categoriesRoute.post("/categories/:id", async (c) => {
   if (category.isSystem) {
     return c.html(
       <CategoriesList
-        categories={listCategories(user.id)}
+        categories={listCategoriesWithCounts(user.id)}
         error="Cannot rename the system category."
       />,
     );
@@ -145,7 +116,7 @@ categoriesRoute.post("/categories/:id", async (c) => {
   if (name.length > CATEGORY_NAME_MAX_LENGTH) {
     return c.html(
       <CategoriesList
-        categories={listCategories(user.id)}
+        categories={listCategoriesWithCounts(user.id)}
         editingId={id}
         error={`Category name must be ${CATEGORY_NAME_MAX_LENGTH} characters or fewer.`}
       />,
@@ -154,7 +125,7 @@ categoriesRoute.post("/categories/:id", async (c) => {
   if (!name) {
     return c.html(
       <CategoriesList
-        categories={listCategories(user.id)}
+        categories={listCategoriesWithCounts(user.id)}
         editingId={id}
         error="Category name is required."
       />,
@@ -163,7 +134,7 @@ categoriesRoute.post("/categories/:id", async (c) => {
   if (name.toLowerCase() === "uncategorized") {
     return c.html(
       <CategoriesList
-        categories={listCategories(user.id)}
+        categories={listCategoriesWithCounts(user.id)}
         editingId={id}
         error='"Uncategorized" is a reserved name.'
       />,
@@ -177,7 +148,7 @@ categoriesRoute.post("/categories/:id", async (c) => {
     if (message.includes("UNIQUE constraint failed")) {
       return c.html(
         <CategoriesList
-          categories={listCategories(user.id)}
+          categories={listCategoriesWithCounts(user.id)}
           editingId={id}
           error="A category with that name already exists."
         />,
@@ -186,5 +157,7 @@ categoriesRoute.post("/categories/:id", async (c) => {
     throw err;
   }
 
-  return c.html(<CategoriesList categories={listCategories(user.id)} />);
+  return c.html(
+    <CategoriesList categories={listCategoriesWithCounts(user.id)} />,
+  );
 });

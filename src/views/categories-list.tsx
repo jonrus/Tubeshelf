@@ -1,12 +1,8 @@
 import type { FC } from "hono/jsx";
-import type { categories } from "../db/schema";
-
-export type Category = typeof categories.$inferSelect & {
-  unwatchedCount: number;
-};
+import type { CategoryWithCount } from "../lib/categories";
 
 export const CategoriesList: FC<{
-  categories: Category[];
+  categories: CategoryWithCount[];
   editingId?: number;
   error?: string;
 }> = (props) => {

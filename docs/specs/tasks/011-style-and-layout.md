@@ -39,7 +39,7 @@ Generated: 2026-07-30
     custom properties/utilities (e.g. `grep -c "color-accent\|color-danger\|color-surface"
     public/css/tailwind.css` returns a non-zero count).
 
-- [ ] 3. `src/lib/categories.ts`, per the spec's "`src/lib/categories.ts` (new)" section and
+- [x] 3. `src/lib/categories.ts`, per the spec's "`src/lib/categories.ts` (new)" section and
   its "Real type mismatch caught in review" fix. This migrates `categories.tsx`'s existing
   category-listing logic to a shared location without changing its behavior — the Categories
   page's own rendered output is unchanged by this task.

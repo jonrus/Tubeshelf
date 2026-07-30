@@ -1,10 +1,11 @@
 import type { FC } from "hono/jsx";
+import type { CategoryWithCount } from "../lib/categories";
 import type { NavCounts } from "../lib/nav-counts";
-import { CategoriesList, type Category } from "./categories-list";
+import { CategoriesList } from "./categories-list";
 import { Layout } from "./layout";
 
 export const CategoriesPage: FC<{
-  categories: Category[];
+  categories: CategoryWithCount[];
   navCounts: NavCounts;
 }> = (props) => {
   return (
