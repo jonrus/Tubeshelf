@@ -1,6 +1,7 @@
 ---
-status: refined
+status: promoted
 created: 2026-08-02
+promoted_to: docs/specs/012-auth-and-csrf.md
 ---
 
 # Auth & CSRF
@@ -39,6 +40,8 @@ attempts, and CSRF protection on state-changing HTMX requests.
   (`POST /ignore-rules`, `POST /ignore-rules/:id`, `DELETE /ignore-rules/:id`),
   `src/routes/queue.tsx` (`POST /videos/:id/watching`, `POST /videos/:id/watched-toggle`,
   `POST /videos/:id/toggle`, `POST /videos/:id/ignore`, `POST /videos/:id/unignore`).
+  **Superseded during spec writing — this is actually 14 endpoints, not 11; the corrected
+  count and list are in `docs/specs/012-auth-and-csrf.md`'s Scope section.**
 - Retrofit of the existing test suite to work under enforced auth/CSRF (see "Testing impact"
   below) — this is core scope for this feature, not incidental cleanup, because without it
   the bulk of the existing route-level test suite (`test/routes/*.test.ts`) would fail the
@@ -112,6 +115,10 @@ attempts, and CSRF protection on state-changing HTMX requests.
      reusable time-mocking convention — it already fakes `Date`-driven due-time logic for
      the ingestion scheduler), session expiry/logout, CSRF rejection on missing/stale
      token, unauthenticated-GET-redirects-to-login.
+     **Superseded during spec writing — `test/lib/scheduler.test.ts` doesn't actually mock
+     the clock; it takes `now` as an explicit function argument instead, which doesn't
+     transfer to black-box HTTP testing of lockout expiry. `docs/specs/012-auth-and-csrf.md`
+     specifies `bun:test`'s built-in `setSystemTime` instead.**
 
 ## Open Questions
 <!-- resolved via /new-feature — see Resolved Decisions -->

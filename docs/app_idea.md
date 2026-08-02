@@ -81,6 +81,10 @@ remaining pre-v1.0 work is:
    immediately after MVP features finish, because its urgency comes from the app
    actually being exposed (the tunnel-to-internet posture in §5), not from existing in
    the abstract. Costs nothing to defer while the app is dev-only and undeployed.
+   (Refined in docs/specs/012-auth-and-csrf.md — username/password + DB-backed sessions,
+   lockout, env-var recovery, and Origin-allowlist CSRF, designed to support the intended
+   multi-domain deployment of NGINX Proxy Manager on the LAN alongside a Cloudflare Tunnel
+   for WAN access.)
 3. **DB squash** — collapse all migrations accumulated during MVP + styling + auth
    development into one clean baseline. Deliberately the *last* schema-touching spec
    here, not right after MVP features finish — auth (above) will likely add its own
@@ -128,7 +132,7 @@ remaining pre-v1.0 work is:
 - **Auth Strategy:** Simple username/password auth - application is expected to run inside a local network OR open to internet via a secure method such as Cloudflare Tunnels - long term OTP support would be nice but that is v3+ concern
 - **Authorization Rules:** See User Roles & Permissions
 - **Data Protection:** User Passwords at least Bcrypt + salt, other data to encrypt TBD
-- **Baseline hardening (required before deployment, not a blocker for MVP-as-delivered - see *Path to v1.0* step 2 below, which deliberately sequences this right before deployment rather than immediately after MVP features, since its urgency comes from the app actually being exposed):** Since the app may be exposed to the internet (not just LAN), a tunnel alone doesn't protect the login form - basic rate-limiting/lockout on login attempts is required. State-changing HTMX requests (mark watched, add/remove channel, rename category, etc.) require CSRF protection.
+- **Baseline hardening (required before deployment, not a blocker for MVP-as-delivered - see *Path to v1.0* step 2 below, which deliberately sequences this right before deployment rather than immediately after MVP features, since its urgency comes from the app actually being exposed):** Since the app may be exposed to the internet (not just LAN), a tunnel alone doesn't protect the login form - basic rate-limiting/lockout on login attempts is required. State-changing HTMX requests (mark watched, add/remove channel, rename category, etc.) require CSRF protection. (Refined in docs/specs/012-auth-and-csrf.md — 5-attempt/15-minute lockout keyed by username, Origin-header allowlist CSRF.)
 - **Compliance:** None
 
 ## 6. Development Workflow & DevOps
