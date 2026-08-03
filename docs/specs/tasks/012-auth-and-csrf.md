@@ -14,7 +14,7 @@ Generated: 2026-08-02
   (unixepoch())\`)`).
   - Done when: `bunx tsc --noEmit` passes with no errors introduced by this change.
 
-- [ ] 2. Generate the migration for task 1's schema change. **This step requires a real
+- [x] 2. Generate the migration for task 1's schema change. **This step requires a real
   interactive TTY that a Claude Code session does not have** (per `CLAUDE.md`'s "Running
   commands" section — `drizzle-kit generate` can prompt to disambiguate new-vs-renamed
   tables/columns, and piping input does not substitute for a TTY). Tell the user to run
