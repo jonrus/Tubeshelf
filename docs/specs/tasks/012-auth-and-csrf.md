@@ -240,7 +240,7 @@ Generated: 2026-08-02
   - Done when: `bun test test/routes/ignore-rules.test.ts` passes fully again with no
     assertions weakened or removed.
 
-- [ ] 18. Retrofit `test/routes/queue.test.ts` the same way (attach cookie + Origin headers
+- [x] 18. Retrofit `test/routes/queue.test.ts` the same way (attach cookie + Origin headers
   to every `queueRoute.request(...)` call across all its GET and POST endpoints).
   - Done when: `bun test test/routes/queue.test.ts` passes fully again with no assertions
     weakened or removed.

@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
+import { loginAsDefaultUser } from "../helpers/auth";
 
 // queueRoute operates against the module-level `db` singleton in
 // src/db/client.ts, which reads DB_FILE_NAME at import time -- so it must be
@@ -19,6 +20,9 @@ const { youtubeThumbnailUrl, youtubeWatchUrl } = await import(
 
 migrate(db, { migrationsFolder: "./drizzle" });
 seed(db);
+
+const { cookie, origin } = await loginAsDefaultUser();
+const authHeaders = { Cookie: cookie, Origin: origin };
 
 const defaultUserRow = db
   .select()
@@ -114,7 +118,7 @@ function videoRow(id: number) {
 }
 
 test("GET / redirects to /queue", async () => {
-  const res = await queueRoute.request("/");
+  const res = await queueRoute.request("/", { headers: authHeaders });
   expect(res.status).toBe(302);
   expect(res.headers.get("location")).toBe("/queue");
 });
@@ -143,7 +147,7 @@ test("GET /queue returns unwatched/watching videos for active subscriptions, new
     publishedAt: new Date("2026-07-20T00:00:00Z"),
   });
 
-  const res = await queueRoute.request("/queue");
+  const res = await queueRoute.request("/queue", { headers: authHeaders });
   expect(res.status).toBe(200);
   const html = await res.text();
 
@@ -168,7 +172,9 @@ test("GET /queue?sort=oldest inverts the order", async () => {
     publishedAt: new Date("2026-06-10T00:00:00Z"),
   });
 
-  const res = await queueRoute.request("/queue?sort=oldest");
+  const res = await queueRoute.request("/queue?sort=oldest", {
+    headers: authHeaders,
+  });
   expect(res.status).toBe(200);
   const html = await res.text();
   expect(html.indexOf(older.title)).toBeLessThan(html.indexOf(newer.title));
@@ -195,7 +201,9 @@ test("GET /continue-watching returns only watching videos for active subscriptio
     publishedAt: new Date("2026-07-03T00:00:00Z"),
   });
 
-  const res = await queueRoute.request("/continue-watching");
+  const res = await queueRoute.request("/continue-watching", {
+    headers: authHeaders,
+  });
   expect(res.status).toBe(200);
   const html = await res.text();
   expect(html).toContain(watching.title);
@@ -228,7 +236,7 @@ test("GET /watched lists only watched videos, most-recently-watched-first, inclu
     .where(eq(subscriptions.id, unsubSub.id))
     .run();
 
-  const res = await queueRoute.request("/watched");
+  const res = await queueRoute.request("/watched", { headers: authHeaders });
   expect(res.status).toBe(200);
   const html = await res.text();
 
@@ -251,7 +259,9 @@ test("GET /queue?category=<id> only returns that category's videos", async () =>
   makeSubscription(otherChannel.id, { categoryId: otherCategory.id });
   const inOtherCategory = makeVideo(otherChannel.id, { status: "unwatched" });
 
-  const res = await queueRoute.request(`/queue?category=${category.id}`);
+  const res = await queueRoute.request(`/queue?category=${category.id}`, {
+    headers: authHeaders,
+  });
   expect(res.status).toBe(200);
   const html = await res.text();
   expect(html).toContain(inCategory.title);
@@ -273,7 +283,9 @@ test("GET /queue?category=<uncategorized id> returns exactly the Uncategorized-c
     status: "unwatched",
   });
 
-  const res = await queueRoute.request(`/queue?category=${systemCategory.id}`);
+  const res = await queueRoute.request(`/queue?category=${systemCategory.id}`, {
+    headers: authHeaders,
+  });
   expect(res.status).toBe(200);
   const html = await res.text();
   expect(html).toContain(uncategorizedVideo.title);
@@ -285,15 +297,21 @@ test("GET /queue?category=<invalid or nonexistent> falls back to unfiltered, sam
   makeSubscription(channel.id, { categoryId: otherCategory.id });
   const video = makeVideo(channel.id, { status: "unwatched" });
 
-  const noParamRes = await queueRoute.request("/queue");
+  const noParamRes = await queueRoute.request("/queue", {
+    headers: authHeaders,
+  });
   const noParamHtml = await noParamRes.text();
   expect(noParamHtml).toContain(video.title);
 
-  const invalidRes = await queueRoute.request("/queue?category=not-a-number");
+  const invalidRes = await queueRoute.request("/queue?category=not-a-number", {
+    headers: authHeaders,
+  });
   const invalidHtml = await invalidRes.text();
   expect(invalidHtml).toContain(video.title);
 
-  const nonexistentRes = await queueRoute.request("/queue?category=999999");
+  const nonexistentRes = await queueRoute.request("/queue?category=999999", {
+    headers: authHeaders,
+  });
   const nonexistentHtml = await nonexistentRes.text();
   expect(nonexistentHtml).toContain(video.title);
 });
@@ -319,6 +337,7 @@ test("GET /queue?category=<id>&sort=oldest composes filtering with sort", async 
 
   const res = await queueRoute.request(
     `/queue?category=${category.id}&sort=oldest`,
+    { headers: authHeaders },
   );
   expect(res.status).toBe(200);
   const html = await res.text();
@@ -339,6 +358,7 @@ test("GET /continue-watching?category=<id> only returns that category's videos",
 
   const res = await queueRoute.request(
     `/continue-watching?category=${category.id}`,
+    { headers: authHeaders },
   );
   expect(res.status).toBe(200);
   const html = await res.text();
@@ -365,7 +385,9 @@ test("GET /watched?category=<id> only returns that category's videos, including 
     watchedAt: new Date("2026-07-02T00:00:00Z"),
   });
 
-  const res = await queueRoute.request(`/watched?category=${category.id}`);
+  const res = await queueRoute.request(`/watched?category=${category.id}`, {
+    headers: authHeaders,
+  });
   expect(res.status).toBe(200);
   const html = await res.text();
   expect(html).toContain(historyVideo.title);
@@ -374,7 +396,7 @@ test("GET /watched?category=<id> only returns that category's videos, including 
 
 test("GET /queue, /continue-watching, /watched, /ignored each render a sidebar link per existing category", async () => {
   for (const path of ["/queue", "/continue-watching", "/watched", "/ignored"]) {
-    const res = await queueRoute.request(path);
+    const res = await queueRoute.request(path, { headers: authHeaders });
     expect(res.status).toBe(200);
     const html = await res.text();
     expect(html).toContain(`>${category.name} (`);
@@ -391,7 +413,7 @@ test("GET /queue, /continue-watching, /watched, /ignored each highlight exactly 
     "/ignored": "Ignored",
   };
   for (const [path, activeLabel] of Object.entries(routes)) {
-    const res = await queueRoute.request(path);
+    const res = await queueRoute.request(path, { headers: authHeaders });
     const html = await res.text();
     const activeLinks = [
       ...html.matchAll(/<a href="[^"]*" data-active="true"[^>]*>([^(<]*)/g),
@@ -401,7 +423,9 @@ test("GET /queue, /continue-watching, /watched, /ignored each highlight exactly 
 });
 
 test("GET /watched?category=<id> highlights that category's sidebar sub-item, but not /categories's own link", async () => {
-  const res = await queueRoute.request(`/watched?category=${category.id}`);
+  const res = await queueRoute.request(`/watched?category=${category.id}`, {
+    headers: authHeaders,
+  });
   const html = await res.text();
   expect(html).toContain(
     `href="/watched?category=${category.id}" data-active="true"`,
@@ -410,7 +434,9 @@ test("GET /watched?category=<id> highlights that category's sidebar sub-item, bu
 });
 
 test("A sidebar category link on /ignored?category=<id> stays view-aware, pointing at /ignored (not /queue)", async () => {
-  const res = await queueRoute.request(`/ignored?category=${category.id}`);
+  const res = await queueRoute.request(`/ignored?category=${category.id}`, {
+    headers: authHeaders,
+  });
   const html = await res.text();
   const linkMatch = html.match(
     new RegExp(`href="(/ignored\\?category=${otherCategory.id})"`),
@@ -420,7 +446,9 @@ test("A sidebar category link on /ignored?category=<id> stays view-aware, pointi
 });
 
 test("GET /queue's category links preserve sort, and sort links preserve category", async () => {
-  const sortedRes = await queueRoute.request("/queue?sort=oldest");
+  const sortedRes = await queueRoute.request("/queue?sort=oldest", {
+    headers: authHeaders,
+  });
   const sortedHtml = await sortedRes.text();
   expect(sortedHtml).toContain(
     `href="/queue?sort=oldest&amp;category=${category.id}"`,
@@ -428,6 +456,7 @@ test("GET /queue's category links preserve sort, and sort links preserve categor
 
   const filteredRes = await queueRoute.request(
     `/queue?category=${category.id}`,
+    { headers: authHeaders },
   );
   const filteredHtml = await filteredRes.text();
   expect(filteredHtml).toContain(
@@ -436,7 +465,9 @@ test("GET /queue's category links preserve sort, and sort links preserve categor
 });
 
 test("GET /watching/:id 404s for a nonexistent video", async () => {
-  const res = await queueRoute.request("/watching/999999");
+  const res = await queueRoute.request("/watching/999999", {
+    headers: authHeaders,
+  });
   expect(res.status).toBe(404);
 });
 
@@ -444,7 +475,9 @@ test("GET /watching/:id shows Mark Watched and the auto-timer element for a non-
   const channel = makeChannel("Watching Page Channel");
   const video = makeVideo(channel.id, { status: "unwatched" });
 
-  const res = await queueRoute.request(`/watching/${video.id}`);
+  const res = await queueRoute.request(`/watching/${video.id}`, {
+    headers: authHeaders,
+  });
   expect(res.status).toBe(200);
   const html = await res.text();
   expect(html).toContain("Mark Watched &amp; Return to Queue");
@@ -459,7 +492,9 @@ test("GET /watching/:id shows Mark Unwatched and hides the auto-timer for a watc
     watchedAt: new Date(),
   });
 
-  const res = await queueRoute.request(`/watching/${video.id}`);
+  const res = await queueRoute.request(`/watching/${video.id}`, {
+    headers: authHeaders,
+  });
   expect(res.status).toBe(200);
   const html = await res.text();
   expect(html).toContain("Mark Unwatched &amp; Return to Queue");
@@ -472,6 +507,7 @@ test("GET /watching/:id resolves the return target from from/sort, with fallback
 
   const continueRes = await queueRoute.request(
     `/watching/${video.id}?from=continue-watching`,
+    { headers: authHeaders },
   );
   const continueHtml = await continueRes.text();
   expect(continueHtml).toContain("Return to Continue Watching");
@@ -479,6 +515,7 @@ test("GET /watching/:id resolves the return target from from/sort, with fallback
 
   const watchedRes = await queueRoute.request(
     `/watching/${video.id}?from=watched`,
+    { headers: authHeaders },
   );
   const watchedHtml = await watchedRes.text();
   expect(watchedHtml).toContain("Return to Watched");
@@ -486,6 +523,7 @@ test("GET /watching/:id resolves the return target from from/sort, with fallback
 
   const queueSortRes = await queueRoute.request(
     `/watching/${video.id}?from=queue&sort=oldest`,
+    { headers: authHeaders },
   );
   const queueSortHtml = await queueSortRes.text();
   expect(queueSortHtml).toContain("Return to Queue");
@@ -496,6 +534,7 @@ test("GET /watching/:id resolves the return target from from/sort, with fallback
 
   const queueCategoryRes = await queueRoute.request(
     `/watching/${video.id}?from=queue&sort=oldest&category=${category.id}`,
+    { headers: authHeaders },
   );
   const queueCategoryHtml = await queueCategoryRes.text();
   expect(queueCategoryHtml).toContain("Return to Queue");
@@ -508,6 +547,7 @@ test("GET /watching/:id resolves the return target from from/sort, with fallback
 
   const continueCategoryRes = await queueRoute.request(
     `/watching/${video.id}?from=continue-watching&category=${category.id}`,
+    { headers: authHeaders },
   );
   const continueCategoryHtml = await continueCategoryRes.text();
   expect(continueCategoryHtml).toContain("Return to Continue Watching");
@@ -517,6 +557,7 @@ test("GET /watching/:id resolves the return target from from/sort, with fallback
 
   const watchedCategoryRes = await queueRoute.request(
     `/watching/${video.id}?from=watched&category=${category.id}`,
+    { headers: authHeaders },
   );
   const watchedCategoryHtml = await watchedCategoryRes.text();
   expect(watchedCategoryHtml).toContain("Return to Watched");
@@ -524,12 +565,17 @@ test("GET /watching/:id resolves the return target from from/sort, with fallback
     `href="/watched?category=${category.id}"`,
   );
 
-  const bogusRes = await queueRoute.request(`/watching/${video.id}?from=bogus`);
+  const bogusRes = await queueRoute.request(
+    `/watching/${video.id}?from=bogus`,
+    { headers: authHeaders },
+  );
   const bogusHtml = await bogusRes.text();
   expect(bogusHtml).toContain("Return to Queue");
   expect(bogusHtml).toContain('href="/queue"');
 
-  const noQueryRes = await queueRoute.request(`/watching/${video.id}`);
+  const noQueryRes = await queueRoute.request(`/watching/${video.id}`, {
+    headers: authHeaders,
+  });
   const noQueryHtml = await noQueryRes.text();
   expect(noQueryHtml).toContain("Return to Queue");
   expect(noQueryHtml).toContain('href="/queue"');
@@ -541,7 +587,7 @@ test("POST /videos/:id/watching always sets watching, regardless of prior status
   const unwatchedVideo = makeVideo(channel.id, { status: "unwatched" });
   const unwatchedRes = await queueRoute.request(
     `/videos/${unwatchedVideo.id}/watching`,
-    { method: "POST" },
+    { method: "POST", headers: authHeaders },
   );
   expect(unwatchedRes.status).toBe(200);
   expect(videoRow(unwatchedVideo.id).status).toBe("watching");
@@ -552,7 +598,7 @@ test("POST /videos/:id/watching always sets watching, regardless of prior status
   });
   const watchedRes = await queueRoute.request(
     `/videos/${watchedVideo.id}/watching`,
-    { method: "POST" },
+    { method: "POST", headers: authHeaders },
   );
   expect(watchedRes.status).toBe(200);
   expect(videoRow(watchedVideo.id).status).toBe("watching");
@@ -561,6 +607,7 @@ test("POST /videos/:id/watching always sets watching, regardless of prior status
 test("POST /videos/:id/watching 404s for a nonexistent video", async () => {
   const res = await queueRoute.request("/videos/999999/watching", {
     method: "POST",
+    headers: authHeaders,
   });
   expect(res.status).toBe(404);
 });
@@ -571,7 +618,7 @@ test("POST /videos/:id/watched-toggle transitions watching to watched (regressio
 
   const res = await queueRoute.request(
     `/videos/${video.id}/watched-toggle?from=queue&sort=newest`,
-    { method: "POST" },
+    { method: "POST", headers: authHeaders },
   );
   expect(res.status).toBe(303);
   expect(videoRow(video.id).status).toBe("watched");
@@ -587,6 +634,7 @@ test("POST /videos/:id/watched-toggle transitions watched to unwatched", async (
 
   const res = await queueRoute.request(`/videos/${video.id}/watched-toggle`, {
     method: "POST",
+    headers: authHeaders,
   });
   expect(res.status).toBe(303);
   expect(videoRow(video.id).status).toBe("unwatched");
@@ -599,7 +647,7 @@ test("POST /videos/:id/watched-toggle redirects to resolveReturnTarget's url for
   const queueVideo = makeVideo(channel.id, { status: "unwatched" });
   const queueRes = await queueRoute.request(
     `/videos/${queueVideo.id}/watched-toggle?from=queue&sort=oldest`,
-    { method: "POST" },
+    { method: "POST", headers: authHeaders },
   );
   expect(queueRes.status).toBe(303);
   expect(queueRes.headers.get("location")).toBe("/queue?sort=oldest");
@@ -607,7 +655,7 @@ test("POST /videos/:id/watched-toggle redirects to resolveReturnTarget's url for
   const queueCategoryVideo = makeVideo(channel.id, { status: "unwatched" });
   const queueCategoryRes = await queueRoute.request(
     `/videos/${queueCategoryVideo.id}/watched-toggle?from=queue&sort=oldest&category=${category.id}`,
-    { method: "POST" },
+    { method: "POST", headers: authHeaders },
   );
   expect(queueCategoryRes.status).toBe(303);
   expect(queueCategoryRes.headers.get("location")).toBe(
@@ -617,7 +665,7 @@ test("POST /videos/:id/watched-toggle redirects to resolveReturnTarget's url for
   const continueVideo = makeVideo(channel.id, { status: "unwatched" });
   const continueRes = await queueRoute.request(
     `/videos/${continueVideo.id}/watched-toggle?from=continue-watching`,
-    { method: "POST" },
+    { method: "POST", headers: authHeaders },
   );
   expect(continueRes.status).toBe(303);
   expect(continueRes.headers.get("location")).toBe("/continue-watching");
@@ -627,7 +675,7 @@ test("POST /videos/:id/watched-toggle redirects to resolveReturnTarget's url for
   });
   const watchedRedirectRes = await queueRoute.request(
     `/videos/${watchedVideoForRedirect.id}/watched-toggle?from=watched`,
-    { method: "POST" },
+    { method: "POST", headers: authHeaders },
   );
   expect(watchedRedirectRes.status).toBe(303);
   expect(watchedRedirectRes.headers.get("location")).toBe("/watched");
@@ -635,7 +683,7 @@ test("POST /videos/:id/watched-toggle redirects to resolveReturnTarget's url for
   const fallbackVideo = makeVideo(channel.id, { status: "unwatched" });
   const fallbackRes = await queueRoute.request(
     `/videos/${fallbackVideo.id}/watched-toggle`,
-    { method: "POST" },
+    { method: "POST", headers: authHeaders },
   );
   expect(fallbackRes.status).toBe(303);
   expect(fallbackRes.headers.get("location")).toBe("/queue");
@@ -644,6 +692,7 @@ test("POST /videos/:id/watched-toggle redirects to resolveReturnTarget's url for
 test("POST /videos/:id/watched-toggle 404s for a nonexistent video", async () => {
   const res = await queueRoute.request("/videos/999999/watched-toggle", {
     method: "POST",
+    headers: authHeaders,
   });
   expect(res.status).toBe(404);
 });
@@ -662,7 +711,7 @@ test("POST /videos/:id/toggle changes status and the returned partial reflects t
 
   const res = await queueRoute.request(
     `/videos/${toggled.id}/toggle?view=queue&sort=newest`,
-    { method: "POST" },
+    { method: "POST", headers: authHeaders },
   );
   expect(res.status).toBe(200);
   const html = await res.text();
@@ -678,7 +727,7 @@ test("POST /videos/:id/toggle re-renders continue-watching for view=continue-wat
 
   const res = await queueRoute.request(
     `/videos/${video.id}/toggle?view=continue-watching`,
-    { method: "POST" },
+    { method: "POST", headers: authHeaders },
   );
   expect(res.status).toBe(200);
   const html = await res.text();
@@ -698,6 +747,7 @@ test("POST /videos/:id/toggle falls back to queue when the view param is missing
 
   const res = await queueRoute.request(`/videos/${toggled.id}/toggle`, {
     method: "POST",
+    headers: authHeaders,
   });
   expect(res.status).toBe(200);
   const html = await res.text();
@@ -715,6 +765,7 @@ test("POST /videos/:id/toggle falls back to queue for an unrecognized view (e.g.
     `/videos/${toggled.id}/toggle?view=watched`,
     {
       method: "POST",
+      headers: authHeaders,
     },
   );
   expect(res.status).toBe(200);
@@ -726,6 +777,7 @@ test("POST /videos/:id/toggle falls back to queue for an unrecognized view (e.g.
 test("POST /videos/:id/toggle 404s for a nonexistent video", async () => {
   const res = await queueRoute.request("/videos/999999/toggle", {
     method: "POST",
+    headers: authHeaders,
   });
   expect(res.status).toBe(404);
 });
@@ -746,7 +798,7 @@ test("POST /videos/:id/toggle?view=queue&category=<id> keeps the re-rendered par
 
   const res = await queueRoute.request(
     `/videos/${toggled.id}/toggle?view=queue&category=${category.id}`,
-    { method: "POST" },
+    { method: "POST", headers: authHeaders },
   );
   expect(res.status).toBe(200);
   const html = await res.text();
@@ -762,6 +814,7 @@ test("GET /watching/:id round-trips an adversarial category value as a single en
 
   const res = await queueRoute.request(
     `/watching/${video.id}?from=continue-watching&category=${encodeURIComponent(adversarial)}`,
+    { headers: authHeaders },
   );
   expect(res.status).toBe(200);
   const html = await res.text();
@@ -787,7 +840,9 @@ test("End-to-end: a queue row's link round-trips through /watching/:id back to t
   makeSubscription(channel.id, { categoryId: category.id });
   const video = makeVideo(channel.id, { status: "unwatched" });
 
-  const queueRes = await queueRoute.request(`/queue?category=${category.id}`);
+  const queueRes = await queueRoute.request(`/queue?category=${category.id}`, {
+    headers: authHeaders,
+  });
   const queueHtml = await queueRes.text();
   const rowHrefMatch = queueHtml.match(
     new RegExp(`href="(/watching/${video.id}\\?[^"]*)"`),
@@ -798,7 +853,9 @@ test("End-to-end: a queue row's link round-trips through /watching/:id back to t
   }
   const rowHref = rawRowHref.replace(/&amp;/g, "&");
 
-  const watchingRes = await queueRoute.request(rowHref);
+  const watchingRes = await queueRoute.request(rowHref, {
+    headers: authHeaders,
+  });
   const watchingHtml = await watchingRes.text();
   expect(watchingHtml).toContain(`href="/queue?category=${category.id}"`);
 
@@ -809,7 +866,10 @@ test("End-to-end: a queue row's link round-trips through /watching/:id back to t
   }
   const action = rawAction.replace(/&amp;/g, "&");
 
-  const toggleRes = await queueRoute.request(action, { method: "POST" });
+  const toggleRes = await queueRoute.request(action, {
+    method: "POST",
+    headers: authHeaders,
+  });
   expect(toggleRes.status).toBe(303);
   expect(toggleRes.headers.get("location")).toBe(
     `/queue?category=${category.id}`,
@@ -823,6 +883,7 @@ test("End-to-end: a continue-watching row's link round-trips through /watching/:
 
   const continueRes = await queueRoute.request(
     `/continue-watching?category=${category.id}`,
+    { headers: authHeaders },
   );
   const continueHtml = await continueRes.text();
   const rowHrefMatch = continueHtml.match(
@@ -834,7 +895,9 @@ test("End-to-end: a continue-watching row's link round-trips through /watching/:
   }
   const rowHref = rawRowHref.replace(/&amp;/g, "&");
 
-  const watchingRes = await queueRoute.request(rowHref);
+  const watchingRes = await queueRoute.request(rowHref, {
+    headers: authHeaders,
+  });
   const watchingHtml = await watchingRes.text();
   expect(watchingHtml).toContain(
     `href="/continue-watching?category=${category.id}"`,
@@ -847,7 +910,10 @@ test("End-to-end: a continue-watching row's link round-trips through /watching/:
   }
   const action = rawAction.replace(/&amp;/g, "&");
 
-  const toggleRes = await queueRoute.request(action, { method: "POST" });
+  const toggleRes = await queueRoute.request(action, {
+    method: "POST",
+    headers: authHeaders,
+  });
   expect(toggleRes.status).toBe(303);
   expect(toggleRes.headers.get("location")).toBe(
     `/continue-watching?category=${category.id}`,
@@ -864,6 +930,7 @@ test("End-to-end: a watched row's link round-trips through /watching/:id back to
 
   const watchedRes = await queueRoute.request(
     `/watched?category=${category.id}`,
+    { headers: authHeaders },
   );
   const watchedHtml = await watchedRes.text();
   const rowHrefMatch = watchedHtml.match(
@@ -875,7 +942,9 @@ test("End-to-end: a watched row's link round-trips through /watching/:id back to
   }
   const rowHref = rawRowHref.replace(/&amp;/g, "&");
 
-  const watchingRes = await queueRoute.request(rowHref);
+  const watchingRes = await queueRoute.request(rowHref, {
+    headers: authHeaders,
+  });
   const watchingHtml = await watchingRes.text();
   expect(watchingHtml).toContain(`href="/watched?category=${category.id}"`);
 
@@ -886,7 +955,10 @@ test("End-to-end: a watched row's link round-trips through /watching/:id back to
   }
   const action = rawAction.replace(/&amp;/g, "&");
 
-  const toggleRes = await queueRoute.request(action, { method: "POST" });
+  const toggleRes = await queueRoute.request(action, {
+    method: "POST",
+    headers: authHeaders,
+  });
   expect(toggleRes.status).toBe(303);
   expect(toggleRes.headers.get("location")).toBe(
     `/watched?category=${category.id}`,
@@ -910,7 +982,7 @@ test("POST /videos/:id/toggle?view=continue-watching&category=<id> keeps the re-
 
   const res = await queueRoute.request(
     `/videos/${toggled.id}/toggle?view=continue-watching&category=${category.id}`,
-    { method: "POST" },
+    { method: "POST", headers: authHeaders },
   );
   expect(res.status).toBe(200);
   const html = await res.text();
@@ -926,7 +998,7 @@ test("POST /videos/:id/ignore?view=queue sets ignored/manual and removes the row
 
   const res = await queueRoute.request(
     `/videos/${ignored.id}/ignore?view=queue&sort=newest`,
-    { method: "POST" },
+    { method: "POST", headers: authHeaders },
   );
   expect(res.status).toBe(200);
   const html = await res.text();
@@ -943,7 +1015,7 @@ test("POST /videos/:id/ignore?view=continue-watching sets ignored/manual and rem
 
   const res = await queueRoute.request(
     `/videos/${video.id}/ignore?view=continue-watching`,
-    { method: "POST" },
+    { method: "POST", headers: authHeaders },
   );
   expect(res.status).toBe(200);
   const html = await res.text();
@@ -955,6 +1027,7 @@ test("POST /videos/:id/ignore?view=continue-watching sets ignored/manual and rem
 test("POST /videos/:id/ignore 404s for a nonexistent video", async () => {
   const res = await queueRoute.request("/videos/999999/ignore", {
     method: "POST",
+    headers: authHeaders,
   });
   expect(res.status).toBe(404);
 });
@@ -983,7 +1056,7 @@ test("GET /ignored lists only ignored videos for active subscriptions, excluding
     .where(eq(subscriptions.id, unsubSub.id))
     .run();
 
-  const res = await queueRoute.request("/ignored");
+  const res = await queueRoute.request("/ignored", { headers: authHeaders });
   expect(res.status).toBe(200);
   const html = await res.text();
   expect(html).toContain(manualIgnored.title);
@@ -1013,6 +1086,7 @@ test("GET /ignored?category=<id> only returns that category's videos, including 
 
   const uncategorizedRes = await queueRoute.request(
     `/ignored?category=${systemCategory.id}`,
+    { headers: authHeaders },
   );
   const uncategorizedHtml = await uncategorizedRes.text();
   expect(uncategorizedHtml).toContain(uncategorizedVideo.title);
@@ -1020,6 +1094,7 @@ test("GET /ignored?category=<id> only returns that category's videos, including 
 
   const categorizedRes = await queueRoute.request(
     `/ignored?category=${category.id}`,
+    { headers: authHeaders },
   );
   const categorizedHtml = await categorizedRes.text();
   expect(categorizedHtml).toContain(categorizedVideo.title);
@@ -1034,21 +1109,30 @@ test("GET /ignored?category=<invalid or nonexistent> falls back to unfiltered, s
     ignoreMethod: "auto",
   });
 
-  const noParamRes = await queueRoute.request("/ignored");
+  const noParamRes = await queueRoute.request("/ignored", {
+    headers: authHeaders,
+  });
   const noParamHtml = await noParamRes.text();
   expect(noParamHtml).toContain(video.title);
 
-  const invalidRes = await queueRoute.request("/ignored?category=not-a-number");
+  const invalidRes = await queueRoute.request(
+    "/ignored?category=not-a-number",
+    { headers: authHeaders },
+  );
   const invalidHtml = await invalidRes.text();
   expect(invalidHtml).toContain(video.title);
 
-  const nonexistentRes = await queueRoute.request("/ignored?category=999999");
+  const nonexistentRes = await queueRoute.request("/ignored?category=999999", {
+    headers: authHeaders,
+  });
   const nonexistentHtml = await nonexistentRes.text();
   expect(nonexistentHtml).toContain(video.title);
 });
 
 test("GET /ignored's category links preserve the current filter, same pattern as the other views", async () => {
-  const res = await queueRoute.request(`/ignored?category=${category.id}`);
+  const res = await queueRoute.request(`/ignored?category=${category.id}`, {
+    headers: authHeaders,
+  });
   const html = await res.text();
   expect(html).toContain(`href="/ignored?category=${category.id}"`);
   expect(html).toContain('href="/ignored"');
@@ -1064,6 +1148,7 @@ test("POST /videos/:id/unignore reverts a manually-ignored video to unwatched wi
 
   const res = await queueRoute.request(`/videos/${video.id}/unignore`, {
     method: "POST",
+    headers: authHeaders,
   });
   expect(res.status).toBe(200);
   const html = await res.text();
@@ -1082,6 +1167,7 @@ test("POST /videos/:id/unignore reverts an auto-ignored video to unwatched with 
 
   const res = await queueRoute.request(`/videos/${video.id}/unignore`, {
     method: "POST",
+    headers: authHeaders,
   });
   expect(res.status).toBe(200);
   const html = await res.text();
@@ -1100,6 +1186,7 @@ test("POST /videos/:id/unignore against a watched video does not throw and clear
 
   const res = await queueRoute.request(`/videos/${video.id}/unignore`, {
     method: "POST",
+    headers: authHeaders,
   });
   expect(res.status).toBe(200);
   expect(videoRow(video.id).status).toBe("unwatched");
@@ -1109,6 +1196,7 @@ test("POST /videos/:id/unignore against a watched video does not throw and clear
 test("POST /videos/:id/unignore 404s for a nonexistent video", async () => {
   const res = await queueRoute.request("/videos/999999/unignore", {
     method: "POST",
+    headers: authHeaders,
   });
   expect(res.status).toBe(404);
 });
@@ -1118,7 +1206,7 @@ test("End-to-end: a queue row's rendered Ignore button round-trips through /vide
   makeSubscription(channel.id);
   const video = makeVideo(channel.id, { status: "unwatched" });
 
-  const queueRes = await queueRoute.request("/queue");
+  const queueRes = await queueRoute.request("/queue", { headers: authHeaders });
   const queueHtml = await queueRes.text();
   const buttonMatch = queueHtml.match(
     new RegExp(`hx-post="(/videos/${video.id}/ignore\\?[^"]*)"`),
@@ -1129,10 +1217,15 @@ test("End-to-end: a queue row's rendered Ignore button round-trips through /vide
   }
   const hxPost = rawHxPost.replace(/&amp;/g, "&");
 
-  const ignoreRes = await queueRoute.request(hxPost, { method: "POST" });
+  const ignoreRes = await queueRoute.request(hxPost, {
+    method: "POST",
+    headers: authHeaders,
+  });
   expect(ignoreRes.status).toBe(200);
 
-  const freshQueueRes = await queueRoute.request("/queue");
+  const freshQueueRes = await queueRoute.request("/queue", {
+    headers: authHeaders,
+  });
   const freshQueueHtml = await freshQueueRes.text();
   expect(freshQueueHtml).not.toContain(video.title);
 });
@@ -1144,7 +1237,9 @@ test("End-to-end: a continue-watching row's rendered Ignore button round-trips t
   makeSubscription(channel.id);
   const video = makeVideo(channel.id, { status: "watching" });
 
-  const continueRes = await queueRoute.request("/continue-watching");
+  const continueRes = await queueRoute.request("/continue-watching", {
+    headers: authHeaders,
+  });
   const continueHtml = await continueRes.text();
   const buttonMatch = continueHtml.match(
     new RegExp(`hx-post="(/videos/${video.id}/ignore\\?[^"]*)"`),
@@ -1155,10 +1250,15 @@ test("End-to-end: a continue-watching row's rendered Ignore button round-trips t
   }
   const hxPost = rawHxPost.replace(/&amp;/g, "&");
 
-  const ignoreRes = await queueRoute.request(hxPost, { method: "POST" });
+  const ignoreRes = await queueRoute.request(hxPost, {
+    method: "POST",
+    headers: authHeaders,
+  });
   expect(ignoreRes.status).toBe(200);
 
-  const freshContinueRes = await queueRoute.request("/continue-watching");
+  const freshContinueRes = await queueRoute.request("/continue-watching", {
+    headers: authHeaders,
+  });
   const freshContinueHtml = await freshContinueRes.text();
   expect(freshContinueHtml).not.toContain(video.title);
 });
@@ -1171,7 +1271,9 @@ test("End-to-end: an ignored row's rendered Un-ignore button round-trips through
     ignoreMethod: "manual",
   });
 
-  const ignoredRes = await queueRoute.request("/ignored");
+  const ignoredRes = await queueRoute.request("/ignored", {
+    headers: authHeaders,
+  });
   const ignoredHtml = await ignoredRes.text();
   const buttonMatch = ignoredHtml.match(
     new RegExp(`hx-post="(/videos/${video.id}/unignore(?:\\?[^"]*)?)"`),
@@ -1182,14 +1284,21 @@ test("End-to-end: an ignored row's rendered Un-ignore button round-trips through
   }
   const hxPost = rawHxPost.replace(/&amp;/g, "&");
 
-  const unignoreRes = await queueRoute.request(hxPost, { method: "POST" });
+  const unignoreRes = await queueRoute.request(hxPost, {
+    method: "POST",
+    headers: authHeaders,
+  });
   expect(unignoreRes.status).toBe(200);
 
-  const freshIgnoredRes = await queueRoute.request("/ignored");
+  const freshIgnoredRes = await queueRoute.request("/ignored", {
+    headers: authHeaders,
+  });
   const freshIgnoredHtml = await freshIgnoredRes.text();
   expect(freshIgnoredHtml).not.toContain(video.title);
 
-  const freshQueueRes = await queueRoute.request("/queue");
+  const freshQueueRes = await queueRoute.request("/queue", {
+    headers: authHeaders,
+  });
   const freshQueueHtml = await freshQueueRes.text();
   expect(freshQueueHtml).toContain(video.title);
   expect(videoRow(video.id).status).toBe("unwatched");
@@ -1198,7 +1307,7 @@ test("End-to-end: an ignored row's rendered Un-ignore button round-trips through
 test("GET /queue renders the nav with Queue/Continue Watching/Watched counts from getNavCounts", async () => {
   const counts = getNavCounts(defaultUser.id);
 
-  const res = await queueRoute.request("/queue");
+  const res = await queueRoute.request("/queue", { headers: authHeaders });
   const html = await res.text();
 
   expect(html).toContain(`Queue (${counts.queueCount})`);
@@ -1215,19 +1324,23 @@ test("Queue/Continue Watching/Watched cards carry data-youtube-url matching yout
     watchedAt: new Date("2026-07-01T00:00:00Z"),
   });
 
-  const queueHtml = await (await queueRoute.request("/queue")).text();
+  const queueHtml = await (
+    await queueRoute.request("/queue", { headers: authHeaders })
+  ).text();
   expect(queueHtml).toContain(
     `data-youtube-url="${youtubeWatchUrl(watchingVideo.youtubeVideoId)}"`,
   );
 
   const continueHtml = await (
-    await queueRoute.request("/continue-watching")
+    await queueRoute.request("/continue-watching", { headers: authHeaders })
   ).text();
   expect(continueHtml).toContain(
     `data-youtube-url="${youtubeWatchUrl(watchingVideo.youtubeVideoId)}"`,
   );
 
-  const watchedHtml = await (await queueRoute.request("/watched")).text();
+  const watchedHtml = await (
+    await queueRoute.request("/watched", { headers: authHeaders })
+  ).text();
   expect(watchedHtml).toContain(
     `data-youtube-url="${youtubeWatchUrl(watchedVideo.youtubeVideoId)}"`,
   );
@@ -1246,24 +1359,30 @@ test("Queue/Continue Watching/Watched/Ignored cards render a thumbnail img match
     ignoreMethod: "manual",
   });
 
-  const queueHtml = await (await queueRoute.request("/queue")).text();
+  const queueHtml = await (
+    await queueRoute.request("/queue", { headers: authHeaders })
+  ).text();
   expect(queueHtml).toContain(
     `src="${youtubeThumbnailUrl(watchingVideo.youtubeVideoId)}"`,
   );
 
   const continueHtml = await (
-    await queueRoute.request("/continue-watching")
+    await queueRoute.request("/continue-watching", { headers: authHeaders })
   ).text();
   expect(continueHtml).toContain(
     `src="${youtubeThumbnailUrl(watchingVideo.youtubeVideoId)}"`,
   );
 
-  const watchedHtml = await (await queueRoute.request("/watched")).text();
+  const watchedHtml = await (
+    await queueRoute.request("/watched", { headers: authHeaders })
+  ).text();
   expect(watchedHtml).toContain(
     `src="${youtubeThumbnailUrl(watchedVideo.youtubeVideoId)}"`,
   );
 
-  const ignoredHtml = await (await queueRoute.request("/ignored")).text();
+  const ignoredHtml = await (
+    await queueRoute.request("/ignored", { headers: authHeaders })
+  ).text();
   expect(ignoredHtml).toContain(
     `src="${youtubeThumbnailUrl(ignoredVideo.youtubeVideoId)}"`,
   );
@@ -1277,26 +1396,35 @@ test("Each video-list view renders its empty-state message when zero rows match 
     .get();
 
   const queueEmptyHtml = await (
-    await queueRoute.request(`/queue?category=${emptyCategory.id}`)
+    await queueRoute.request(`/queue?category=${emptyCategory.id}`, {
+      headers: authHeaders,
+    })
   ).text();
   expect(queueEmptyHtml).toContain(
     "Nothing in your queue — your subscriptions are all caught up.",
   );
 
   const continueEmptyHtml = await (
-    await queueRoute.request(`/continue-watching?category=${emptyCategory.id}`)
+    await queueRoute.request(
+      `/continue-watching?category=${emptyCategory.id}`,
+      { headers: authHeaders },
+    )
   ).text();
   expect(continueEmptyHtml).toContain(
     "Nothing in progress — start watching something from your queue.",
   );
 
   const watchedEmptyHtml = await (
-    await queueRoute.request(`/watched?category=${emptyCategory.id}`)
+    await queueRoute.request(`/watched?category=${emptyCategory.id}`, {
+      headers: authHeaders,
+    })
   ).text();
   expect(watchedEmptyHtml).toContain("Nothing watched yet.");
 
   const ignoredEmptyHtml = await (
-    await queueRoute.request(`/ignored?category=${emptyCategory.id}`)
+    await queueRoute.request(`/ignored?category=${emptyCategory.id}`, {
+      headers: authHeaders,
+    })
   ).text();
   expect(ignoredEmptyHtml).toContain("Nothing ignored.");
 
@@ -1305,7 +1433,9 @@ test("Each video-list view renders its empty-state message when zero rows match 
   const video = makeVideo(channel.id, { status: "unwatched" });
 
   const queueNonemptyHtml = await (
-    await queueRoute.request(`/queue?category=${emptyCategory.id}`)
+    await queueRoute.request(`/queue?category=${emptyCategory.id}`, {
+      headers: authHeaders,
+    })
   ).text();
   expect(queueNonemptyHtml).toContain(video.title);
   expect(queueNonemptyHtml).not.toContain(
