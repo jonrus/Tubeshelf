@@ -1,10 +1,18 @@
 import { createHash, randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
-import type { Context } from "hono";
+import type { Context, MiddlewareHandler } from "hono";
+import { getCookie, setCookie } from "hono/cookie";
 import { db } from "../db/client";
 import { sessions, users } from "../db/schema";
 
+declare module "hono" {
+  interface ContextVariableMap {
+    userId: number;
+  }
+}
+
 const SESSION_IDLE_TIMEOUT_MS = 30 * 24 * 60 * 60 * 1000;
+const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
@@ -71,6 +79,43 @@ export function getTrustedOrigins(): string[] {
   if (!raw) return ["http://localhost:3000"];
   return raw.split(",").map((origin) => origin.trim());
 }
+
+export function getSessionFromRequest(
+  c: Context,
+): { userId: number } | undefined {
+  const token = getCookie(c, "session");
+  if (!token) return undefined;
+  return findValidSession(token);
+}
+
+function buildLoginRedirect(c: Context): string {
+  const url = new URL(c.req.url);
+  const currentPath = url.pathname + url.search;
+  return `/login?from=${encodeURIComponent(currentPath)}`;
+}
+
+export const requireAuth: MiddlewareHandler = async (c, next) => {
+  const token = getCookie(c, "session");
+  const session = token ? findValidSession(token) : undefined;
+  if (!session || !token) {
+    const location = buildLoginRedirect(c);
+    if (c.req.header("HX-Request")) {
+      c.header("HX-Redirect", location);
+      return c.body(null, 401);
+    }
+    return c.redirect(location, 302);
+  }
+
+  setCookie(c, "session", token, {
+    httpOnly: true,
+    sameSite: "Lax",
+    secure: resolveCookieSecure(c),
+    maxAge: SESSION_MAX_AGE_SECONDS,
+    path: "/",
+  });
+  c.set("userId", session.userId);
+  await next();
+};
 
 export function resolveCookieSecure(c: Context): boolean {
   const originHeader = c.req.header("Origin");

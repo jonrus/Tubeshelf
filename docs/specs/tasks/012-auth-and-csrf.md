@@ -63,7 +63,7 @@ Generated: 2026-08-02
   addressed by the trusted-origins list at all).
   - Done when: `bunx tsc --noEmit` and `bun run lint` pass.
 
-- [ ] 6. In `src/lib/auth.ts`: the `requireAuth` Hono middleware. Reads the `session`
+- [x] 6. In `src/lib/auth.ts`: the `requireAuth` Hono middleware. Reads the `session`
   cookie (via `getCookie` from `hono/cookie`); if absent or `findValidSession` (task 4)
   returns `undefined`, treat as unauthenticated: if the request has an `HX-Request` header,
   respond with status `401`, header `HX-Redirect: /login?from=<url-encoded current path +
