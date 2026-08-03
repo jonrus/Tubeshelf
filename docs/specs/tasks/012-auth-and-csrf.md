@@ -24,7 +24,7 @@ Generated: 2026-08-02
     `drizzle/0005_<name>.sql`) was generated and its contents create the `sessions` table
     and add the two new `users` columns from task 1, with no unexpected drops/renames.
 
-- [ ] 3. In a new `src/lib/auth.ts`: password hashing and the recovery-password bootstrap.
+- [x] 3. In a new `src/lib/auth.ts`: password hashing and the recovery-password bootstrap.
   Export `hashPassword(plain: string): Promise<string>` (wraps `Bun.password.hash(plain,
   { algorithm: "bcrypt" })`) and `verifyPassword(plain: string, hash: string):
   Promise<boolean>` (wraps `Bun.password.verify`). Export
