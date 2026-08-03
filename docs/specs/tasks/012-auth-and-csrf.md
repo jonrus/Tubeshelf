@@ -204,7 +204,7 @@ Generated: 2026-08-02
     `devcontainer exec --docker-path podman --workspace-folder . printenv
     AUTH_RECOVERY_PASSWORD` prints the configured value.
 
-- [ ] 14. New `test/helpers/auth.ts`. At module load, set `process.env.TRUSTED_ORIGINS =
+- [x] 14. New `test/helpers/auth.ts`. At module load, set `process.env.TRUSTED_ORIGINS =
   "http://test.local"` (mirroring the existing `process.env.DB_FILE_NAME = ":memory:"`
   pattern used at the top of every `test/routes/*.test.ts` file). Export a function (e.g.
   `loginAsDefaultUser(): Promise<{ cookie: string; origin: string }>`) that: ensures the
