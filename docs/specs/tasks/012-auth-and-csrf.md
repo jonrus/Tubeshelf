@@ -49,7 +49,7 @@ Generated: 2026-08-02
   hashes and deletes the matching row.
   - Done when: `bunx tsc --noEmit` and `bun run lint` pass.
 
-- [ ] 5. In `src/lib/auth.ts`: trusted-origins parsing and per-request secure-flag
+- [x] 5. In `src/lib/auth.ts`: trusted-origins parsing and per-request secure-flag
   resolution. Export `getTrustedOrigins(): string[]` — parses
   `process.env.TRUSTED_ORIGINS` as a comma-separated list, trimming whitespace on each
   entry, defaulting to `["http://localhost:3000"]` if unset. Export

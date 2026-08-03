@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
+import type { Context } from "hono";
 import { db } from "../db/client";
 import { sessions, users } from "../db/schema";
 
@@ -63,4 +64,28 @@ export function deleteSession(token: string): void {
   db.delete(sessions)
     .where(eq(sessions.tokenHash, hashToken(token)))
     .run();
+}
+
+export function getTrustedOrigins(): string[] {
+  const raw = process.env.TRUSTED_ORIGINS;
+  if (!raw) return ["http://localhost:3000"];
+  return raw.split(",").map((origin) => origin.trim());
+}
+
+export function resolveCookieSecure(c: Context): boolean {
+  const originHeader = c.req.header("Origin");
+  if (originHeader !== undefined) {
+    const match = getTrustedOrigins().find((origin) => origin === originHeader);
+    return match?.startsWith("https://") ?? false;
+  }
+
+  const hostHeader = c.req.header("Host");
+  const match = getTrustedOrigins().find((origin) => {
+    try {
+      return new URL(origin).host === hostHeader;
+    } catch {
+      return false;
+    }
+  });
+  return match?.startsWith("https://") ?? false;
 }
