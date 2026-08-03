@@ -235,7 +235,7 @@ Generated: 2026-08-02
   - Done when: `bun test test/routes/channels.test.ts` passes fully again with no
     assertions weakened or removed.
 
-- [ ] 17. Retrofit `test/routes/ignore-rules.test.ts` the same way (attach cookie + Origin
+- [x] 17. Retrofit `test/routes/ignore-rules.test.ts` the same way (attach cookie + Origin
   headers to every `ignoreRulesRoute.request(...)` call, including the DELETE).
   - Done when: `bun test test/routes/ignore-rules.test.ts` passes fully again with no
     assertions weakened or removed.

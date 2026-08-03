@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
+import { loginAsDefaultUser } from "../helpers/auth";
 
 // ignoreRulesRoute operates against the module-level `db` singleton in
 // src/db/client.ts, which reads DB_FILE_NAME at import time -- so it must be
@@ -16,6 +17,9 @@ const { ignoreRulesRoute } = await import("../../src/routes/ignore-rules");
 
 migrate(db, { migrationsFolder: "./drizzle" });
 seed(db);
+
+const { cookie, origin } = await loginAsDefaultUser();
+const authHeaders = { Cookie: cookie, Origin: origin };
 
 const channel = db
   .insert(youtubeChannels)
@@ -61,7 +65,10 @@ function videoRow(id: number) {
 function postAdd(keyword: string) {
   return ignoreRulesRoute.request("/ignore-rules", {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      ...authHeaders,
+    },
     body: new URLSearchParams({ keyword }),
   });
 }
@@ -69,7 +76,10 @@ function postAdd(keyword: string) {
 function postEdit(id: number, keyword: string) {
   return ignoreRulesRoute.request(`/ignore-rules/${id}`, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      ...authHeaders,
+    },
     body: new URLSearchParams({ keyword }),
   });
 }
@@ -77,11 +87,14 @@ function postEdit(id: number, keyword: string) {
 function deleteRule(id: number) {
   return ignoreRulesRoute.request(`/ignore-rules/${id}`, {
     method: "DELETE",
+    headers: authHeaders,
   });
 }
 
 test("GET /ignore-rules highlights the Ignore Rules sidebar link and no other top-level link", async () => {
-  const res = await ignoreRulesRoute.request("/ignore-rules");
+  const res = await ignoreRulesRoute.request("/ignore-rules", {
+    headers: authHeaders,
+  });
   expect(res.status).toBe(200);
   const html = await res.text();
   const activeLinks = [
@@ -97,7 +110,9 @@ test("GET /ignore-rules shows the empty-state message when there are no rules ye
   // -- clear the table explicitly rather than relying on file/test order.
   db.delete(ignoreRules).run();
 
-  const res = await ignoreRulesRoute.request("/ignore-rules");
+  const res = await ignoreRulesRoute.request("/ignore-rules", {
+    headers: authHeaders,
+  });
   expect(res.status).toBe(200);
   const html = await res.text();
   expect(html).toContain("No ignore rules yet — add one below.");
@@ -106,7 +121,9 @@ test("GET /ignore-rules shows the empty-state message when there are no rules ye
 test("GET /ignore-rules lists existing rules", async () => {
   makeRule("list-test-keyword");
 
-  const res = await ignoreRulesRoute.request("/ignore-rules");
+  const res = await ignoreRulesRoute.request("/ignore-rules", {
+    headers: authHeaders,
+  });
   const html = await res.text();
 
   expect(res.status).toBe(200);
@@ -154,7 +171,9 @@ test("POST /ignore-rules adds a rule and triggers reconciliation of newly-matchi
 test("GET /ignore-rules/:id/edit renders that row in edit mode", async () => {
   const rule = makeRule("edit-mode-keyword");
 
-  const res = await ignoreRulesRoute.request(`/ignore-rules/${rule.id}/edit`);
+  const res = await ignoreRulesRoute.request(`/ignore-rules/${rule.id}/edit`, {
+    headers: authHeaders,
+  });
   const html = await res.text();
 
   expect(res.status).toBe(200);
