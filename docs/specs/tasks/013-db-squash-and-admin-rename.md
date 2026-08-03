@@ -2,7 +2,7 @@
 Spec: docs/specs/013-db-squash-and-admin-rename.md
 Generated: 2026-08-03
 
-- [ ] 1. Squash the 6 existing Drizzle migrations into a single baseline. Delete
+- [x] 1. Squash the 6 existing Drizzle migrations into a single baseline. Delete
   `drizzle/0000_steady_wild_pack.sql` through `drizzle/0005_misty_jasper_sitwell.sql` and
   everything under `drizzle/meta/` (`_journal.json` + the 6 `NNNN_snapshot.json` files).
   Then run `bun run db:generate` (via `devcontainer exec --docker-path podman

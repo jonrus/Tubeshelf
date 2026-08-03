@@ -5,43 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1784585698424,
-      "tag": "0000_steady_wild_pack",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1784759504472,
-      "tag": "0001_next_moon_knight",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1784833477365,
-      "tag": "0002_past_yellowjacket",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1784904030670,
-      "tag": "0003_redundant_sprite",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1785083660438,
-      "tag": "0004_perpetual_lucky_pierre",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1785767519562,
-      "tag": "0005_misty_jasper_sitwell",
+      "when": 1785799797485,
+      "tag": "baseline",
       "breakpoints": true
     }
   ]
