@@ -24,7 +24,7 @@ Generated: 2026-08-03
   unique index) and no `ALTER TABLE`/`DROP` statements (this is a fresh-baseline `CREATE`
   set, not a migration).
 
-- [ ] 2. Wipe the local dev DB so it re-creates from the new baseline. Delete
+- [x] 2. Wipe the local dev DB so it re-creates from the new baseline. Delete
   `data/tubeshelf.db`, `data/tubeshelf.db-shm`, `data/tubeshelf.db-wal` (all gitignored per
   `.gitignore`'s `data/*.db*` — confirm `git status` shows nothing for this deletion).
   Done when: `data/` contains only `.gitkeep`, and `git status` is clean with respect to
