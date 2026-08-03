@@ -7,6 +7,7 @@ import {
   videos,
   youtubeChannels,
 } from "../db/schema";
+import { csrfCheck, requireAuth } from "../lib/auth";
 import { listCategoriesWithCounts } from "../lib/categories";
 import {
   CHANNEL_ID_PATTERN,
@@ -127,6 +128,8 @@ function listActiveSubscriptions(userId: number) {
 }
 
 export const channelsRoute = new Hono();
+
+channelsRoute.use("*", csrfCheck, requireAuth);
 
 channelsRoute.get("/channels", (c) => {
   const user = getCurrentUser();

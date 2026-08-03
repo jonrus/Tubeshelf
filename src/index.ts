@@ -3,7 +3,9 @@ import { serveStatic } from "hono/bun";
 import { db } from "./db/client";
 import { runMigrations } from "./db/migrate";
 import { seed } from "./db/seed";
+import { applyRecoveryPasswordFromEnv } from "./lib/auth";
 import { startScheduler } from "./lib/scheduler";
+import { authRoute } from "./routes/auth";
 import { categoriesRoute } from "./routes/categories";
 import { channelsRoute } from "./routes/channels";
 import { ignoreRulesRoute } from "./routes/ignore-rules";
@@ -13,10 +15,12 @@ runMigrations();
 console.log("Migrations complete.");
 seed(db);
 console.log("Seed complete.");
+await applyRecoveryPasswordFromEnv();
 
 const app = new Hono();
 
 app.use("/css/*", serveStatic({ root: "./public" }));
+app.route("/", authRoute);
 app.route("/", categoriesRoute);
 app.route("/", channelsRoute);
 app.route("/", queueRoute);

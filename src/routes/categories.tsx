@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { db } from "../db/client";
 import { CATEGORY_NAME_MAX_LENGTH, categories } from "../db/schema";
+import { csrfCheck, requireAuth } from "../lib/auth";
 import { listCategoriesWithCounts } from "../lib/categories";
 import { getCurrentUser } from "../lib/current-user";
 import { getNavCounts } from "../lib/nav-counts";
@@ -9,6 +10,8 @@ import { CategoriesList } from "../views/categories-list";
 import { CategoriesPage } from "../views/categories-page";
 
 export const categoriesRoute = new Hono();
+
+categoriesRoute.use("*", csrfCheck, requireAuth);
 
 categoriesRoute.get("/categories", (c) => {
   const user = getCurrentUser();

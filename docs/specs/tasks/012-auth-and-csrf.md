@@ -160,7 +160,7 @@ Generated: 2026-08-02
   - Done when: `bunx tsc --noEmit` and `bun run lint` pass. Not yet mounted in
     `src/index.ts` (that's task 12).
 
-- [ ] 12. Wire everything into `src/index.ts` and the four existing route modules.
+- [x] 12. Wire everything into `src/index.ts` and the four existing route modules.
   - In `src/index.ts`: import `authRoute` and mount it via `app.route("/", authRoute)`
     **before** the four existing `app.route("/", ...)` calls for `categoriesRoute`,
     `channelsRoute`, `queueRoute`, `ignoreRulesRoute`. This order is a hard requirement per

@@ -7,6 +7,7 @@ import {
   videos,
   youtubeChannels,
 } from "../db/schema";
+import { csrfCheck, requireAuth } from "../lib/auth";
 import { listCategoriesWithCounts } from "../lib/categories";
 import { getCurrentUser } from "../lib/current-user";
 import { getNavCounts } from "../lib/nav-counts";
@@ -251,6 +252,8 @@ function videoForWatchingPage(videoId: number) {
 }
 
 export const queueRoute = new Hono();
+
+queueRoute.use("*", csrfCheck, requireAuth);
 
 queueRoute.get("/", (c) => c.redirect("/queue", 302));
 
