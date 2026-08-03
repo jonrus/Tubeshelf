@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
+import { loginAsDefaultUser } from "../helpers/auth";
 
 // categoriesRoute operates against the module-level `db` singleton in
 // src/db/client.ts, which reads DB_FILE_NAME at import time — so it must be
@@ -21,6 +22,9 @@ const { categoriesRoute } = await import("../../src/routes/categories");
 
 migrate(db, { migrationsFolder: "./drizzle" });
 seed(db);
+
+const { cookie, origin } = await loginAsDefaultUser();
+const authHeaders = { Cookie: cookie, Origin: origin };
 
 const systemCategory = db
   .select()
@@ -87,7 +91,10 @@ function makeVideo(
 function postCategory(name: string) {
   return categoriesRoute.request("/categories", {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      ...authHeaders,
+    },
     body: new URLSearchParams({ name }),
   });
 }
@@ -99,17 +106,24 @@ function findCategory(name: string) {
 function postRename(id: number, name: string) {
   return categoriesRoute.request(`/categories/${id}`, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      ...authHeaders,
+    },
     body: new URLSearchParams({ name }),
   });
 }
 
 function getEdit(id: number) {
-  return categoriesRoute.request(`/categories/${id}/edit`);
+  return categoriesRoute.request(`/categories/${id}/edit`, {
+    headers: authHeaders,
+  });
 }
 
 test("GET /categories highlights the Categories sidebar link and no other top-level link", async () => {
-  const res = await categoriesRoute.request("/categories");
+  const res = await categoriesRoute.request("/categories", {
+    headers: authHeaders,
+  });
   expect(res.status).toBe(200);
   const html = await res.text();
   const activeLinks = [
@@ -282,7 +296,9 @@ test("GET /categories renders a category's unwatched count and a link to its fil
   makeVideo(channel.id, "watched");
   makeVideo(channel.id, "ignored");
 
-  const res = await categoriesRoute.request("/categories");
+  const res = await categoriesRoute.request("/categories", {
+    headers: authHeaders,
+  });
   expect(res.status).toBe(200);
   const html = await res.text();
   expect(html).toContain(
@@ -304,7 +320,9 @@ test("GET /categories shows the empty-state message when there are no categories
   db.delete(subscriptions).run();
   db.delete(categories).run();
 
-  const res = await categoriesRoute.request("/categories");
+  const res = await categoriesRoute.request("/categories", {
+    headers: authHeaders,
+  });
   expect(res.status).toBe(200);
   const html = await res.text();
   expect(html).toContain("No categories yet — add one below.");

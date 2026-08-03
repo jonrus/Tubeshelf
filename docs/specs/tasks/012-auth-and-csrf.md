@@ -220,7 +220,7 @@ Generated: 2026-08-02
     scratch test confirms `loginAsDefaultUser()` returns a cookie value that
     `findValidSession` (task 4) accepts.
 
-- [ ] 15. Retrofit `test/routes/categories.test.ts`: import `loginAsDefaultUser` from
+- [x] 15. Retrofit `test/routes/categories.test.ts`: import `loginAsDefaultUser` from
   task 14's helper, call it once (module load or a `beforeAll`-equivalent, matching this
   file's existing top-level setup style), and attach `Cookie: <cookie>` +
   `Origin: <origin>` headers to every existing `categoriesRoute.request(...)` call in the
