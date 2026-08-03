@@ -1,6 +1,7 @@
 import { afterEach, expect, spyOn, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { rssUrlFor } from "../../src/lib/channel-input";
+import { loginAsDefaultUser } from "../helpers/auth";
 
 // channelsRoute operates against the module-level `db` singleton in
 // src/db/client.ts, which reads DB_FILE_NAME at import time — so it must be
@@ -16,6 +17,9 @@ const { channelsRoute } = await import("../../src/routes/channels");
 
 migrate(db, { migrationsFolder: "./drizzle" });
 seed(db);
+
+const { cookie, origin } = await loginAsDefaultUser();
+const authHeaders = { Cookie: cookie, Origin: origin };
 
 const defaultUser = db
   .select()
@@ -75,7 +79,10 @@ function mockFetch(xml: string, status = 200) {
 function postPreview(channelInput: string, categoryId = "") {
   return channelsRoute.request("/subscriptions/preview", {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      ...authHeaders,
+    },
     body: new URLSearchParams({ channelInput, categoryId }),
   });
 }
@@ -83,18 +90,25 @@ function postPreview(channelInput: string, categoryId = "") {
 function postConfirm(fields: Record<string, string>) {
   return channelsRoute.request("/subscriptions", {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      ...authHeaders,
+    },
     body: new URLSearchParams(fields),
   });
 }
 
 function deleteSubscription(id: number) {
-  return channelsRoute.request(`/subscriptions/${id}`, { method: "DELETE" });
+  return channelsRoute.request(`/subscriptions/${id}`, {
+    method: "DELETE",
+    headers: authHeaders,
+  });
 }
 
 function dismissMissedVideos(id: number) {
   return channelsRoute.request(`/subscriptions/${id}/dismiss-missed-videos`, {
     method: "POST",
+    headers: authHeaders,
   });
 }
 
@@ -126,7 +140,9 @@ afterEach(() => {
 });
 
 test("GET /channels highlights the Channels sidebar link and no other top-level link", async () => {
-  const res = await channelsRoute.request("/channels");
+  const res = await channelsRoute.request("/channels", {
+    headers: authHeaders,
+  });
   expect(res.status).toBe(200);
   const html = await res.text();
   const activeLinks = [
@@ -142,7 +158,9 @@ test("GET /channels shows the empty-state message when there are no subscription
   // -- clear the table explicitly rather than relying on file/test order.
   db.delete(subscriptions).run();
 
-  const res = await channelsRoute.request("/channels");
+  const res = await channelsRoute.request("/channels", {
+    headers: authHeaders,
+  });
   expect(res.status).toBe(200);
   const html = await res.text();
   expect(html).toContain("No subscriptions yet — add a channel above.");
@@ -561,7 +579,9 @@ test("a subscription to a channel with a detected gap and no dismissal shows the
     })
     .run();
 
-  const res = await channelsRoute.request("/channels");
+  const res = await channelsRoute.request("/channels", {
+    headers: authHeaders,
+  });
   expect(res.status).toBe(200);
   const html = await res.text();
   const row = extractSubscriptionRow(html, "Gap No Dismiss Channel");
@@ -628,7 +648,9 @@ test("a dismissal older than the channel's (re-)detection timestamp still shows 
     })
     .run();
 
-  const res = await channelsRoute.request("/channels");
+  const res = await channelsRoute.request("/channels", {
+    headers: authHeaders,
+  });
   expect(res.status).toBe(200);
   const html = await res.text();
   const row = extractSubscriptionRow(html, "Gap Retrigger Channel");
@@ -756,7 +778,9 @@ test("a channel's row shows its unwatched video count", async () => {
     ])
     .run();
 
-  const res = await channelsRoute.request("/channels");
+  const res = await channelsRoute.request("/channels", {
+    headers: authHeaders,
+  });
   expect(res.status).toBe(200);
   const html = await res.text();
   const row = extractSubscriptionRow(html, "Unwatched Count Channel");

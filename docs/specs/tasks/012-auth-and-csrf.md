@@ -228,7 +228,7 @@ Generated: 2026-08-02
   - Done when: `bun test test/routes/categories.test.ts` passes fully again with no
     assertions weakened or removed.
 
-- [ ] 16. Retrofit `test/routes/channels.test.ts` the same way as task 15 (import the
+- [x] 16. Retrofit `test/routes/channels.test.ts` the same way as task 15 (import the
   helper, attach cookie + Origin headers to every `channelsRoute.request(...)` call,
   including the DELETE and the two POST helper functions defined near the top of the
   file).
