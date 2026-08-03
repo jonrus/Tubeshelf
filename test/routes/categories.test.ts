@@ -36,7 +36,7 @@ if (!systemCategory) throw new Error("seed did not create the system category");
 const defaultUserRow = db
   .select()
   .from(users)
-  .where(eq(users.username, "default"))
+  .where(eq(users.username, "admin"))
   .get();
 if (!defaultUserRow) throw new Error("seed did not create the default user");
 const defaultUser = defaultUserRow;

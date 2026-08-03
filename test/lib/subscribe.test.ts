@@ -19,7 +19,7 @@ const { upsertSubscription, upsertYoutubeChannel } = await import(
 migrate(db, { migrationsFolder: "./drizzle" });
 seed(db);
 
-const user = db.select().from(users).where(eq(users.username, "default")).get();
+const user = db.select().from(users).where(eq(users.username, "admin")).get();
 if (!user) throw new Error("seed did not create the default user");
 
 const category = db

@@ -24,7 +24,7 @@ const authHeaders = { Cookie: cookie, Origin: origin };
 const defaultUser = db
   .select()
   .from(users)
-  .where(eq(users.username, "default"))
+  .where(eq(users.username, "admin"))
   .get();
 if (!defaultUser) throw new Error("seed did not create the default user");
 

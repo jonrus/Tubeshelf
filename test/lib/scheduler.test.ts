@@ -20,7 +20,7 @@ seed(db);
 const userRow = db
   .select()
   .from(users)
-  .where(eq(users.username, "default"))
+  .where(eq(users.username, "admin"))
   .get();
 if (!userRow) throw new Error("seed did not create the default user");
 const user = userRow;

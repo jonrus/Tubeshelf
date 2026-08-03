@@ -62,7 +62,7 @@ Generated: 2026-08-03
   `bun test test/routes/channels.test.ts test/routes/categories.test.ts
   test/routes/ignore-rules.test.ts test/routes/queue.test.ts` passes.
 
-- [ ] 6. Update the remaining literal `"default"` username occurrences in test files that
+- [x] 6. Update the remaining literal `"default"` username occurrences in test files that
   query `users.username` directly (not via the helper): `test/lib/nav-counts.test.ts`,
   `test/lib/scheduler.test.ts`, `test/lib/categories.test.ts`, `test/lib/subscribe.test.ts`,
   `test/routes/channels.test.ts`, `test/routes/categories.test.ts`,
