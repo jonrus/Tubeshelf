@@ -52,7 +52,7 @@ Generated: 2026-08-03
   `grep -n 'loginAsDefaultUser\|"default"' test/helpers/auth.ts` returns no results, and
   the file exports `loginAsAdminUser` with matching internal naming throughout.
 
-- [ ] 5. Update the 4 real call sites of the renamed helper: `test/routes/channels.test.ts`,
+- [x] 5. Update the 4 real call sites of the renamed helper: `test/routes/channels.test.ts`,
   `test/routes/categories.test.ts`, `test/routes/ignore-rules.test.ts`, and
   `test/routes/queue.test.ts` — each imports `loginAsDefaultUser` from
   `"../helpers/auth"` and calls `await loginAsDefaultUser()`; update both the import and

@@ -72,12 +72,23 @@ property as the squash itself, not because it's otherwise related to migrations.
    generating from nothing has no ambiguity to resolve).
 3. Rename the generated migration file and its journal `tag` from Drizzle's
    auto-generated adjective-noun name (e.g. `0000_random_name.sql`) to
-   `0000_baseline.sql` / tag `baseline`. Reasoning: the whole point of a squash is a clean,
-   legible starting point for anyone reading `drizzle/` later — an auto-generated name
-   would obscure that this file is deliberately the collapsed baseline rather than just
-   migration zero of a fresh project. This is a manual edit to the generated `.sql`
+   `0000_baseline.sql` / tag ~~`baseline`~~. Reasoning: the whole point of a squash is a
+   clean, legible starting point for anyone reading `drizzle/` later — an auto-generated
+   name would obscure that this file is deliberately the collapsed baseline rather than
+   just migration zero of a fresh project. This is a manual edit to the generated `.sql`
    filename and the `tag` field in `drizzle/meta/_journal.json` only; the SQL content and
    the snapshot in `drizzle/meta/0000_snapshot.json` are left exactly as generated.
+   **Corrected during task 5's verification:** the tag must be `0000_baseline` (matching
+   the full `.sql` filename stem, index prefix included), not bare `baseline` — Drizzle's
+   migrator builds the migration path as `` `${migrationFolder}/${tag}.sql` `` (see
+   `node_modules/drizzle-orm/migrator.js`), so a bare `baseline` tag makes it look for a
+   nonexistent `drizzle/baseline.sql` and every migration-dependent test fails with
+   `No file ./drizzle/baseline.sql found`. Task 1 was completed and committed with the
+   bare-`baseline` tag; the bug went unnoticed because task 1's done-criteria checked file
+   presence/content, not an actual `bun test` run. Fixed directly in
+   `drizzle/meta/_journal.json` (tag now `0000_baseline`) as part of task 5's verification
+   pass, once channels/categories/queue test failures traced back to this instead of the
+   task 5 changes themselves.
 4. Delete `data/tubeshelf.db`, `data/tubeshelf.db-shm`, `data/tubeshelf.db-wal` (all
    gitignored per `.gitignore`'s `data/*.db*`, so this touches no tracked files). No
    separate manual migrate step is needed afterward: `src/index.ts` calls

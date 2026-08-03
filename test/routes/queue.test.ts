@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
-import { loginAsDefaultUser } from "../helpers/auth";
+import { loginAsAdminUser } from "../helpers/auth";
 
 // queueRoute operates against the module-level `db` singleton in
 // src/db/client.ts, which reads DB_FILE_NAME at import time -- so it must be
@@ -21,7 +21,7 @@ const { youtubeThumbnailUrl, youtubeWatchUrl } = await import(
 migrate(db, { migrationsFolder: "./drizzle" });
 seed(db);
 
-const { cookie, origin } = await loginAsDefaultUser();
+const { cookie, origin } = await loginAsAdminUser();
 const authHeaders = { Cookie: cookie, Origin: origin };
 
 const defaultUserRow = db

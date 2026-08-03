@@ -1,7 +1,7 @@
 import { afterEach, expect, spyOn, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { rssUrlFor } from "../../src/lib/channel-input";
-import { loginAsDefaultUser } from "../helpers/auth";
+import { loginAsAdminUser } from "../helpers/auth";
 
 // channelsRoute operates against the module-level `db` singleton in
 // src/db/client.ts, which reads DB_FILE_NAME at import time — so it must be
@@ -18,7 +18,7 @@ const { channelsRoute } = await import("../../src/routes/channels");
 migrate(db, { migrationsFolder: "./drizzle" });
 seed(db);
 
-const { cookie, origin } = await loginAsDefaultUser();
+const { cookie, origin } = await loginAsAdminUser();
 const authHeaders = { Cookie: cookie, Origin: origin };
 
 const defaultUser = db
