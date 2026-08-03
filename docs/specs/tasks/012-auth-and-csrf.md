@@ -245,7 +245,7 @@ Generated: 2026-08-02
   - Done when: `bun test test/routes/queue.test.ts` passes fully again with no assertions
     weakened or removed.
 
-- [ ] 19. New `test/routes/auth.test.ts`. Follow the same `process.env.DB_FILE_NAME =
+- [x] 19. New `test/routes/auth.test.ts`. Follow the same `process.env.DB_FILE_NAME =
   ":memory:"` + `migrate` + `seed(db)` setup as every existing route test file, **calling
   `seed(db)` before inserting any test-only fixture rows** — per the spec's Design > Test
   retrofit section, `src/db/seed.ts`'s guard is `if (!anyUser)`, so seeding after an insert
