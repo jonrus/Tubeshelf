@@ -85,7 +85,7 @@ Generated: 2026-08-03
   and `bun test test/routes/auth.test.ts` passes with no test-order-dependent failures
   (run it at least twice in a row, per this file's existing shared-state sensitivity).
 
-- [ ] 8. Final verification. Run `bun test`, `bun run lint`, and `bunx tsc --noEmit` clean
+- [x] 8. Final verification. Run `bun test`, `bun run lint`, and `bunx tsc --noEmit` clean
   across the repo (all via `devcontainer exec`). Then do manual end-to-end verification,
   split per `CLAUDE.md`'s convention:
   - **Claude performs directly** (via `devcontainer exec` / `curl` inside the devcontainer,
