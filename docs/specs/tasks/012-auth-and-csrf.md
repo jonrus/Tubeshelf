@@ -38,7 +38,7 @@ Generated: 2026-08-02
     `AUTH_RECOVERY_PASSWORD` set updates the seeded user's `passwordHash` to a value
     `Bun.password.verify` accepts for that plaintext.
 
-- [ ] 4. In `src/lib/auth.ts`: session CRUD. Export `createSession(userId: number): {
+- [x] 4. In `src/lib/auth.ts`: session CRUD. Export `createSession(userId: number): {
   token: string }` — generates a random token via `randomBytes(32)` from `node:crypto`,
   base64url-encodes it, inserts a `sessions` row with its SHA-256 hash (`createHash("sha256")`
   from `node:crypto`) and the given `userId`, returns the raw token (never store the raw
