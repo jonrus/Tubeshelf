@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: implemented
 created: 2026-08-02
 ---
 
@@ -124,6 +124,13 @@ design).
   continued daily use. If the session is missing or expired, the request is treated as
   unauthenticated.
 - Logout (`POST /logout`): deletes the matching `sessions` row and clears the cookie.
+  Gap found at implementation time (task 20 manual verification): none of tasks 1-19
+  actually added a way to *trigger* this from the UI — the endpoint existed but no page
+  linked to it, so a logged-in user had no way to log out except manually deleting the
+  cookie. Fixed by adding a plain `<form method="post" action="/logout">`/submit-button
+  pair to the bottom of `Layout`'s sidebar (`src/views/layout.tsx`) — a real form so the
+  browser sends the `Origin` header `csrfCheck` requires, same pattern as the existing
+  Mark Watched/Unwatched forms in `src/views/watching-page.tsx`.
 - Cookie `Secure` attribute is derived **per request**, not from one global flag: whichever
   `TRUSTED_ORIGINS` entry matches determines the scheme, and the cookie is set `Secure` iff
   that scheme is `https`. Matching uses the `Origin` header when present (reliably true for
@@ -353,9 +360,18 @@ New `test/helpers/auth.ts`:
 
 ### Interaction with existing routes
 
-- `GET /` (`queueRoute.get("/", ...)`, added in spec010) redirects to `/queue` regardless of
-  auth state; `/queue` itself is gated, so an unauthenticated visit to `/` double-redirects
-  (`/` → `/queue` → `/login?from=/queue`) — harmless, no special-casing needed.
+- ~~`GET /` (`queueRoute.get("/", ...)`, added in spec010) redirects to `/queue` regardless
+  of auth state; `/queue` itself is gated, so an unauthenticated visit to `/`
+  double-redirects (`/` → `/queue` → `/login?from=/queue`) — harmless, no special-casing
+  needed.~~ Corrected at implementation time (task 20 manual verification): since
+  `requireAuth` is `queueRoute`'s own wildcard middleware (task 12) and `queueRoute` is
+  mounted at `/`, it intercepts `GET /` itself before the route's redirect-to-`/queue`
+  handler ever runs. The actual unauthenticated chain is a **single** redirect, `/` →
+  `/login?from=%2F` (not `%2Fqueue`) — confirmed via `curl -i http://localhost:3000/`.
+  Still harmless: after a successful login, `safeRedirectTarget("/")` returns `/` unchanged
+  (same-origin relative path), which on the follow-up authenticated `GET /` passes
+  `requireAuth` and hits the real handler, landing on `/queue` — one extra hop after login
+  instead of before it, same eventual destination.
 - No route currently reads `getCurrentUser()` (`src/lib/current-user.ts`) in a way that
   assumes it can never fail — it stays exactly as-is (still resolves the single seeded
   `"default"` user by username), since this spec doesn't add multi-user support. `requireAuth`
@@ -373,7 +389,10 @@ the two red-team passes, rather than left as a forward-pointing question. Two it
 flagged inline in Design for explicit re-verification during implementation rather than
 being treated as fully closed by review alone: real htmx `HX-Redirect`-with-401 behavior,
 and that the lockout increment truly has zero `await` between its lockout-check and its
-write.
+write. A third assumption (the `/` → `/queue` → `/login?from=/queue` double-redirect in
+Design > Interaction with existing routes) was checked the same way at task 20 and turned
+out inaccurate — see the strike-through correction there; the actual single-redirect
+behavior is still harmless.
 
 **Red-team retrospective — pass 1** (subagent, no memory of the drafting conversation):
 checked every concrete file/line citation against the current source, and empirically

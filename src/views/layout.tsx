@@ -199,6 +199,15 @@ export const Layout: FC<{
             >
               Channels
             </a>
+
+            <form action="/logout" method="post" class="mt-auto pt-4">
+              <button
+                type="submit"
+                class="w-full rounded px-3 py-2 text-left text-sm font-medium text-text-muted hover:bg-surface-raised hover:text-text"
+              >
+                Log out
+              </button>
+            </form>
           </nav>
         </aside>
         <main class="min-w-0 flex-1 p-4 pt-20 lg:pt-6">{props.children}</main>

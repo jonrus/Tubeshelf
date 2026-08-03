@@ -275,7 +275,7 @@ Generated: 2026-08-02
     (`bun test`) shows no test-order-dependent failures (run it at least twice in a row to
     catch any lingering shared-state leakage from this file into the others).
 
-- [ ] 20. Final verification. Run `bun test`, `bun run lint`, and `bunx tsc --noEmit` clean
+- [x] 20. Final verification. Run `bun test`, `bun run lint`, and `bunx tsc --noEmit` clean
   across the repo, then `bun run css:build` once more to confirm the login page's markup
   doesn't need any Tailwind classes not already in the generated stylesheet. Then do manual
   end-to-end verification, split per `CLAUDE.md`'s convention:
