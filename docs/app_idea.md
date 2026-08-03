@@ -92,6 +92,9 @@ remaining pre-v1.0 work is:
    requires), so squashing after it catches that dev-time churn too instead of leaving
    it to accumulate past an earlier squash. Safe to do this aggressively since the app
    has never been deployed — no real user data/migration path to preserve yet.
+   (Refined in docs/specs/013-db-squash-and-admin-rename.md — also folds in an unrelated
+   small rename, from the seeded single user's username `default` to `admin`, riding
+   along since it shares the same no-real-data-at-stake property.)
 4. **Deployment/Docker packaging** (§3's compose-file infrastructure, deferred since
    spec001 since there was no app yet to containerize).
 5. **GitHub buildout** (CI, release image pushing, §6's CI/CD Pipeline) — sequenced

@@ -1,6 +1,7 @@
 ---
-status: refined
+status: promoted
 created: 2026-08-03
+promoted_to: docs/specs/013-db-squash-and-admin-rename.md
 ---
 
 # DB Squash + Default User Rename (default → admin)
