@@ -30,7 +30,7 @@ Generated: 2026-08-03
   Done when: `data/` contains only `.gitkeep`, and `git status` is clean with respect to
   `data/`.
 
-- [ ] 3. Rename the seeded username in application code: `src/db/seed.ts`'s
+- [x] 3. Rename the seeded username in application code: `src/db/seed.ts`'s
   `db.insert(users).values({ username: "default" })` → `{ username: "admin" }`;
   `src/lib/auth.ts`'s `applyRecoveryPasswordFromEnv` query
   `.where(eq(users.username, "default"))` → `"admin"` (leave its `console.warn` text

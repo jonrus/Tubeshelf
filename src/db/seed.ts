@@ -15,6 +15,6 @@ export function seed(db: BunSQLiteDatabase) {
   }
   const anyUser = db.select().from(users).get();
   if (!anyUser) {
-    db.insert(users).values({ username: "default" }).run();
+    db.insert(users).values({ username: "admin" }).run();
   }
 }

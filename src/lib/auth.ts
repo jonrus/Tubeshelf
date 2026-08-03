@@ -36,7 +36,7 @@ export async function applyRecoveryPasswordFromEnv(): Promise<void> {
   const passwordHash = await hashPassword(recoveryPassword);
   db.update(users)
     .set({ passwordHash })
-    .where(eq(users.username, "default"))
+    .where(eq(users.username, "admin"))
     .run();
   console.warn(
     "AUTH_RECOVERY_PASSWORD was applied to the default user's password. Unset this environment variable after use.",
