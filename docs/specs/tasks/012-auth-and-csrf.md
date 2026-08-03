@@ -78,7 +78,7 @@ Generated: 2026-08-02
   - Done when: `bunx tsc --noEmit` and `bun run lint` pass. Not yet wired into any router
     (that's task 12) — this task only defines the middleware.
 
-- [ ] 7. In `src/lib/auth.ts`: the `csrfCheck` middleware. Export `csrfCheck` built from
+- [x] 7. In `src/lib/auth.ts`: the `csrfCheck` middleware. Export `csrfCheck` built from
   Hono's built-in `csrf` (`import { csrf } from "hono/csrf"`), called as
   `csrf({ origin: getTrustedOrigins() })` (task 5) — pass the array directly, no custom
   matcher function needed (confirmed against the installed `hono@4.12.31` source during

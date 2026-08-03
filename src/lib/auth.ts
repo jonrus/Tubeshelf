@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import type { Context, MiddlewareHandler } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
+import { csrf } from "hono/csrf";
 import { db } from "../db/client";
 import { sessions, users } from "../db/schema";
 
@@ -79,6 +80,8 @@ export function getTrustedOrigins(): string[] {
   if (!raw) return ["http://localhost:3000"];
   return raw.split(",").map((origin) => origin.trim());
 }
+
+export const csrfCheck = csrf({ origin: getTrustedOrigins() });
 
 export function getSessionFromRequest(
   c: Context,
