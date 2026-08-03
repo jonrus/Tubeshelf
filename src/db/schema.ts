@@ -15,7 +15,9 @@ export const CATEGORY_NAME_MAX_LENGTH = 100;
 export const users = sqliteTable("users", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   username: text("username").notNull().unique(),
-  passwordHash: text("password_hash"), // nullable now; auth is out of scope
+  passwordHash: text("password_hash"), // nullable; null = cannot log in with any password
+  failedLoginAttempts: integer("failed_login_attempts").notNull().default(0),
+  lockedUntil: integer("locked_until", { mode: "timestamp" }), // null = not locked
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`(unixepoch())`),
@@ -128,6 +130,20 @@ export const ignoreRules = sqliteTable("ignore_rules", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   keyword: text("keyword").notNull(),
   createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
+export const sessions = sqliteTable("sessions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  tokenHash: text("token_hash").notNull().unique(),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+  lastSeenAt: integer("last_seen_at", { mode: "timestamp" })
     .notNull()
     .default(sql`(unixepoch())`),
 });

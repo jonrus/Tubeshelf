@@ -2,7 +2,7 @@
 Spec: docs/specs/012-auth-and-csrf.md
 Generated: 2026-08-02
 
-- [ ] 1. Schema changes in `src/db/schema.ts`. Add to the existing `users` table:
+- [x] 1. Schema changes in `src/db/schema.ts`. Add to the existing `users` table:
   `failedLoginAttempts: integer("failed_login_attempts").notNull().default(0)` and
   `lockedUntil: integer("locked_until", { mode: "timestamp" })` (nullable). Leave
   `passwordHash` exactly as-is (still nullable) — do not add a `NOT NULL` constraint, per
