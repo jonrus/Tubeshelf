@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 
 // authRoute reads getTrustedOrigins() (src/lib/auth.ts) at request time, so
-// this only needs to be set before loginAsDefaultUser() is first called, not
+// this only needs to be set before loginAsAdminUser() is first called, not
 // before src/db/client is loaded — unlike DB_FILE_NAME, which every
 // test/routes/*.test.ts file sets before its own dynamic db/client import.
 process.env.TRUSTED_ORIGINS = "http://test.local";
@@ -9,7 +9,7 @@ process.env.TRUSTED_ORIGINS = "http://test.local";
 const TEST_ORIGIN = "http://test.local";
 const TEST_PASSWORD = "test-helper-password";
 
-export async function loginAsDefaultUser(): Promise<{
+export async function loginAsAdminUser(): Promise<{
   cookie: string;
   origin: string;
 }> {
@@ -21,7 +21,7 @@ export async function loginAsDefaultUser(): Promise<{
   const passwordHash = await hashPassword(TEST_PASSWORD);
   db.update(users)
     .set({ passwordHash })
-    .where(eq(users.username, "default"))
+    .where(eq(users.username, "admin"))
     .run();
 
   const res = await authRoute.request("/login", {
@@ -31,7 +31,7 @@ export async function loginAsDefaultUser(): Promise<{
       Origin: TEST_ORIGIN,
     },
     body: new URLSearchParams({
-      username: "default",
+      username: "admin",
       password: TEST_PASSWORD,
     }),
   });
@@ -39,14 +39,14 @@ export async function loginAsDefaultUser(): Promise<{
   const setCookieHeader = res.headers.get("set-cookie");
   if (!setCookieHeader) {
     throw new Error(
-      "loginAsDefaultUser: login response had no Set-Cookie header",
+      "loginAsAdminUser: login response had no Set-Cookie header",
     );
   }
   const match = setCookieHeader.match(/session=([^;]+)/);
   const sessionValue = match?.[1];
   if (!sessionValue) {
     throw new Error(
-      "loginAsDefaultUser: no session cookie found in Set-Cookie header",
+      "loginAsAdminUser: no session cookie found in Set-Cookie header",
     );
   }
 

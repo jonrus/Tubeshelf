@@ -42,7 +42,7 @@ Generated: 2026-08-03
   `grep -n '"admin"' src/db/seed.ts src/lib/auth.ts src/lib/current-user.ts` shows the 3
   updated query/insert sites.
 
-- [ ] 4. Rename the test helper in `test/helpers/auth.ts`: function `loginAsDefaultUser` →
+- [x] 4. Rename the test helper in `test/helpers/auth.ts`: function `loginAsDefaultUser` →
   `loginAsAdminUser`; its `db.update(users).set(...).where(eq(users.username, "default"))`
   query → `"admin"`; its login POST body `username: "default"` → `"admin"`; and its two
   internal error-message prefixes (`"loginAsDefaultUser: login response had no Set-Cookie
