@@ -168,6 +168,16 @@ export const requireAuth: MiddlewareHandler = async (c, next) => {
   await next();
 };
 
+export function safeRedirectTarget(from: string | undefined): string {
+  if (from === undefined) return "/queue";
+  try {
+    const resolved = new URL(from, "http://internal.invalid");
+    return resolved.origin === "http://internal.invalid" ? from : "/queue";
+  } catch {
+    return "/queue";
+  }
+}
+
 export function resolveCookieSecure(c: Context): boolean {
   const originHeader = c.req.header("Origin");
   if (originHeader !== undefined) {

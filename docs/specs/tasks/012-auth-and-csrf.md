@@ -112,7 +112,7 @@ Generated: 2026-08-02
   - Done when: `bunx tsc --noEmit` and `bun run lint` pass. Full behavioral coverage of this
     function happens in task 19's tests, not here.
 
-- [ ] 9. In `src/lib/auth.ts`: the open-redirect-safe `from` validator. Export
+- [x] 9. In `src/lib/auth.ts`: the open-redirect-safe `from` validator. Export
   `safeRedirectTarget(from: string | undefined): string` — if `from` is undefined, return
   `"/queue"`. Otherwise attempt `new URL(from, "http://internal.invalid")`; if the result's
   `.origin` is exactly `"http://internal.invalid"`, return `from` unchanged (it stayed a
