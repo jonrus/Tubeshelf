@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { Context, MiddlewareHandler } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { csrf } from "hono/csrf";
@@ -14,6 +14,8 @@ declare module "hono" {
 
 const SESSION_IDLE_TIMEOUT_MS = 30 * 24 * 60 * 60 * 1000;
 const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
+const LOCKOUT_THRESHOLD = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
@@ -39,6 +41,52 @@ export async function applyRecoveryPasswordFromEnv(): Promise<void> {
   console.warn(
     "AUTH_RECOVERY_PASSWORD was applied to the default user's password. Unset this environment variable after use.",
   );
+}
+
+export async function attemptLogin(
+  username: string,
+  password: string,
+): Promise<{ ok: true; userId: number } | { ok: false }> {
+  const user = db
+    .select()
+    .from(users)
+    .where(eq(users.username, username))
+    .get();
+  if (!user) return { ok: false };
+
+  if (user.lockedUntil && user.lockedUntil.getTime() > Date.now()) {
+    return { ok: false };
+  }
+
+  const passwordOk = user.passwordHash
+    ? await verifyPassword(password, user.passwordHash)
+    : false;
+
+  if (passwordOk) {
+    db.update(users)
+      .set({ failedLoginAttempts: 0, lockedUntil: null })
+      .where(eq(users.id, user.id))
+      .run();
+    return { ok: true, userId: user.id };
+  }
+
+  const fresh = db.select().from(users).where(eq(users.id, user.id)).get();
+  if (fresh?.lockedUntil && fresh.lockedUntil.getTime() > Date.now()) {
+    return { ok: false };
+  }
+
+  const lockedUntilSeconds = Math.floor(
+    (Date.now() + LOCKOUT_DURATION_MS) / 1000,
+  );
+  db.update(users)
+    .set({
+      failedLoginAttempts: sql`CASE WHEN ${users.failedLoginAttempts} + 1 >= ${LOCKOUT_THRESHOLD} THEN 0 ELSE ${users.failedLoginAttempts} + 1 END`,
+      lockedUntil: sql`CASE WHEN ${users.failedLoginAttempts} + 1 >= ${LOCKOUT_THRESHOLD} THEN ${lockedUntilSeconds} ELSE ${users.lockedUntil} END`,
+    })
+    .where(eq(users.id, user.id))
+    .run();
+
+  return { ok: false };
 }
 
 export function createSession(userId: number): { token: string } {

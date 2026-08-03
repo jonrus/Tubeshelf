@@ -85,7 +85,7 @@ Generated: 2026-08-02
   spec review that `origin` accepts a plain `string[]`).
   - Done when: `bunx tsc --noEmit` and `bun run lint` pass.
 
-- [ ] 8. In `src/lib/auth.ts`: lockout and login orchestration. Export
+- [x] 8. In `src/lib/auth.ts`: lockout and login orchestration. Export
   `attemptLogin(username: string, password: string): Promise<{ ok: true; userId: number }
   | { ok: false }>` as a single function (not spread across separate exported lockout
   helpers) so the lockout-check/password-verify/counter-write sequence stays easy to keep
