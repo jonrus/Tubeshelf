@@ -123,7 +123,7 @@ Generated: 2026-08-02
   naive check yet still normalize to an off-site `//evil.com` in a real browser).
   - Done when: `bunx tsc --noEmit` and `bun run lint` pass.
 
-- [ ] 10. New `src/views/login-page.tsx`, exporting a `LoginPage` component. **Not** wrapped
+- [x] 10. New `src/views/login-page.tsx`, exporting a `LoginPage` component. **Not** wrapped
   in `Layout` (`src/views/layout.tsx`) — per the spec's Design > Login page section,
   `Layout` requires `navCounts`/`categories` props from authenticated-user queries and
   renders a full sidebar with no reachable destinations pre-login. Render a minimal
