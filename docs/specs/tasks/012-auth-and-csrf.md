@@ -137,7 +137,7 @@ Generated: 2026-08-02
   `POST /login` will validate via `safeRedirectTarget`, task 9, not this view).
   - Done when: `bunx tsc --noEmit` and `bun run lint` pass.
 
-- [ ] 11. New `src/routes/auth.tsx`, exporting `authRoute = new Hono()`. Add
+- [x] 11. New `src/routes/auth.tsx`, exporting `authRoute = new Hono()`. Add
   `authRoute.use("*", csrfCheck)` (from task 7) as the **first statement** after the
   `new Hono()` line — do not add `requireAuth` here, per the spec's Design > Middleware
   composition section (`/login` must be reachable unauthenticated). Then:
