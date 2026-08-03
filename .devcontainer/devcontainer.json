@@ -2,6 +2,11 @@
   "name": "Tubeshelf",
   "image": "docker.io/oven/bun:1",
   "remoteUser": "bun",
+  // Dev-only recovery password, applied to the default user on every boot. Insecure by
+  // design (fixed, checked into the repo) — never use this as a real deployment credential.
+  "containerEnv": {
+    "AUTH_RECOVERY_PASSWORD": "dev-password-change-me"
+  },
   "features": {
     "ghcr.io/devcontainers/features/git:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {}

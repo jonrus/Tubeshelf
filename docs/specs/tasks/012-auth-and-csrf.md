@@ -189,7 +189,7 @@ Generated: 2026-08-02
     unauthenticated now redirects to `/login`, and that `GET /login` itself loads without
     redirecting.
 
-- [ ] 13. Devcontainer and `.env.example` defaults. In `.devcontainer/devcontainer.json`,
+- [x] 13. Devcontainer and `.env.example` defaults. In `.devcontainer/devcontainer.json`,
   add a `"containerEnv"` block setting a fixed dev-only `AUTH_RECOVERY_PASSWORD` value
   (e.g. `"AUTH_RECOVERY_PASSWORD": "dev-password-change-me"` — the exact string doesn't
   matter, but add a `// devcontainer.json doesn't support comments — note this decision
