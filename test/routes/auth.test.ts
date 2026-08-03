@@ -25,9 +25,9 @@ const DEFAULT_TEST_PASSWORD = "auth-test-default-password";
 const LOCKOUT_USERNAME = "auth-test-lockout-user";
 const LOCKOUT_PASSWORD = "auth-test-lockout-password";
 
-// A dedicated, non-"default" user for the lockout tests below, so
+// A dedicated, non-"admin" user for the lockout tests below, so
 // failure-count/lockout state never leaks into other test files' shared use
-// of "default" via loginAsDefaultUser (test/helpers/auth.ts).
+// of "admin" via loginAsAdminUser (test/helpers/auth.ts).
 const lockoutPasswordHash = await hashPassword(LOCKOUT_PASSWORD);
 db.insert(users)
   .values({ username: LOCKOUT_USERNAME, passwordHash: lockoutPasswordHash })
@@ -36,7 +36,7 @@ db.insert(users)
 const defaultPasswordHash = await hashPassword(DEFAULT_TEST_PASSWORD);
 db.update(users)
   .set({ passwordHash: defaultPasswordHash })
-  .where(eq(users.username, "default"))
+  .where(eq(users.username, "admin"))
   .run();
 
 function postLogin(
@@ -71,7 +71,7 @@ function extractSessionCookie(res: Response): string {
 
 test("a successful login redirects to a validated `from`, falling back to /queue when from is absent or fails the open-redirect guard", async () => {
   const validFromRes = await postLogin({
-    username: "default",
+    username: "admin",
     password: DEFAULT_TEST_PASSWORD,
     from: "/watched?category=3",
   });
@@ -79,7 +79,7 @@ test("a successful login redirects to a validated `from`, falling back to /queue
   expect(validFromRes.headers.get("location")).toBe("/watched?category=3");
 
   const noFromRes = await postLogin({
-    username: "default",
+    username: "admin",
     password: DEFAULT_TEST_PASSWORD,
   });
   expect(noFromRes.status).toBe(302);
@@ -89,7 +89,7 @@ test("a successful login redirects to a validated `from`, falling back to /queue
   // normalizing this to the protocol-relative (off-site) `//evil.com` -- the
   // open-redirect guard must reject it, not a naive "starts with /" check.
   const unsafeFromRes = await postLogin({
-    username: "default",
+    username: "admin",
     password: DEFAULT_TEST_PASSWORD,
     from: "/\t/evil.com",
   });
@@ -99,7 +99,7 @@ test("a successful login redirects to a validated `from`, falling back to /queue
 
 test("a failed login re-renders the form with a 401 and a generic error message", async () => {
   const res = await postLogin({
-    username: "default",
+    username: "admin",
     password: "wrong-password",
   });
   expect(res.status).toBe(401);
@@ -169,7 +169,7 @@ test("5 consecutive failed logins lock the account; further attempts during the 
 
 test("a session past the 30-day idle window is rejected; a gated GET with the stale cookie redirects to /login", async () => {
   const loginRes = await postLogin({
-    username: "default",
+    username: "admin",
     password: DEFAULT_TEST_PASSWORD,
   });
   const cookie = extractSessionCookie(loginRes);
@@ -193,7 +193,7 @@ test("a session past the 30-day idle window is rejected; a gated GET with the st
 
 test("logging out invalidates the session; reusing the old cookie afterward redirects to /login again", async () => {
   const loginRes = await postLogin({
-    username: "default",
+    username: "admin",
     password: DEFAULT_TEST_PASSWORD,
   });
   const cookie = extractSessionCookie(loginRes);

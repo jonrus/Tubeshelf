@@ -74,7 +74,7 @@ Generated: 2026-08-03
   test/lib/subscribe.test.ts test/routes/channels.test.ts test/routes/categories.test.ts
   test/routes/queue.test.ts` passes.
 
-- [ ] 7. Update `test/routes/auth.test.ts`: it has its own direct login flow (doesn't use
+- [x] 7. Update `test/routes/auth.test.ts`: it has its own direct login flow (doesn't use
   the helper) with multiple literal `"default"` occurrences — a lookup query
   (`.where(eq(users.username, "default"))`) and several `username: "default"` values in
   login-request bodies. Change all of them to `"admin"`. Also update the code comment
