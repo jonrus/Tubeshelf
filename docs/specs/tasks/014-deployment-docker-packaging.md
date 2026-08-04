@@ -31,7 +31,7 @@ Generated: 2026-08-04
   imports and mounts it as described, and `bunx tsc --noEmit` (via `devcontainer exec
   --docker-path podman --workspace-folder .`) reports no new errors.
 
-- [ ] 2. Add a test for the health route from task 1. Create `test/routes/health.test.ts`,
+- [x] 2. Add a test for the health route from task 1. Create `test/routes/health.test.ts`,
   modeled on the `DB_FILE_NAME`-before-import pattern already used in
   `test/routes/categories.test.ts`:
   ```ts
