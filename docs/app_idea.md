@@ -63,6 +63,10 @@
   + Still requires Brave browser ad blocking and SponsorBlock support
 - Support other platforms than YouTube - Long term goal, I currently do not have any other platforms in mind
 - Application is in a place to be made public as an open source project, with enough documentation that I might be able to manage Pull Requests reasonably if there were any
+- Ship the app as a Bun-compiled standalone binary (`bun build --compile`) instead of a `node_modules`-based image. Deferred from the deployment-packaging work since it requires embedding/relocating the `./drizzle` migrations folder and `./public` static assets (both currently read from disk at relative paths), which is its own scoped problem
+- `PUID`/`PGID` env var support (linuxserver.io-style) so the container can run as an arbitrary host UID/GID and avoid bind-mount permission friction on the `/data` volume. MVP deployment docs instead just document manually `chown`-ing the data directory to match the container's user before first run
+- Graceful shutdown (SIGTERM handling) for the HTTP server and the background RSS-fetch scheduler, so a `docker compose down`/restart can't kill an in-flight fetch mid-write. Deferred since SQLite's WAL mode makes this low-risk as-is (durable on commit)
+- A broader structured-logging pass across the app (log levels, what's signal vs. noise for ingestion/ignore-rule processing, etc.), beyond the narrowly-scoped startup-migration-failure message the deployment spec adds
 
 ### Path to v1.0 (post-MVP-feature sequencing)
 *A loose plan, not a locked spec order — expect this to shift as work progresses. This
