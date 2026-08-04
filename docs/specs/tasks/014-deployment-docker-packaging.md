@@ -82,7 +82,7 @@ Generated: 2026-08-04
   and `bun test` (via `devcontainer exec`) still passes — this change must not alter
   behavior on the success path, only add error-path handling.
 
-- [ ] 4. Add `.dockerignore` at the repo root:
+- [x] 4. Add `.dockerignore` at the repo root:
   ```
   node_modules
   .git
