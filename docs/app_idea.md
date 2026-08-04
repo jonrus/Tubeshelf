@@ -100,7 +100,10 @@ remaining pre-v1.0 work is:
    small rename, from the seeded single user's username `default` to `admin`, riding
    along since it shares the same no-real-data-at-stake property.)
 4. **Deployment/Docker packaging** (§3's compose-file infrastructure, deferred since
-   spec001 since there was no app yet to containerize).
+   spec001 since there was no app yet to containerize). (Refined in
+   docs/specs/014-deployment-docker-packaging.md — multi-stage Dockerfile, bind-mounted
+   SQLite storage, a DB-reachability-checking `/healthz`, and a generic
+   `docs/DEPLOYMENT.md`.)
 5. **GitHub buildout** (CI, release image pushing, §6's CI/CD Pipeline) — sequenced
    last, once there's an actual release artifact shape to automate around, rather than
    chasing a moving packaging target.

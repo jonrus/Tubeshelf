@@ -1,6 +1,7 @@
 ---
-status: refined
+status: promoted
 created: 2026-08-04
+promoted_to: docs/specs/014-deployment-docker-packaging.md
 ---
 
 # Deployment / Docker Packaging
