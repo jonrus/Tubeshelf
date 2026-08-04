@@ -2,7 +2,7 @@
 Spec: docs/specs/014-deployment-docker-packaging.md
 Generated: 2026-08-04
 
-- [ ] 1. Add a DB-reachability-checking `GET /healthz` route and mount it. Create
+- [x] 1. Add a DB-reachability-checking `GET /healthz` route and mount it. Create
   `src/routes/health.ts`:
   ```ts
   import { Hono } from "hono";

@@ -8,6 +8,7 @@ import { startScheduler } from "./lib/scheduler";
 import { authRoute } from "./routes/auth";
 import { categoriesRoute } from "./routes/categories";
 import { channelsRoute } from "./routes/channels";
+import { healthRoute } from "./routes/health";
 import { ignoreRulesRoute } from "./routes/ignore-rules";
 import { queueRoute } from "./routes/queue";
 
@@ -23,6 +24,7 @@ app.use("/css/*", serveStatic({ root: "./public" }));
 app.route("/", authRoute);
 app.route("/", categoriesRoute);
 app.route("/", channelsRoute);
+app.route("/", healthRoute);
 app.route("/", queueRoute);
 app.route("/", ignoreRulesRoute);
 
