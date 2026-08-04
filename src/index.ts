@@ -12,7 +12,18 @@ import { healthRoute } from "./routes/health";
 import { ignoreRulesRoute } from "./routes/ignore-rules";
 import { queueRoute } from "./routes/queue";
 
-runMigrations();
+try {
+  runMigrations();
+} catch (err) {
+  console.error("Database migration failed:", err);
+  console.error(
+    "The database may be partially migrated: each migration file runs in its own " +
+      "transaction, so an earlier file's changes are not automatically undone by a " +
+      "later file's failure. Restore your previous container image and/or your most " +
+      "recent database backup, then retry.",
+  );
+  process.exit(1);
+}
 console.log("Migrations complete.");
 seed(db);
 console.log("Seed complete.");

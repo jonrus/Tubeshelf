@@ -56,7 +56,7 @@ Generated: 2026-08-04
   `DB_FILE_NAME` at module load — same isolation approach `categories.test.ts` already
   relies on, so it should not collide with other test files' own `:memory:` DBs).
 
-- [ ] 3. Wrap the startup migration call in `src/index.ts` in a try/catch with actionable
+- [x] 3. Wrap the startup migration call in `src/index.ts` in a try/catch with actionable
   failure guidance. Replace:
   ```ts
   runMigrations();
