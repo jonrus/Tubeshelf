@@ -30,6 +30,15 @@ Generated: 2026-08-04
   Done when: `src/routes/health.ts` exists with the exact content above, `src/index.ts`
   imports and mounts it as described, and `bunx tsc --noEmit` (via `devcontainer exec
   --docker-path podman --workspace-folder .`) reports no new errors.
+  **Corrected during task 5's live-boot verification:** the mount position specified above
+  (after `channelsRoute`) put `healthRoute` behind `categoriesRoute`'s and `channelsRoute`'s
+  `.use("*", csrfCheck, requireAuth)` middleware, which — once mounted at `app.route("/",
+  ...)` — matches every path in the whole app, not just their own routes. `curl`ing the
+  built container's `/healthz` returned a 302 to `/login`, not 200. Fixed by moving
+  `app.route("/", healthRoute);` to be the *first* route mount in `src/index.ts`, before
+  `authRoute`. See the spec's Design section (`### GET /healthz`) for the full explanation.
+  `test/routes/health.test.ts` (task 2) didn't catch this because it exercises `healthRoute`
+  in isolation, not through the composed `app`.
 
 - [x] 2. Add a test for the health route from task 1. Create `test/routes/health.test.ts`,
   modeled on the `DB_FILE_NAME`-before-import pattern already used in
@@ -95,7 +104,7 @@ Generated: 2026-08-04
   ```
   Done when: the file exists at the repo root with exactly these 8 entries.
 
-- [ ] 5. Add the production `Dockerfile` at the repo root, per the spec's Design section
+- [x] 5. Add the production `Dockerfile` at the repo root, per the spec's Design section
   (this exact content already includes the `tsconfig.json` fix found during the spec's
   red-team pass):
   ```dockerfile

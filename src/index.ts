@@ -32,10 +32,10 @@ await applyRecoveryPasswordFromEnv();
 const app = new Hono();
 
 app.use("/css/*", serveStatic({ root: "./public" }));
+app.route("/", healthRoute);
 app.route("/", authRoute);
 app.route("/", categoriesRoute);
 app.route("/", channelsRoute);
-app.route("/", healthRoute);
 app.route("/", queueRoute);
 app.route("/", ignoreRulesRoute);
 

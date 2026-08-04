@@ -261,6 +261,23 @@ simply never calls `.use(...)`, so it's outside both by construction — no bypa
 needed, and there's nothing to accidentally leave unprotected on some other route by
 contrast, since every other route file's protection is opt-in the same way.
 
+**Corrected during task 5's live-boot verification** (running the built image and `curl`ing
+`/healthz` for real, not just the unit test): mounting `healthRoute` never calling
+`.use(...)` is necessary but not sufficient. Each protected route's `.use("*", ...)`,
+once mounted at `app.route("/", ...)`, becomes middleware matching **every path in the whole
+app** (`"*"` composed with mount prefix `"/"` is `"/*"`), and Hono runs all matching
+middleware/handlers for a request in *registration order* across the entire `app`, not
+scoped to the sub-router they were declared on. The task file originally mounted
+`healthRoute` between `channelsRoute` and `queueRoute`, i.e. *after*
+`categoriesRoute.use("*", csrfCheck, requireAuth)` and `channelsRoute.use("*", csrfCheck,
+requireAuth)` — both of which therefore ran ahead of `/healthz`'s own handler in the
+composed chain and redirected it to `/login` before `healthRoute` was ever reached.
+`test/routes/health.test.ts` didn't catch this because it calls `healthRoute.request(...)`
+directly against the isolated sub-app, bypassing `app`'s composition entirely. Fixed by
+mounting `app.route("/", healthRoute)` **first**, before any protected route — see
+`src/index.ts`. Verified by rebuilding the production image and `curl`ing the running
+container's `/healthz`: 302 to `/login` before the fix, `200 ok` after.
+
 Queries the raw `sqlite` handle directly (`src/db/client.ts`'s exported `bun:sqlite`
 `Database` instance) rather than going through `db` (the drizzle wrapper), to keep the
 check as cheap as possible. WAL mode (`PRAGMA journal_mode = WAL`, already set in
@@ -297,6 +314,25 @@ Docker/podman — it happens directly on the host via plain `podman build`/`podm
 --docker-path podman` in the first place). `/spec-tasks` and `/work-task` should treat these
 as two separate container invocations, not conflate "run it in the devcontainer" with "build
 the deployment image."
+
+**Host-specific note, confirmed during task 5's verification on this host:** the host's
+`podman` runs rootless (`podman info --format '{{.Host.Security.Rootless}}'` → `true`) with
+SELinux enforcing (`getenforce` → `Enforcing`). Two consequences for any `podman run`
+against this Dockerfile's image with a bind-mounted `/data`, neither of which is specific to
+this app — both are standard rootless-podman-on-SELinux behavior:
+- Rootless podman remaps container UIDs via `/etc/subuid`/`/etc/subgid` by default, so a
+  host directory `chown`'d to `1000:1000` does *not* actually match the container's `bun`
+  user (also uid 1000) unless the run also passes `--userns=keep-id` (which maps the
+  invoking host user 1-to-1 into the container). Without it, the container's `bun` user
+  can't open the DB file even though the host-side ownership looks correct
+  (`SQLITE_CANTOPEN`).
+  - Additionally, the mount needs SELinux relabeling — `-v host:container:Z` (or `:z` for a
+  mount shared across containers) — or the container gets `Permission denied` on the mount
+  regardless of Unix ownership.
+  This does not affect `docs/DEPLOYMENT.md`'s guidance, which targets the more common
+  rootful Docker/`docker compose` setup where container-uid-equals-host-uid `chown` works
+  as documented without either flag; it only matters for verifying this spec's claims
+  directly against podman on this particular host.
 
 ### `.env.example`
 
