@@ -168,7 +168,7 @@ Generated: 2026-08-04
   `podman compose config` (or `podman-compose config`, whichever is available — check with
   `podman compose version` / `command -v podman-compose` first) parses it without error.
 
-- [ ] 7. Rewrite `.env.example` to document all three env vars the app actually reads:
+- [x] 7. Rewrite `.env.example` to document all three env vars the app actually reads:
   ```
   # DB_FILE_NAME: path to the SQLite database file. Defaults to ./data/tubeshelf.db if unset.
   # In docker-compose.yml this is set to /data/tubeshelf.db to match the bind mount — leave
