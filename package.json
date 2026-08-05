@@ -3,6 +3,7 @@
   "module": "src/index.ts",
   "type": "module",
   "private": true,
+  "license": "GPL-3.0-or-later",
   "scripts": {
     "dev": "concurrently -k -n server,css \"bun run dev:server\" \"bun run css:watch\"",
     "dev:server": "bun run --hot src/index.ts",

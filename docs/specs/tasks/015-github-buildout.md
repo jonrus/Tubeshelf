@@ -13,7 +13,7 @@ actions per the spec's Sequencing subsection — Claude cannot execute these, on
 click-paths and verify the result afterward. Task 17 proves the whole pipeline end-to-end
 via a real PR. Task 18 is final verification.
 
-- [ ] 1. Add `LICENSE` (GPLv3) and add the `"license"` field to `package.json`.
+- [x] 1. Add `LICENSE` (GPLv3) and add the `"license"` field to `package.json`.
   Fetch the canonical GPLv3 text via `WebFetch` from `https://www.gnu.org/licenses/gpl-3.0.txt`,
   and save it as `LICENSE` at the repo root with this exact line prepended before the
   fetched text begins:
