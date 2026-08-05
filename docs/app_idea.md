@@ -106,7 +106,7 @@ remaining pre-v1.0 work is:
    `docs/DEPLOYMENT.md`.)
 5. **GitHub buildout** (CI, release image pushing, §6's CI/CD Pipeline) — sequenced
    last, once there's an actual release artifact shape to automate around, rather than
-   chasing a moving packaging target.
+   chasing a moving packaging target. (Refined in docs/specs/015-github-buildout.md.)
 
 ### User Roles & Permissions
 | Role | Permissions |
@@ -149,7 +149,7 @@ remaining pre-v1.0 work is:
 - **Version Control:** Git based VC, pull requests workflow once the application is in a working state - at least by MVP state
 - **Development Pattern:** Ideally via Spec-Driven Development with an AI agent
 - **Development Workflow:** `.devcontainer` workflow as I develop on two different devices one running Bazzite Fedora 44 and another just Fedora 44
-- **CI/CD Pipeline:** TBD - probably whatever I can get away with for free on GitHub
+- **CI/CD Pipeline:** TBD - probably whatever I can get away with for free on GitHub (refined in docs/specs/015-github-buildout.md)
 - **Environment Variables:** None expected for MVP, but might need adjustment
 - **Testing Strategy:** 
   - Unit Tests: Bun Test Runner

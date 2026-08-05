@@ -4,8 +4,9 @@ file. Everything under Firm Scope / Related Specs / Resolved Decisions reflects 
 actually agreed in that conversation — nothing here is invented scope.
 -->
 ---
-status: refined
+status: promoted
 created: 2026-08-05
+promoted_to: docs/specs/015-github-buildout.md
 ---
 
 # GitHub Buildout (CI/CD, Release Process, OSS Framing)
@@ -178,6 +179,13 @@ documents for manual verification sections):**
   off means the sole admin bypasses the review gate automatically while it still applies to
   anyone else, achieving "path of least resistance for me, blocks others" with zero extra
   bypass-list configuration.
+  **Superseded during spec writing** — a single classic-branch-protection admin-bypass
+  toggle turns out to be all-or-nothing (it would also exempt the admin from required
+  status checks, not just review, undermining the CI this feature exists to add). See
+  `docs/specs/015-github-buildout.md`'s Design section (Repo governance) for the corrected
+  two-Ruleset mechanism, and its Sequencing subsection for a further plan-tier-driven
+  reordering (GitHub Free requires the repo to be public before Rulesets are usable) found
+  during that spec's own red-team pass.
 - **License: GPLv3.** *Why:* this is a self-hosted app, not a library others embed into
   proprietary code, so copyleft's usual friction barely applies, and it matches the
   self-hosted/homelab space's norms more than a permissive JS-library-style license would.
