@@ -240,7 +240,7 @@ Generated: 2026-08-04
   Done when: `README.md` contains this (or equivalent short) new section after
   "## Development", linking to `docs/DEPLOYMENT.md`.
 
-- [ ] 10. Final verification. Run `bun test`, `bun run lint`, and `bunx tsc --noEmit` clean
+- [x] 10. Final verification. Run `bun test`, `bun run lint`, and `bunx tsc --noEmit` clean
   across the repo (all via `devcontainer exec --docker-path podman --workspace-folder .`).
   Then do the remaining manual end-to-end verification beyond task 5's basic build/boot
   check — per the spec's "Operational note," this is a separate use of podman directly on

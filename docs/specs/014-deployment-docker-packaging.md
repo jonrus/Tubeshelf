@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: implemented
 created: 2026-08-04
 ---
 
@@ -333,6 +333,19 @@ this app — both are standard rootless-podman-on-SELinux behavior:
   rootful Docker/`docker compose` setup where container-uid-equals-host-uid `chown` works
   as documented without either flag; it only matters for verifying this spec's claims
   directly against podman on this particular host.
+
+**Extended during task 10's compose-path verification:** the committed `docker-compose.yml`
+has no per-service `userns_mode`/SELinux-label equivalent to `podman run --userns=keep-id`/
+`:Z` (correctly — it targets the common rootful case, per the note above), so bringing the
+stack up with `podman compose`/`podman-compose` on *this* rootless+SELinux host hits the same
+`SQLITE_CANTOPEN` wall even after a plain `chown 1000:1000 ./data`. Worked around, for
+verification purposes only, with `podman unshare chown 1000:1000 ./data` and `podman unshare
+chcon -Rt container_file_t ./data` (both run the ownership/relabel operation inside the
+rootless user namespace instead of on the raw host UID, and `podman unshare rm -rf` to clean
+the resulting namespace-owned files back up afterward) — the compose file itself was not
+modified. Confirmed working after that: `podman compose up -d --build` boots, migrates,
+seeds, and `podman ps` reports the healthcheck as `healthy` after `start_period`, with
+`RestartPolicy: unless-stopped` present in the running container's inspect output.
 
 ### `.env.example`
 
