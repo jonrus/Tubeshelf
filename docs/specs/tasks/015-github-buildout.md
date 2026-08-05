@@ -202,7 +202,7 @@ via a real PR. Task 18 is final verification.
   ```
   Done when: all four files exist at these exact paths with this exact content.
 
-- [ ] 7. Update `docker-compose.yml`: replace `build: .` with
+- [x] 7. Update `docker-compose.yml`: replace `build: .` with
   `image: ghcr.io/jonrus/tubeshelf:1`. Everything else in the file is unchanged.
   ```diff
    services:

@@ -1,6 +1,6 @@
 services:
   tubeshelf:
-    build: .
+    image: ghcr.io/jonrus/tubeshelf:1
     restart: unless-stopped
     ports:
       - "3000:3000"
