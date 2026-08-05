@@ -188,7 +188,7 @@ Generated: 2026-08-04
   Done when: `.env.example` matches this content exactly (replacing its current two-var
   version), and `grep -c '^# [A-Z_]*:' .env.example` returns `3`.
 
-- [ ] 8. Write `docs/DEPLOYMENT.md` (new file), covering all 7 sections from the spec's
+- [x] 8. Write `docs/DEPLOYMENT.md` (new file), covering all 7 sections from the spec's
   Design section outline, each with real prose (not placeholder headers):
   1. **Quick start** — clone the repo, copy `.env.example` to `.env` and fill in values,
      run `docker compose up -d` (or `podman compose up -d`), app listens on the host port
