@@ -142,7 +142,7 @@ via a real PR. Task 18 is final verification.
   Context section).
   Done when: the file exists at this exact path with this exact content.
 
-- [ ] 6. Add issue templates and a PR template.
+- [x] 6. Add issue templates and a PR template.
   `.github/ISSUE_TEMPLATE/bug_report.yml`:
   ```yaml
   name: Bug report
