@@ -62,7 +62,7 @@
 - In app video watching (not link out)
   + Still requires Brave browser ad blocking and SponsorBlock support
 - Support other platforms than YouTube - Long term goal, I currently do not have any other platforms in mind
-- Application is in a place to be made public as an open source project, with enough documentation that I might be able to manage Pull Requests reasonably if there were any
+- Application is in a place to be made public as an open source project, with enough documentation that I might be able to manage Pull Requests reasonably if there were any. `CONTRIBUTING.md` (added in docs/features/006-github-buildout.md) is intentionally minimal until this point — once outside contributions are actually being accepted, it should grow a Code of Conduct and PR/issue contribution etiquette section
 - Ship the app as a Bun-compiled standalone binary (`bun build --compile`) instead of a `node_modules`-based image. Deferred from the deployment-packaging work since it requires embedding/relocating the `./drizzle` migrations folder and `./public` static assets (both currently read from disk at relative paths), which is its own scoped problem
 - `PUID`/`PGID` env var support (linuxserver.io-style) so the container can run as an arbitrary host UID/GID and avoid bind-mount permission friction on the `/data` volume. MVP deployment docs instead just document manually `chown`-ing the data directory to match the container's user before first run
 - Graceful shutdown (SIGTERM handling) for the HTTP server and the background RSS-fetch scheduler, so a `docker compose down`/restart can't kill an in-flight fetch mid-write. Deferred since SQLite's WAL mode makes this low-risk as-is (durable on commit)
