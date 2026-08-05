@@ -143,7 +143,7 @@ Generated: 2026-08-04
   rm -rf /tmp/tubeshelf-verify-data
   ```
 
-- [ ] 6. Add `docker-compose.yml` at the repo root:
+- [x] 6. Add `docker-compose.yml` at the repo root:
   ```yaml
   services:
     tubeshelf:
