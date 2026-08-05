@@ -1,0 +1,38 @@
+name: PR Checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+concurrency:
+  group: pr-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: "1" }
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: "1" }
+      - run: bun install --frozen-lockfile
+      - run: bun test
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: "1" }
+      - run: bun install --frozen-lockfile
+      - run: bunx tsc --noEmit
+  docker-build-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t tubeshelf:pr-check .

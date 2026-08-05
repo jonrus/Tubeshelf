@@ -31,7 +31,7 @@ via a real PR. Task 18 is final verification.
   `"license"` line and `bun run lint` (via `devcontainer exec --docker-path podman
   --workspace-folder .`) passes (confirms the JSON is still well-formed).
 
-- [ ] 2. Add `.github/workflows/pr.yml`:
+- [x] 2. Add `.github/workflows/pr.yml`:
   ```yaml
   name: PR Checks
   on:
