@@ -118,7 +118,7 @@ via a real PR. Task 18 is final verification.
   Done when: the file exists at this exact path with this exact content. Real validation
   happens in task 15, when publishing the `v1.0.0` release actually triggers this workflow.
 
-- [ ] 4. Add `.github/CODEOWNERS`:
+- [x] 4. Add `.github/CODEOWNERS`:
   ```
   * @jonrus
   ```
