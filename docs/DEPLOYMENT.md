@@ -1,6 +1,6 @@
 # Deploying Tubeshelf
 
-Tubeshelf ships as a container image built from source (`Dockerfile`) and run via
+Tubeshelf ships as a prebuilt container image published to GHCR and run via
 `docker-compose.yml`. This guide covers running it as a self-hosted Docker Compose service.
 Examples use `docker compose`; substitute `podman compose` (or `podman-compose`, whichever
 `podman compose version` / `command -v podman-compose` shows is available on your host) if
@@ -82,16 +82,16 @@ sitting in the `-wal` file rather than the main file.
 
 ## 6. Updating
 
-There's no published registry image yet (that's a later step on the project's roadmap — see
-`docs/app_idea.md`'s Path to v1.0), so updating means rebuilding from source:
-
 ```
-git pull
-docker compose up -d --build
+git pull   # only needed to pick up doc/config changes, not the app itself
+docker compose pull
+docker compose up -d
 ```
 
-This section will change once an image is published — at that point, updating will be a
-plain `docker compose pull && docker compose up -d` with no local build required.
+`docker compose pull` fetches the latest image matching `docker-compose.yml`'s
+`image: ghcr.io/jonrus/tubeshelf:1` tag — since that's the floating major-version tag,
+this picks up every compatible release without needing to edit the compose file. No
+`docker login` step is needed: the GHCR package is public.
 
 ## 7. Reverse proxy
 

@@ -216,7 +216,7 @@ via a real PR. Task 18 is final verification.
   `podman-compose config`) still parses it without error (per spec014's task 6 precedent
   for validating this file).
 
-- [ ] 8. Update `docs/DEPLOYMENT.md`'s intro paragraph and §6 ("Updating").
+- [x] 8. Update `docs/DEPLOYMENT.md`'s intro paragraph and §6 ("Updating").
   Replace the current intro's first sentence:
   ```
   Tubeshelf ships as a container image built from source (`Dockerfile`) and run via
