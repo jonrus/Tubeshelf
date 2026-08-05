@@ -248,7 +248,7 @@ via a real PR. Task 18 is final verification.
   `devcontainer exec`) still passes (Biome doesn't lint Markdown, but confirms nothing else
   broke).
 
-- [ ] 9. Add `CONTRIBUTING.md` (new, repo root):
+- [x] 9. Add `CONTRIBUTING.md` (new, repo root):
   ```markdown
   # Contributing
 
