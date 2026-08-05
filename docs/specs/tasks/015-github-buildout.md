@@ -124,7 +124,7 @@ via a real PR. Task 18 is final verification.
   ```
   Done when: the file exists at this exact path with this exact content.
 
-- [ ] 5. Add `.github/dependabot.yml`:
+- [x] 5. Add `.github/dependabot.yml`:
   ```yaml
   version: 2
   updates:
