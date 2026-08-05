@@ -76,7 +76,7 @@ via a real PR. Task 18 is final verification.
   can't be meaningfully validated locally (no `gh`/`act` available per `CLAUDE.md`) — real
   validation happens in task 12 once it's pushed and actually runs.
 
-- [ ] 3. Add `.github/workflows/release.yml`:
+- [x] 3. Add `.github/workflows/release.yml`:
   ```yaml
   name: Release
   on:
