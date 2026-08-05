@@ -229,7 +229,7 @@ Generated: 2026-08-04
   doesn't lint Markdown by default, but this confirms the change didn't break anything it
   does check).
 
-- [ ] 9. Add a short "Deployment" section to `README.md`, after the existing "Development"
+- [x] 9. Add a short "Deployment" section to `README.md`, after the existing "Development"
   section, pointing readers at `docs/DEPLOYMENT.md` rather than duplicating its content —
   e.g.:
   ```markdown

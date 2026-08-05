@@ -24,3 +24,7 @@ rather than Docker as its backend — no extra setup is needed beyond that.
    ```
    bun test
    ```
+
+## Deployment
+
+See `docs/DEPLOYMENT.md` for running Tubeshelf as a self-hosted Docker Compose service.
