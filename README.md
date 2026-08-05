@@ -1,6 +1,23 @@
 # Tubeshelf
 
-See `docs/app_idea.md` for the product spec.
+[![CI](https://github.com/jonrus/Tubeshelf/actions/workflows/pr.yml/badge.svg)](https://github.com/jonrus/Tubeshelf/actions/workflows/pr.yml)
+![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)
+
+A self-hosted YouTube subscription tracker — a queue-based alternative to the YouTube
+Subscriptions page, with per-channel categories, unwatched/watching/watched status
+tracking, and keyword-based noise filtering. Videos are still watched on youtube.com
+itself (not embedded), so ad-blocking and SponsorBlock in your own browser keep working
+normally.
+
+See `docs/app_idea.md` for the full product spec.
+
+## Features
+
+- Subscribe to YouTube channels via RSS — no YouTube Data API key required
+- Organize channels into free-text categories
+- Unwatched / Watching / Watched tracking, with a dedicated Watching page
+- Keyword-based Ignore rules to auto-filter noise (e.g. Shorts)
+- Category-filtered Queue, Continue Watching, Watched, and Ignored views
 
 ## Development
 
@@ -28,3 +45,7 @@ rather than Docker as its backend — no extra setup is needed beyond that.
 ## Deployment
 
 See `docs/DEPLOYMENT.md` for running Tubeshelf as a self-hosted Docker Compose service.
+
+## License
+
+GPLv3 — see [LICENSE](LICENSE).

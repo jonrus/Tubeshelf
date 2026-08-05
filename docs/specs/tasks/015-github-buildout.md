@@ -285,7 +285,7 @@ via a real PR. Task 18 is final verification.
   ```
   Done when: `CONTRIBUTING.md` exists at the repo root with this content.
 
-- [ ] 10. Rewrite `README.md`'s top section (badges, features, license) while leaving the
+- [x] 10. Rewrite `README.md`'s top section (badges, features, license) while leaving the
   existing "Development" and "Deployment" sections' content untouched. Do **not** add a
   screenshot reference yet (task 11 handles that once the image file exists — a broken
   image link would fail this task's own review). New content, replacing everything from the
