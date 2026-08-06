@@ -88,7 +88,7 @@ duplicates that.
   Done when: the file exists matching the above, and `bunx tsc --noEmit` (via
   `devcontainer exec --docker-path podman --workspace-folder .`) is clean.
 
-- [ ] 2. Create `test/lib/channel-resolve.test.ts`, mirroring `test/lib/rss.test.ts`'s
+- [x] 2. Create `test/lib/channel-resolve.test.ts`, mirroring `test/lib/rss.test.ts`'s
   `spyOn(globalThis, "fetch")` mocking convention. Cover every case listed in the spec's
   Testing section under `test/lib/channel-resolve.test.ts` (`docs/specs/016-handle-url-subscribe.md`):
   - Each of the 3 existing forms (raw ID, `/channel/` URL, RSS URL) resolves via
