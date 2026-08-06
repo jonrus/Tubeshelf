@@ -13,6 +13,18 @@ actions per the spec's Sequencing subsection — Claude cannot execute these, on
 click-paths and verify the result afterward. Task 17 proves the whole pipeline end-to-end
 via a real PR. Task 18 is final verification.
 
+**Push plan for tasks 14–18 (confirmed 2026-08-06 via `gh api repos/jonrus/Tubeshelf/rulesets/<id>`,
+after task 14 completed):** `main-checks`' bypass list is genuinely empty — nobody,
+including the repo owner, bypasses it, and GitHub blocks any direct push to `main` whose
+commit SHA hasn't already had CI recorded against it. This applies to every commit from
+here on, not just app-code changes — including this task file's own checkbox commits. So:
+the local commits marking tasks 13 and 14 complete (and 15/16 once done) stay unpushed and
+accumulate; task 17 below bundles all of them onto its branch alongside the release-badge
+edit, so they land via that one PR. Task 18's own final commit (spec status →
+`implemented`) is created *after* task 17's PR merges, so it can't ride along — it needs
+its own small follow-up branch+PR, done as part of task 18 even though task 18's original
+wording below doesn't spell that out.
+
 - [x] 1. Add `LICENSE` (GPLv3) and add the `"license"` field to `package.json`.
   Fetch the canonical GPLv3 text via `WebFetch` from `https://www.gnu.org/licenses/gpl-3.0.txt`,
   and save it as `LICENSE` at the repo root with this exact line prepended before the
@@ -408,7 +420,10 @@ via a real PR. Task 18 is final verification.
   `latest`.
 
 - [ ] 17. Add the release badge to `README.md`, via a real PR — the first PR the repo's new
-  process actually handles, proving the whole pipeline end-to-end.
+  process actually handles, proving the whole pipeline end-to-end. This branch also carries
+  the accumulated local commits marking tasks 13–16 complete (see the push-plan note above
+  this task file's task list) — they haven't been pushed yet since `main-checks` blocks
+  direct pushes to `main`.
   1. `git checkout -b docs/release-badge`
   2. In `README.md`, add this badge to the badge line added in task 10 (after the license
      badge):
@@ -416,7 +431,8 @@ via a real PR. Task 18 is final verification.
      [![Release](https://img.shields.io/github/v/release/jonrus/Tubeshelf)](https://github.com/jonrus/Tubeshelf/releases/latest)
      ```
   3. Commit, then **get explicit confirmation before pushing** (same standing-preference
-     note as task 12): `git push -u origin docs/release-badge`
+     note as task 12): `git push -u origin docs/release-badge` (this pushes the whole
+     branch, i.e. tasks 13–16's commits plus this one)
   4. Tell the user to open the PR via the "Compare & pull request" prompt GitHub shows
      after the branch push (`https://github.com/jonrus/Tubeshelf/pull/new/docs/release-badge`),
      wait for `main-checks`' four required checks to go green, then merge it themselves
@@ -447,7 +463,16 @@ via a real PR. Task 18 is final verification.
   - **User performs live in a browser**: not applicable — every check for this spec is
     infra/process/doc-level and verifiable directly via `podman`/`curl`/`WebFetch`, same as
     spec014.
+  - Once the above all pass, update `docs/specs/015-github-buildout.md`'s frontmatter to
+    `status: implemented` and check off this step below — then, since this commit is new
+    (created after task 17's PR already merged) and `main-checks` blocks any direct push to
+    `main` regardless of who's pushing (see the push-plan note above this task file's task
+    list), land it the same way as task 17: `git checkout -b docs/spec015-implemented`,
+    commit, **get explicit confirmation before pushing**, `git push -u origin
+    docs/spec015-implemented`, open the PR, wait for the four checks to go green, merge.
   - Done when: `bun test`, `bun run lint`, and `bunx tsc --noEmit` are all clean; the
     `podman pull`/run/`curl` check above passes against the real published image; all four
-    `WebFetch` checks above confirm the expected live GitHub/GHCR state; and
-    `docs/specs/015-github-buildout.md`'s frontmatter is updated to `status: implemented`.
+    `WebFetch` checks above confirm the expected live GitHub/GHCR state;
+    `docs/specs/015-github-buildout.md`'s frontmatter is updated to `status: implemented`;
+    and that final commit has been merged to `main` via its own branch+PR as described
+    above (confirmed via `git fetch && git log origin/main -1`).
