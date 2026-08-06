@@ -336,7 +336,7 @@ via a real PR. Task 18 is final verification.
   with `file .github/assets/screenshot.png` reporting a PNG/JPEG type, not e.g. `ASCII
   text`), and `README.md` references it at the position above.
 
-- [ ] 12. Push tasks 1–11's commits to `origin/main`. **Get explicit confirmation from the
+- [x] 12. Push tasks 1–11's commits to `origin/main`. **Get explicit confirmation from the
   user before running `git push`** — this project's standing preference is to never push
   without being asked, and this task file existing is not that confirmation; ask in this
   session, in the moment. Once confirmed:
