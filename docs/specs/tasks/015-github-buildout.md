@@ -419,7 +419,7 @@ wording below doesn't spell that out.
   succeeds without requiring login and lists tags including `1`, `1.0`, `1.0.0`, and
   `latest`.
 
-- [ ] 17. Add the release badge to `README.md`, via a real PR — the first PR the repo's new
+- [x] 17. Add the release badge to `README.md`, via a real PR — the first PR the repo's new
   process actually handles, proving the whole pipeline end-to-end. This branch also carries
   the accumulated local commits marking tasks 13–16 complete (see the push-plan note above
   this task file's task list) — they haven't been pushed yet since `main-checks` blocks
