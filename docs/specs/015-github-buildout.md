@@ -427,13 +427,16 @@ Going public (step 3) starts that clock — from that point on, an outside visit
 the README's quick start would hit a `docker compose pull` failure until step 5 finishes
 (image doesn't exist yet), and then a confusing auth/403 (not a clean "not found") until
 step 6 finishes on top of that, since GHCR packages pushed via `GITHUB_TOKEN` are commonly
-private by default even when the parent repo is already public. Whether a package created
+private by default even when the parent repo is already public. ~~Whether a package created
 from a workflow run in an already-public repo inherits public visibility automatically at
 creation, or still needs the manual flip regardless, isn't confirmed — treat step 6 as
 required and check it immediately after step 5 completes rather than assuming it's already
-handled. None of steps 3–6 need to wait on anything external, so there's no structural
-reason they can't all happen in one sitting — the risk is purely about not leaving gaps
-between them, not about any one step being slow.
+handled.~~ **Confirmed 2026-08-06 (task 16):** it does inherit automatically — by the time
+the user checked, the `tubeshelf` package was already public, tagged `latest`/`1`/`1.0`/
+`1.0.0`, and already linked to `jonrus/Tubeshelf`, with no manual change needed. None of
+steps 3–6 need to wait on anything external, so there's no structural reason they can't all
+happen in one sitting — the risk is purely about not leaving gaps between them, not about
+any one step being slow.
 
 ### `docs/app_idea.md` cross-reference
 

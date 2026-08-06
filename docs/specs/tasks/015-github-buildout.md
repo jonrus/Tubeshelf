@@ -410,7 +410,7 @@ wording below doesn't spell that out.
   successfully — this can take several minutes due to QEMU-emulated arm64; wait and re-check
   rather than reporting failure prematurely).
 
-- [ ] 16. **Manual (user, GitHub UI).** Confirm/set the GHCR package's visibility to
+- [x] 16. **Manual (user, GitHub UI).** Confirm/set the GHCR package's visibility to
   public: `https://github.com/jonrus?tab=packages` → `tubeshelf` package → "Package
   settings" → "Danger Zone" → "Change visibility" → Public (if not already) → also use
   "Connect Repository" to link it to `jonrus/Tubeshelf`, if not already linked. Give the
