@@ -398,7 +398,7 @@ wording below doesn't spell that out.
   succeeded, which is also what makes the required-checks picker in step 2 above
   populated), and the user confirms all four settings groups above are in place.
 
-- [ ] 15. **Manual (user, GitHub UI).** Cut the `v1.0.0` release:
+- [x] 15. **Manual (user, GitHub UI).** Cut the `v1.0.0` release:
   `https://github.com/jonrus/Tubeshelf/releases/new` → "Choose a tag" → type `v1.0.0` →
   "Create new tag: v1.0.0 on publish" → Release title: `v1.0.0` → click "Generate release
   notes" → "Publish release". Give the user this exact click-path and wait for
