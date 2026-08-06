@@ -419,7 +419,7 @@ wording below doesn't spell that out.
   succeeds without requiring login and lists tags including `1`, `1.0`, `1.0.0`, and
   `latest`.
 
-- [ ] 17. Add the release badge to `README.md`, via a real PR — the first PR the repo's new
+- [x] 17. Add the release badge to `README.md`, via a real PR — the first PR the repo's new
   process actually handles, proving the whole pipeline end-to-end. This branch also carries
   the accumulated local commits marking tasks 13–16 complete (see the push-plan note above
   this task file's task list) — they haven't been pushed yet since `main-checks` blocks
@@ -443,7 +443,7 @@ wording below doesn't spell that out.
   rendering (confirms `img.shields.io/github/v/release/...` resolved against the now-public
   repo and `v1.0.0` release).
 
-- [ ] 18. Final verification. Run `bun test`, `bun run lint`, and `bunx tsc --noEmit` clean
+- [x] 18. Final verification. Run `bun test`, `bun run lint`, and `bunx tsc --noEmit` clean
   across the repo (all via `devcontainer exec --docker-path podman --workspace-folder .`,
   against `main` after task 17's merge — `git pull` first). Then:
   - **Claude performs directly** (plain host-shell `podman`, mirroring spec014's
