@@ -93,6 +93,51 @@ A spec's frontmatter `status` progresses `draft` → `in-progress` (once tasks e
 `implemented` (once `/work-task` finishes the last step). Don't hand-write code against a
 spec without going through a task file — that's what defeats the point of the pattern.
 
+### Git workflow: branches and PRs (post spec015)
+
+Since spec015 (`docs/specs/015-github-buildout.md`), `main` is protected by two GitHub
+Rulesets, one of which (`main-checks`) has an **empty bypass list** — direct pushes to
+`main` are blocked for everyone, including the repo owner. All work now goes through one
+branch/PR per spec, layered on top of the four steps above (this isn't part of the shared
+`~/.claude/skills/` themselves, since those are reused across other projects — it's applied
+here as a project-specific pin, the same way the devcontainer paths above are):
+
+- **Branch creation.** Off `main`, named `spec/<slug>` — **no number prefix.** Created at
+  whichever step first produces a file for that unit of work: `/new-feature`, if used (the
+  feature file is the first artifact); otherwise `/new-spec`. Deliberately excludes the
+  `NNN` (from either the feature file's own number or the eventual spec's — see step 2
+  above, they're independent sequences) specifically so the branch never needs renaming
+  later: a feature file's slug is already reused verbatim for its promoted spec's title, so
+  `spec/<slug>` is stable from the moment `/new-feature` first names it, through promotion,
+  through the PR — including across a feature file created on one machine and continued via
+  `/new-spec`/`/work-task` on the other, where a local-only rename wouldn't be visible
+  anyway. The tradeoff: slug uniqueness is no longer backstopped by a filename number, so
+  `/new-feature` and `/new-spec` should check the slug isn't already in use by another
+  branch/spec/feature file before settling on it.
+- **Commits during `/work-task`.** Each session commits its one step to the branch as
+  usual. Never push without asking first — default assumption is the user pushes manually,
+  but confirm explicitly at whatever point a push would actually matter (end of a
+  `/work-task` session, or the branch-push-and-PR step below): ask whether the user is
+  pushing it themselves or wants Claude to, and only push if they say so. This isn't a
+  one-time authorization — ask every time, since which machine the user is about to switch
+  to varies session to session.
+- **Finishing a spec.** Flip the spec's frontmatter to `status: implemented` as part of the
+  same branch (not a separate trailing PR after merge — that split only happened in
+  spec015 itself as a one-time artifact of branch protection not existing yet when it
+  started, not the steady-state pattern going forward). The task file's final step is to
+  open the PR, filled out (summary + test plan) — but check that final step's own box
+  *before* pushing, deliberately inverting `/work-task`'s normal "do the work, then check
+  it off" order (steps 4→6) for this one step only. Otherwise the box-check commit trails
+  the push with nothing to carry it to the remote, leaving a dangling local commit the user
+  has to notice and push separately. Checking it off first means the push — whenever it
+  happens, see above — carries a task file that's already fully checked off, so the pushed
+  branch and the opened PR both reflect a complete state with nothing left uncommitted
+  afterward.
+- **CI and merge.** `pr.yml`'s four required checks (`lint`, `test`, `typecheck`,
+  `docker-build-check`) must be green. Merging is always manual — the user reviews and
+  clicks merge in the GitHub UI; Claude never runs `gh pr merge` or otherwise merges a PR
+  itself.
+
 ### Manual verification sections in task files
 
 When a task file has a "Manual end-to-end verification" section, split it explicitly into
