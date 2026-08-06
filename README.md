@@ -19,6 +19,8 @@ See `docs/app_idea.md` for the full product spec.
 - Keyword-based Ignore rules to auto-filter noise (e.g. Shorts)
 - Category-filtered Queue, Continue Watching, Watched, and Ignored views
 
+![Tubeshelf screenshot](.github/assets/screenshot.png)
+
 ## Development
 
 This project runs inside a devcontainer (`.devcontainer/devcontainer.json`), based on the

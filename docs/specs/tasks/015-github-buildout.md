@@ -323,7 +323,7 @@ via a real PR. Task 18 is final verification.
   unchanged Development/Deployment sections, new License section at the end), and
   `bun run lint` (via `devcontainer exec`) passes.
 
-- [ ] 11. Add the README screenshot (user-provided — see the spec's Design section:
+- [x] 11. Add the README screenshot (user-provided — see the spec's Design section:
   `claude-in-chrome` can't reach the devcontainer's dev server per `CLAUDE.md`'s
   port-forwarding gotcha, and the extension isn't installed regardless). Ask the user for
   one or two screenshots of the running app; save the chosen one as
