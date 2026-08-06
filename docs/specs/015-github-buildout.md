@@ -398,6 +398,18 @@ Ordered, since several steps depend on an earlier one existing:
    the PR merge-strategy/auto-delete repo settings, verify/enable Dependabot alerts — all
    as specified above. From this point on, all further changes (to this repo, ever) go
    through a PR.
+   Confirmed via `gh api repos/jonrus/Tubeshelf/rulesets/<id>` (2026-08-06, after step 4
+   completed) that `main-checks`' `bypass_actors` is genuinely `[]` — nobody, including the
+   repo owner, bypasses it. Since GitHub evaluates required status checks against the
+   pushed commit's SHA at push time (before CI has a chance to run against a never-seen
+   commit), this blocks **every** direct push to `main` from this point on, not just
+   app-code changes — including trivial doc/task-file commits like checking off this
+   spec's own remaining task-file steps. `main-review`'s owner-bypass only waives the
+   approval/code-owner-review requirement, not `main-checks`. Practical effect on this
+   spec's own remaining tasks: task-file checkbox commits for tasks 13–16 accumulate
+   locally, unpushed, until they can ride along on step 7's PR below; task 18's own final
+   commit (spec status → `implemented`) needs a *second*, separate small PR after step 7
+   merges, since it's a new commit created after that merge.
 5. **Manual (user, GitHub UI):** draft and publish the `v1.0.0` GitHub Release ("Draft a
    new release", tag `v1.0.0`, "Generate release notes"). Publishing triggers
    `release.yml`.
@@ -415,13 +427,16 @@ Going public (step 3) starts that clock — from that point on, an outside visit
 the README's quick start would hit a `docker compose pull` failure until step 5 finishes
 (image doesn't exist yet), and then a confusing auth/403 (not a clean "not found") until
 step 6 finishes on top of that, since GHCR packages pushed via `GITHUB_TOKEN` are commonly
-private by default even when the parent repo is already public. Whether a package created
+private by default even when the parent repo is already public. ~~Whether a package created
 from a workflow run in an already-public repo inherits public visibility automatically at
 creation, or still needs the manual flip regardless, isn't confirmed — treat step 6 as
 required and check it immediately after step 5 completes rather than assuming it's already
-handled. None of steps 3–6 need to wait on anything external, so there's no structural
-reason they can't all happen in one sitting — the risk is purely about not leaving gaps
-between them, not about any one step being slow.
+handled.~~ **Confirmed 2026-08-06 (task 16):** it does inherit automatically — by the time
+the user checked, the `tubeshelf` package was already public, tagged `latest`/`1`/`1.0`/
+`1.0.0`, and already linked to `jonrus/Tubeshelf`, with no manual change needed. None of
+steps 3–6 need to wait on anything external, so there's no structural reason they can't all
+happen in one sitting — the risk is purely about not leaving gaps between them, not about
+any one step being slow.
 
 ### `docs/app_idea.md` cross-reference
 
