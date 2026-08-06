@@ -175,7 +175,11 @@ Notes:
   shouldn't just copy 5s unexamined. Those two notes contradict each other; this spec
   resolves the contradiction in favor of 8s (the page-size concern is the more specific,
   more recently-reasoned note). Per the append-don't-rewrite convention, the feature file's
-  "5s" line itself isn't edited — a pointer note is appended there instead.
+  original "5s `AbortSignal.timeout`" phrase is kept legible (struck through, not deleted)
+  with a correction note inserted immediately before it in the same bullet, rather than
+  silently replaced outright — the same spirit as append-don't-rewrite even though the
+  correction lives inline in the same sentence rather than as a fully separate note
+  elsewhere in the file.
 - Failure-mode convention matches `fetchChannelFeed`: network error, timeout, non-2xx, and
   missing-canonical-link all collapse to one outcome (here, `{ ok: false, reason:
   "resolve-failed" }`) — no further breakdown needed, same reasoning spec002 used for
@@ -316,11 +320,19 @@ made when the only comparison point was the small, fast RSS-preview fetch — it
 anticipate this spec's 8s/2.6MB scrape. Up to 8 seconds with an apparently-unresponsive
 Subscribe button is a real gap, not one to inherit unexamined just because an earlier note
 said so under different assumptions. Fix: reuse this codebase's existing
-`hx-disabled-elt` convention (`src/views/queue-list.tsx`'s un-ignore button), structured
-slightly differently here since the request is issued by the `<form>` element (via submit),
-not the button itself the way queue-list.tsx's button issues its own — `hx-disabled-elt`
-needs to live on the same element as the `hx-post` it's tied to, so it goes on the `<form>`
-with a `find` selector targeting the button, not a bare `"this"` on the button itself:
+`hx-disabled-elt` convention (`src/views/queue-list.tsx`'s un-ignore button), using the
+`find <selector>` form here instead of the bare `"this"` `queue-list.tsx` uses, since the
+button that needs disabling isn't the element issuing the request the way `queue-list.tsx`'s
+button is (there, `hx-post` and `hx-disabled-elt="this"` are on the same button; here,
+`hx-post` is on the `<form>`, submitted via a separate `<button type="submit">`).
+**Correction, caught by this spec's second red-team pass**: an earlier draft of this note
+claimed `hx-disabled-elt` "needs to live on the same element as `hx-post`" — checked
+directly against htmx 2.0.4's actual source (`unpkg.com/htmx.org@2.0.4/dist/htmx.js`) and
+that's false; the attribute is inherited up the ancestor chain
+(`getClosestAttributeValue`), and htmx's own docs give an example of it declared on a
+wrapping element several levels above the triggering `hx-post`. Placing it on the `<form>`
+here is simply the most direct/readable spot, not a functional requirement — `find button`
+would resolve identically from `#confirm-panel` or any other ancestor:
 
 ```diff
        <form
@@ -440,10 +452,15 @@ None remaining. The feature file's `/new-feature` research resolved every scope-
 ambiguity; this spec's own addition (the SSRF guard) was raised to the user directly during
 drafting and confirmed before being written in.
 
-**Red-team retrospective**: one independent pass (general-purpose agent, no memory of the
-drafting conversation), which found five real issues, all fixed directly in this spec —
-no second pass run, since the fixes were mechanical corrections/additions rather than
-design changes that could themselves hide a new blind spot:
+**Red-team retrospective**: two independent passes (general-purpose agents, no memory of
+the drafting conversation). First pass below; a second, narrower pass was run afterward
+specifically because the person requesting the fixes personally caught a further mistake
+in one of the first pass's own fixes (a claim verified against host Node instead of Bun,
+the project's actual runtime) — direct evidence that unverified claims were a real,
+recurring risk in this document, not hypothetical, so a second pass was worth running
+rather than treating the first pass's fixes as automatically trustworthy.
+
+*First pass* found five real issues, all fixed directly in this spec:
 1. **(High)** `CANONICAL_LINK_PATTERN` was only backed by prose ("verified live") with no
    quoted evidence, and the unit tests' own fixtures couldn't have caught a
    regex-vs-real-markup mismatch by construction. Fixed by re-fetching and quoting the
@@ -479,3 +496,25 @@ file's "no new loading state needed" call, since that call was made assuming the
 much-faster RSS-preview-fetch latency profile. Fixed by adding an `hx-disabled-elt` loading
 state, reusing this codebase's existing convention from `queue-list.tsx` (structured
 differently here since the request is issued by the `<form>`, not the button itself).
+
+*Second pass*, scoped narrowly to the sections just edited in response to the first pass
+(rather than a full re-review), verified claims directly — ran the actual regex against
+quoted evidence, downloaded and read htmx 2.0.4's real source rather than relying on
+recalled docs, and executed the new edge-case test claims in both Node and Bun (via the
+devcontainer). Found two issues, both fixed:
+1. **(Medium)** The loading-state fix's justification claimed `hx-disabled-elt` "needs to
+   live on the same element as `hx-post`" — false per htmx 2.0.4's actual source (it's an
+   inherited attribute, resolvable from any ancestor); the diff itself still worked
+   correctly, only the stated reasoning was wrong. Fixed by correcting the justification to
+   "most direct/readable spot, not a functional requirement."
+2. **(Low)** The timeout-correction note claimed the feature file's "5s" line "isn't
+   edited," when the actual diff struck through and inserted text inline in the same
+   bullet — substance was consistent, but the description of the edit mechanics was wrong.
+   Fixed by describing the edit accurately.
+
+The regex-verification claim and the four new edge-case tests (bare non-`www` host, query
+string/fragment stripping, empty/whitespace input, and the others) all came back clean —
+independently re-executed, not just re-read. No third pass run: both issues found were
+mischaracterizations of already-correct mechanics, not functional defects, and fixing them
+was a direct correction rather than a further design decision that could itself hide a new
+blind spot.
