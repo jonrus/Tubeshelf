@@ -355,7 +355,7 @@ via a real PR. Task 18 is final verification.
   repo content (not a login/404 wall) — confirms it's genuinely public, not just
   self-reported.
 
-- [ ] 14. **Manual (user, GitHub UI).** Set up the two rulesets and remaining repo
+- [x] 14. **Manual (user, GitHub UI).** Set up the two rulesets and remaining repo
   settings — give the user this exact checklist and wait for confirmation:
   1. `Settings → Rules → Rulesets → New ruleset → New branch ruleset`:
      - Ruleset name: `main-review`
