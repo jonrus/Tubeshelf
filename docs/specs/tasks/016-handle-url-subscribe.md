@@ -131,7 +131,7 @@ duplicates that.
   Done when: `bun test test/lib/channel-resolve.test.ts` (via `devcontainer exec`) passes,
   covering every case above.
 
-- [ ] 3. Update `POST /subscriptions/preview` in `src/routes/channels.tsx` per the spec's
+- [x] 3. Update `POST /subscriptions/preview` in `src/routes/channels.tsx` per the spec's
   diff (`docs/specs/016-handle-url-subscribe.md`, "`src/routes/channels.tsx` — `POST
   /subscriptions/preview`" section) — re-read the current file first rather than trusting
   the spec's diff blindly (it notes this itself): remove `parseChannelInput` from the

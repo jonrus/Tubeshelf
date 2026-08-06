@@ -9,11 +9,8 @@ import {
 } from "../db/schema";
 import { csrfCheck, requireAuth } from "../lib/auth";
 import { listCategoriesWithCounts } from "../lib/categories";
-import {
-  CHANNEL_ID_PATTERN,
-  parseChannelInput,
-  rssUrlFor,
-} from "../lib/channel-input";
+import { CHANNEL_ID_PATTERN, rssUrlFor } from "../lib/channel-input";
+import { resolveChannelInput } from "../lib/channel-resolve";
 import { getCurrentUser } from "../lib/current-user";
 import { applyFeedToChannel, ingestChannel } from "../lib/ingest";
 import { getNavCounts } from "../lib/nav-counts";
@@ -151,11 +148,13 @@ channelsRoute.post("/subscriptions/preview", async (c) => {
   const categoryIdRaw =
     typeof body.categoryId === "string" ? body.categoryId : "";
 
-  const parsed = parseChannelInput(channelInput);
-  if (!parsed) {
-    return c.html(
-      <ConfirmError message="Couldn't parse that as a channel ID or URL." />,
-    );
+  const resolved = await resolveChannelInput(channelInput);
+  if (!resolved.ok) {
+    const message =
+      resolved.reason === "unrecognized"
+        ? "Couldn't parse that as a channel ID, handle, or URL."
+        : "Couldn't find a channel at that handle or URL.";
+    return c.html(<ConfirmError message={message} />);
   }
 
   const resolvedCategory = resolveCategoryId(categoryIdRaw);
@@ -166,14 +165,14 @@ channelsRoute.post("/subscriptions/preview", async (c) => {
   const existing = db
     .select()
     .from(youtubeChannels)
-    .where(eq(youtubeChannels.youtubeChannelId, parsed.channelId))
+    .where(eq(youtubeChannels.youtubeChannelId, resolved.channelId))
     .get();
 
   let channelName: string;
   if (existing) {
     channelName = existing.name;
   } else {
-    const feed = await fetchChannelFeed(parsed.rssUrl);
+    const feed = await fetchChannelFeed(resolved.rssUrl);
     if (!feed) {
       return c.html(
         <ConfirmError message="Couldn't fetch that channel's feed." />,
@@ -184,7 +183,7 @@ channelsRoute.post("/subscriptions/preview", async (c) => {
 
   return c.html(
     <ConfirmPanel
-      channelId={parsed.channelId}
+      channelId={resolved.channelId}
       categoryId={categoryIdRaw}
       channelName={channelName}
     />,
