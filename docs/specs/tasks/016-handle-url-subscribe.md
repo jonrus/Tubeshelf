@@ -174,7 +174,7 @@ duplicates that.
   Done when: `bun test test/routes/channels.test.ts` (via `devcontainer exec`) passes,
   including both new tests.
 
-- [ ] 5. Update `src/views/subscribe-confirm.tsx`'s `BlankSubscribeForm` per the spec's
+- [x] 5. Update `src/views/subscribe-confirm.tsx`'s `BlankSubscribeForm` per the spec's
   Design section ("Subscribe-form copy" and "Loading state" subsections):
   - Replace the instructional paragraph:
     ```
