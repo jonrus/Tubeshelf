@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/jonrus/Tubeshelf/actions/workflows/pr.yml/badge.svg)](https://github.com/jonrus/Tubeshelf/actions/workflows/pr.yml)
 ![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)
+[![Release](https://img.shields.io/github/v/release/jonrus/Tubeshelf)](https://github.com/jonrus/Tubeshelf/releases/latest)
 
 A self-hosted YouTube subscription tracker — a queue-based alternative to the YouTube
 Subscriptions page, with per-channel categories, unwatched/watching/watched status
