@@ -347,7 +347,7 @@ via a real PR. Task 18 is final verification.
   succeeded, and `git fetch && git log origin/main -1` shows task 11's commit as
   `origin/main`'s HEAD.
 
-- [ ] 13. **Manual (user, GitHub UI).** Flip the repo's visibility to public:
+- [x] 13. **Manual (user, GitHub UI).** Flip the repo's visibility to public:
   `https://github.com/jonrus/Tubeshelf/settings` → General → scroll to "Danger Zone" →
   "Change repository visibility" → "Change to public" → type the repository name to
   confirm. Tell the user exactly this click-path and wait for them to report it done.
