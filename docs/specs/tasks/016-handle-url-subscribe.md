@@ -156,7 +156,7 @@ duplicates that.
   "Couldn't parse that as a channel ID or URL." string literal, so this is expected to
   stay green).
 
-- [ ] 4. Add the two route-level tests from the spec's Testing section to
+- [x] 4. Add the two route-level tests from the spec's Testing section to
   `test/routes/channels.test.ts`:
   - `POST /subscriptions/preview` with a bare-handle-shaped input (a literal test string
     like `"@previewHandleTest"` — the existing `channelId()` helper produces `UC...`-shaped

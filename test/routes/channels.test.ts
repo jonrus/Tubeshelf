@@ -87,6 +87,21 @@ function postPreview(channelInput: string, categoryId = "") {
   });
 }
 
+// Preview of a *new* channel resolved via handle/URL scrape issues two
+// fetches (the scrape, then the RSS feed lookup for its title) -- unlike
+// mockFetch's single fixed response, this switches on the requested URL so
+// each fetch gets the right shape of content.
+function mockScrapeThenFeed(canonicalChannelId: string, feedTitle: string) {
+  const rssUrl = rssUrlFor(canonicalChannelId);
+  const canonicalHtml = `<html><head><link rel="canonical" href="https://www.youtube.com/channel/${canonicalChannelId}"></head><body></body></html>`;
+  return spyOn(globalThis, "fetch").mockImplementation((async (url: string) => {
+    if (url === rssUrl) {
+      return new Response(feedXml(feedTitle, []), { status: 200 });
+    }
+    return new Response(canonicalHtml, { status: 200 });
+  }) as unknown as typeof fetch);
+}
+
 function postConfirm(fields: Record<string, string>) {
   return channelsRoute.request("/subscriptions", {
     method: "POST",
@@ -343,6 +358,40 @@ test("preview renders the real fetched name and writes nothing to any table", as
     .where(eq(youtubeChannels.youtubeChannelId, id))
     .get();
   expect(channel).toBeUndefined();
+});
+
+test("preview resolves a bare @handle via scrape and renders the confirmed channel", async () => {
+  const id = channelId("previewHandle");
+  fetchSpy = mockScrapeThenFeed(id, "Preview Handle Channel");
+
+  const res = await postPreview("@previewHandleTest");
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).toContain("Preview Handle Channel");
+  expect(html).toContain(`value="${id}"`);
+  expect(html).toContain("Confirm Subscribe");
+});
+
+test("preview surfaces distinct errors for unrecognized input vs. a recognized-but-unresolvable handle", async () => {
+  fetchSpy = spyOn(globalThis, "fetch");
+
+  const unrecognizedRes = await postPreview("not a channel");
+  expect(unrecognizedRes.status).toBe(200);
+  const unrecognizedHtml = await unrecognizedRes.text();
+  expect(unrecognizedHtml).toContain(
+    "Couldn&#39;t parse that as a channel ID, handle, or URL.",
+  );
+  expect(fetchSpy).not.toHaveBeenCalled();
+
+  fetchSpy.mockRestore();
+  fetchSpy = mockFetch("", 404);
+
+  const unresolvableRes = await postPreview("@nonexistentHandleTest");
+  expect(unresolvableRes.status).toBe(200);
+  const unresolvableHtml = await unresolvableRes.text();
+  expect(unresolvableHtml).toContain(
+    "Couldn&#39;t find a channel at that handle or URL.",
+  );
 });
 
 test("confirm creates the subscription and populates videos in one round trip", async () => {
