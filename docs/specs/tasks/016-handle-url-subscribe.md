@@ -197,7 +197,7 @@ duplicates that.
   Done when: `bun run lint` and `bunx tsc --noEmit` are clean, and a quick grep of the file
   confirms both the new copy and `hx-disabled-elt="find button"` are present on the form.
 
-- [ ] 6. Final verification, spec status, and PR. First run `bun test`, `bun run lint`, and
+- [x] 6. Final verification, spec status, and PR. First run `bun test`, `bun run lint`, and
   `bunx tsc --noEmit` clean across the whole repo (all via `devcontainer exec
   --docker-path podman --workspace-folder .`).
   **Claude performs directly** (`curl` from inside the devcontainer per `CLAUDE.md`'s
