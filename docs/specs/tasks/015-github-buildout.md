@@ -443,7 +443,7 @@ wording below doesn't spell that out.
   rendering (confirms `img.shields.io/github/v/release/...` resolved against the now-public
   repo and `v1.0.0` release).
 
-- [ ] 18. Final verification. Run `bun test`, `bun run lint`, and `bunx tsc --noEmit` clean
+- [x] 18. Final verification. Run `bun test`, `bun run lint`, and `bunx tsc --noEmit` clean
   across the repo (all via `devcontainer exec --docker-path podman --workspace-folder .`,
   against `main` after task 17's merge — `git pull` first). Then:
   - **Claude performs directly** (plain host-shell `podman`, mirroring spec014's
