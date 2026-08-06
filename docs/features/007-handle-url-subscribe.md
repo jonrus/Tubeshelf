@@ -1,6 +1,7 @@
 ---
-status: refined
+status: promoted
 created: 2026-08-06
+promoted_to: docs/specs/016-handle-url-subscribe.md
 ---
 
 # Subscribe by @handle or Channel URL
@@ -107,7 +108,11 @@ None identified.
   needed no throttling either.
 - **Failure-mode convention**: reuse `fetchChannelFeed`'s existing shape
   (`src/lib/rss.ts`) — collapse network error / timeout / non-2xx / unparseable response
-  into a single `null` return, no thrown exceptions, 5s `AbortSignal.timeout`. Verified live
+  into a single `null`-shaped return, no thrown exceptions. Timeout value **superseded
+  during spec writing** — see `docs/specs/016-handle-url-subscribe.md`'s Design section for
+  why 8s replaced the "5s" below (this decision contradicted this same file's own
+  page-size technical note under Related Specs/Code; the spec resolves it in favor of the
+  page-size concern). ~~5s `AbortSignal.timeout`~~. Verified live
   (2026-08-06): a nonexistent handle (`youtube.com/@this-handle-should-not-exist-zzz999xyz`)
   returns a clean `404` with no canonical link in the body — so a plain `!res.ok` check
   (same as `fetchChannelFeed`) is sufficient to catch the common case; the existing
