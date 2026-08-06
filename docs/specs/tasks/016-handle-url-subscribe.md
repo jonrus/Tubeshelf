@@ -10,7 +10,7 @@ step. `docs/app_idea.md`'s cross-reference pointers (MVP item 1, Future Roadmap 
 are **already applied and committed** (done while drafting the spec) — no task below
 duplicates that.
 
-- [ ] 1. Create `src/lib/channel-resolve.ts` with the module exactly as specified in the
+- [x] 1. Create `src/lib/channel-resolve.ts` with the module exactly as specified in the
   spec's Design section (`docs/specs/016-handle-url-subscribe.md`, "`src/lib/channel-resolve.ts`
   (new file)"):
   ```ts
