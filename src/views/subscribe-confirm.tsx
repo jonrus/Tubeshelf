@@ -18,13 +18,15 @@ export const BlankSubscribeForm: FC<{ categories: Category[] }> = (props) => {
         hx-post="/subscriptions/preview"
         hx-target="#confirm-panel"
         hx-swap="outerHTML"
+        hx-disabled-elt="find button"
         class="flex flex-col gap-2"
       >
         <p class="text-sm text-text-muted">
-          Paste the channel's ID (starts with <code>UC</code>), a URL containing{" "}
-          <code>/channel/UC.../</code>, or the channel's RSS feed URL. To find
-          the ID: open the channel's page, view source, and search for{" "}
-          <code>channelId</code>.
+          Paste the channel's <code>@handle</code> or its URL (e.g.{" "}
+          <code>youtube.com/@handle</code>). If you don't know the handle, the
+          channel's ID, <code>/channel/UC.../</code> URL, or RSS feed URL also
+          work — find the ID by opening the channel's page, viewing source, and
+          searching for <code>channelId</code>.
         </p>
         <input
           type="text"
