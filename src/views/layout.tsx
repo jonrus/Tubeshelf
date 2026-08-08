@@ -150,7 +150,7 @@ export const Layout: FC<{
               data-active={props.currentView === "categories"}
               class={NAV_LINK_CLASS}
             >
-              Categories
+              Manage Categories
             </a>
             <ul class="ml-3 flex flex-col gap-1 border-l border-border pl-3">
               {props.categories.map((cat) => (

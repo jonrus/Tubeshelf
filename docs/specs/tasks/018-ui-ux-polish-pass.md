@@ -172,7 +172,7 @@ Generated: 2026-08-08
   tests are untouched). Done when: `bun test` passes with the updated assertions, and
   `bun run lint` / `bunx tsc --noEmit` are clean.
 
-- [ ] 7. Rename the sidebar's "Categories" management link (spec Design §8). In
+- [x] 7. Rename the sidebar's "Categories" management link (spec Design §8). In
   `src/views/layout.tsx`, the top-level nav link:
   ```jsx
   <a
