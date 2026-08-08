@@ -12,6 +12,8 @@ COPY package.json bun.lock tsconfig.json ./
 RUN bun install --frozen-lockfile --production
 COPY src ./src
 COPY drizzle ./drizzle
+COPY public/icons ./public/icons
+COPY public/manifest.json ./public/manifest.json
 COPY --from=build /app/public/css/tailwind.css ./public/css/tailwind.css
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh

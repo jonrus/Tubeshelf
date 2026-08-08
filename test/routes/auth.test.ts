@@ -85,6 +85,19 @@ test("a successful login redirects to a validated `from`, falling back to /queue
   expect(noFromRes.status).toBe(302);
   expect(noFromRes.headers.get("location")).toBe("/queue");
 
+  // The login page's hidden `from` field always renders (via `props.from ??
+  // ""`), so a login not preceded by an auth-redirect-with-`?from=` (e.g.
+  // right after logout, or just visiting /login directly) submits a literal
+  // empty string, not an absent field -- must fall back to /queue exactly
+  // like the absent case above, not redirect to "".
+  const emptyFromRes = await postLogin({
+    username: "admin",
+    password: DEFAULT_TEST_PASSWORD,
+    from: "",
+  });
+  expect(emptyFromRes.status).toBe(302);
+  expect(emptyFromRes.headers.get("location")).toBe("/queue");
+
   // A literal tab as the second character: WHATWG URL parsing strips it,
   // normalizing this to the protocol-relative (off-site) `//evil.com` -- the
   // open-redirect guard must reject it, not a naive "starts with /" check.
