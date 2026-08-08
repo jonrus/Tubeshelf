@@ -6,12 +6,15 @@ COPY . .
 RUN bun run css:build
 
 FROM oven/bun:1-alpine
+RUN apk add --no-cache shadow su-exec
 WORKDIR /app
 COPY package.json bun.lock tsconfig.json ./
 RUN bun install --frozen-lockfile --production
 COPY src ./src
 COPY drizzle ./drizzle
 COPY --from=build /app/public/css/tailwind.css ./public/css/tailwind.css
-USER bun
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 EXPOSE 3000
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["bun", "run", "start"]

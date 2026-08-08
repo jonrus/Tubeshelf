@@ -38,3 +38,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker build -t tubeshelf:pr-check .
+      - name: Verify PUID/PGID remap
+        run: |
+          uid=$(docker run --rm -e PUID=1234 -e PGID=5678 tubeshelf:pr-check id -u)
+          gid=$(docker run --rm -e PUID=1234 -e PGID=5678 tubeshelf:pr-check id -g)
+          test "$uid" = "1234"
+          test "$gid" = "5678"
+      - name: Verify PUID/PGID default to 1000
+        run: |
+          uid=$(docker run --rm tubeshelf:pr-check id -u)
+          gid=$(docker run --rm tubeshelf:pr-check id -g)
+          test "$uid" = "1000"
+          test "$gid" = "1000"

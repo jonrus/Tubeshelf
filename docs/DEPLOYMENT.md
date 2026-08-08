@@ -33,6 +33,9 @@ quick reference:
 | `DB_FILE_NAME` | Path to the SQLite database file. Already set to `/data/tubeshelf.db` in `docker-compose.yml` to match the bind mount — leave unset in `.env`. |
 | `AUTH_RECOVERY_PASSWORD` | If set, forces the admin user's password to this value on every startup. Used only for initial login / password recovery — see below. |
 | `TRUSTED_ORIGINS` | Comma-separated list of origins allowed to make CSRF-protected requests. Must include whatever public origin(s) you access the app through. |
+| `PUID` | User ID the app process runs as inside the container. Defaults to `1000` if unset. |
+| `PGID` | Group ID the app process runs as inside the container. Defaults to `1000` if unset. |
+| `UMASK` | Permission mask applied to files created under `/data`. Defaults to `022` if unset. |
 
 ## 3. Initial login
 
@@ -48,23 +51,41 @@ way to set the `admin` user's password:
 Step 4 matters: as long as `AUTH_RECOVERY_PASSWORD` is set, it overwrites the `admin` user's
 password on *every* startup, silently discarding any password you later set through the UI.
 
-## 4. Bind-mount permissions
+## 4. File ownership (PUID/PGID)
 
-The container runs as the image's non-root `bun` user (uid `1000`). Before first run, make
-sure the host directory bind-mounted to `/data` (`./data`, per `docker-compose.yml`) is
-writable by that uid:
+The container remaps its runtime user at startup to match the `PUID`/`PGID` environment
+variables, so files under the bind-mounted `./data` directory end up owned by whatever host
+user you choose — no need for `./data` to already be owned by a fixed uid.
+
+1. Find your host user's uid/gid:
+   ```
+   id -u   # → PUID
+   id -g   # → PGID
+   ```
+2. Set `PUID`/`PGID` in `.env` to those values. Leaving them unset defaults to `1000`/`1000`.
+3. `mkdir -p ./data` if it doesn't already exist, then start (or restart) the container —
+   ownership is handled automatically on boot.
+
+### Advanced: runtimes that never grant the container root
+
+The above relies on the container briefly starting as root before dropping to the
+`PUID`/`PGID` user. If your setup never grants that (e.g. you set `user:` directly in a
+compose override, or run under a policy that drops `CAP_SETUID`/`CAP_SETGID`), the container
+detects this and skips the remap step entirely, running as whatever user it's given instead.
+In that case, `chown` the host directory yourself before first run, matching whatever
+uid/gid your override actually runs the container as — for example, if your override sets
+`user: "1000:1000"`:
 
 ```
 mkdir -p ./data
 chown -R 1000:1000 ./data
 ```
 
-If you skip this, the container fails to boot with a `SQLITE_CANTOPEN` error, since it can't
-create `tubeshelf.db` in a directory it doesn't own.
+Substitute your override's actual uid/gid if it isn't `1000:1000`.
 
-Automatic `PUID`/`PGID` support (linuxserver.io-style, so the container could run as an
-arbitrary host uid/gid instead of a fixed `1000`) is deferred — see the corresponding entry
-in `docs/app_idea.md`'s Future Roadmap.
+Either way, if the container ends up running as a uid that doesn't own `./data`, it fails to
+boot with a `SQLITE_CANTOPEN` error, since it can't create `tubeshelf.db` in a directory it
+doesn't own.
 
 ## 5. Backups
 
