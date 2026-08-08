@@ -125,7 +125,7 @@ Generated: 2026-08-08
   are both standard packages in Alpine's `main` repository (not `community` or
   architecture-limited) as the best available evidence instead.
 
-- [ ] 3. Add `PUID`/`PGID`/`UMASK` to `.env.example`. Append, after the existing
+- [x] 3. Add `PUID`/`PGID`/`UMASK` to `.env.example`. Append, after the existing
   `TRUSTED_ORIGINS` block:
   ```
   # PUID: user ID the app process runs as inside the container. Defaults to 1000 if unset —
