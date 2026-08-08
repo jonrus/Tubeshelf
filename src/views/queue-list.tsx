@@ -219,7 +219,7 @@ export const QueueList: FC<QueueListProps> = (props) => {
                   class="rounded bg-accent-strong px-3 py-1 text-sm text-bg hover:bg-accent"
                 >
                   {row.status === "watching"
-                    ? "Clear to Unwatched"
+                    ? "Mark Unwatched"
                     : "Mark Watched"}
                 </button>
                 <button

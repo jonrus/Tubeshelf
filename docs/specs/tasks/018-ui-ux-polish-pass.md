@@ -50,7 +50,7 @@ Generated: 2026-08-08
   below it. Done when: the form is the first child in the JSX, the `EmptyState` string says
   "above", and `bun run lint` / `bunx tsc --noEmit` are clean.
 
-- [ ] 4. Copy change: "Clear to Unwatched" → "Mark Unwatched" (spec Design §5). In
+- [x] 4. Copy change: "Clear to Unwatched" → "Mark Unwatched" (spec Design §5). In
   `src/views/queue-list.tsx`, the status-toggle button's conditional label:
   ```
   {row.status === "watching"
