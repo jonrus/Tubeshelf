@@ -169,7 +169,7 @@ export const requireAuth: MiddlewareHandler = async (c, next) => {
 };
 
 export function safeRedirectTarget(from: string | undefined): string {
-  if (from === undefined) return "/queue";
+  if (!from) return "/queue";
   try {
     const resolved = new URL(from, "http://internal.invalid");
     return resolved.origin === "http://internal.invalid" ? from : "/queue";
