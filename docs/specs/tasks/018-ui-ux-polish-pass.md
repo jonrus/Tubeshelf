@@ -227,7 +227,7 @@ Generated: 2026-08-08
   against `NAV_SUBLINK_CLASS` items — confirmed by reading `test/routes/{categories,
   ignore-rules,channels,queue}.test.ts`).
 
-- [ ] 9. Choose the favicon/icon design (spec Design §3, spec Open Questions). This step is
+- [x] 9. Choose the favicon/icon design (spec Design §3, spec Open Questions). This step is
   interactive by design — the spec's Open Questions section explicitly defers the visual
   choice to this point rather than pre-deciding it. Propose 2-3 simple concepts to the user
   (e.g. a play-button mark, a shelf/stack motif, a monogram) rendered as small inline SVGs

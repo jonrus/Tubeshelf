@@ -82,8 +82,12 @@ normally in a column). Row-height stretch is already CSS Grid's default
 (`align-items: stretch`) via `QueueList`'s existing `grid` container — no grid changes
 needed, only the card's own internal layout.
 
-**3. Favicon / installability icons.** One source icon design (visual concept TBD — see
-Open Questions) rendered to the standard installability sizes: 16×16 and 32×32 (favicon),
+**3. Favicon / installability icons.** One source icon design (~~visual concept TBD — see
+Open Questions~~ **Confirmed 2026-08-08 (task 9):** a bold two-shape "T" monogram in accent
+teal (`#2dd4bf`) on the app's dark background (`#020617`), no other ornamentation — chosen
+over a literal "shelf of tubes" mark and a queue/playlist-bars mark for staying legible at
+16×16 favicon size, saved to `public/icons/source.svg`) rendered to the standard
+installability sizes: 16×16 and 32×32 (favicon),
 180×180 (`apple-touch-icon`), 192×192 and 512×512 (including a maskable variant), placed
 under `public/icons/`. Add `public/manifest.json`: `name: "Tubeshelf"`, a `short_name`,
 the icon set, `theme_color`/`background_color` matching the existing `bg`/`surface` theme
@@ -160,9 +164,10 @@ judgment during `/work-task` — not a decision worth blocking the spec on.
 
 ## Open Questions
 
-- Favicon/icon visual design not yet chosen. To be resolved during `/work-task`: propose a
+- ~~Favicon/icon visual design not yet chosen. To be resolved during `/work-task`: propose a
   few simple concepts (e.g. a play-button mark, a shelf/stack motif, a monogram) against
-  the existing theme colors before generating the icon set.
+  the existing theme colors before generating the icon set.~~ **Confirmed 2026-08-08 (task
+  9):** monogram "T" chosen — see Design §3.
 - None else — retrospective below.
 
 **Red-team retrospective:** First pass (fresh-eyes subagent, no drafting-conversation
