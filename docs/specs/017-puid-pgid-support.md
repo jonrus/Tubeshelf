@@ -220,6 +220,15 @@ CMD ["bun", "run", "start"]
   healthcheck only does a `fetch()` to `localhost:3000/healthz`, no filesystem access. Noted
   here so it doesn't read as an oversight if a security-conscious reader later notices
   `docker inspect`'s declared user is root despite the app itself running non-root.
+  **Confirmed during task 6's manual verification applies more broadly than just
+  `HEALTHCHECK`:** `podman exec <container> id` (and `docker exec` equally) starts a *new*
+  process under this same declared-root default, not one attached to the actual running app
+  process — so it reports `uid=0(root)` regardless of `PUID`/`PGID`, which is *not* evidence
+  the remap failed. The real confirmation is `/proc/1/status` (or `podman top`) inside the
+  container, which showed `Uid: 1234 1234 1234 1234` / `Gid: 5678 5678 5678 5678` for PID 1
+  (`bun run start`) with `PUID=1234 PGID=5678` — i.e. the actual long-running process is
+  correctly remapped even though an ad hoc `exec ... id` check would misleadingly suggest
+  otherwise.
 - `apk add --no-cache shadow su-exec` added as the first line of the runtime stage,
   before `WORKDIR`, so it's cached independently of anything that changes more often
   (`package.json`, `src/`) — this ordering is Docker layer-caching hygiene consistent with

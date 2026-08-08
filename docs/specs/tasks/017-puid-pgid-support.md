@@ -227,7 +227,7 @@ Generated: 2026-08-08
   "import yaml; yaml.safe_load(open('/f.yml'))"` exits 0, or any equivalent local YAML
   parse check).
 
-- [ ] 6. Manual end-to-end verification of the two things CI's `id`-inside-container checks
+- [x] 6. Manual end-to-end verification of the two things CI's `id`-inside-container checks
   can't observe: real bind-mount ownership on disk, and the non-root fallback branch. Uses
   the image built in task 1 (rebuild with `podman build -t tubeshelf:puid-check .` if it was
   since removed).
@@ -246,6 +246,10 @@ Generated: 2026-08-08
   podman stop tubeshelf-puid-verify
   rm -rf /tmp/tubeshelf-puid-verify
   ```
+  (Cleanup note: with a shifted rootless-podman host uid owning the files, as described
+  below, a plain `rm -rf` on the host can itself hit `Permission denied` — use
+  `podman unshare rm -rf /tmp/tubeshelf-puid-verify` instead, which operates inside the same
+  user namespace that owns the files.)
   Note for the host-side `ls -ln`: this host runs rootless podman, which remaps container
   uids through `/etc/subuid` — per the spec's Design section, this feature fixes ownership
   from *inside* the container's own namespace (confirmed by the `podman exec` checks above),
@@ -255,6 +259,20 @@ Generated: 2026-08-08
   If a `Permission denied` shows up instead (distinct from an ownership mismatch), that's
   the still-needed, unrelated SELinux relabel (`:Z`) the spec's Design section flags as out
   of scope — not a sign this feature is broken.
+
+  **Actually run, 2026-08-08:** the bare bind mount hit exactly that `Permission denied` on
+  first try (`chown: /data: Permission denied`, container exited 1) — this host is
+  SELinux-enforcing and `/tmp/tubeshelf-puid-verify` had `user_tmp_t`, not
+  `container_file_t`. Re-ran with `-v /tmp/tubeshelf-puid-verify:/data:Z` (the spec's
+  documented, out-of-scope workaround) and it booted clean. Separately, `podman exec
+  tubeshelf-puid-verify id` reported `uid=0(root)` — **not** a failure, see the note now
+  added to the spec's Design section next to the `HEALTHCHECK` bullet: `exec` starts a new
+  process under the image's declared-root default user, not attached to the real running
+  process. Used `podman exec tubeshelf-puid-verify cat /proc/1/status` instead, which showed
+  `Uid: 1234 ... Gid: 5678 ...` for PID 1 (`bun run start`) — the actual remap target.
+  `ls -ln /data` inside the container showed the three SQLite files owned `1234 5678` as
+  expected; host-side `ls -ln` showed a shifted rootless-podman uid (`525521`), exactly the
+  expected-and-documented rootless remap, not a bug. `curl /healthz` returned `200 ok`.
 
   **Non-root fallback branch** — simulate a runtime that never grants the container root:
   ```
@@ -271,6 +289,12 @@ Generated: 2026-08-08
   podman stop tubeshelf-puid-fallback
   rm -rf /tmp/tubeshelf-puid-fallback
   ```
+
+  **Actually run, 2026-08-08:** same `:Z` mount flag applied here too (same SELinux-enforcing
+  host). Container booted and stayed up, `curl /healthz` returned `200 ok`, and `podman logs`
+  showed only `Migrations complete.` / `Seed complete.` / `Listening on http://localhost:3000`
+  — no `usermod`/`groupmod`/`chown` errors, confirming the non-root branch correctly skipped
+  the entire root-only block and fell straight through to `exec "$@"`.
 
   **User performs live in a browser**: not applicable — this feature has no UI surface;
   everything observable lives at the filesystem/process level, fully covered above.
