@@ -101,7 +101,8 @@ const EMPTY_MESSAGES: Record<QueueListProps["view"], string> = {
 const THUMBNAIL_WRAPPER_CLASS =
   "aspect-video w-full overflow-hidden bg-surface-raised";
 const THUMBNAIL_IMG_CLASS = "h-full w-full object-cover";
-const CARD_CLASS = "rounded-lg border border-border bg-surface overflow-hidden";
+const CARD_CLASS =
+  "flex flex-col rounded-lg border border-border bg-surface overflow-hidden";
 
 export const QueueList: FC<QueueListProps> = (props) => {
   const isEmpty = props.rows.length === 0;
@@ -131,12 +132,17 @@ export const QueueList: FC<QueueListProps> = (props) => {
               </div>
               <div class="p-3">
                 <p class="font-medium text-text">{row.title}</p>
-                <p class="mt-1 text-sm text-text-muted">
-                  {row.channelName} · {row.categoryName}
-                  {row.watchedAt
-                    ? ` · watched ${formatRelativeTime(row.watchedAt)}`
-                    : ""}
-                </p>
+                <div class="mt-1 flex flex-wrap items-center gap-1.5 text-sm">
+                  <span class="text-text">{row.channelName}</span>
+                  <span class="rounded-full bg-surface-raised px-2 py-0.5 text-xs text-text-muted">
+                    {row.categoryName}
+                  </span>
+                  {row.watchedAt ? (
+                    <span class="text-text-muted">
+                      watched {formatRelativeTime(row.watchedAt)}
+                    </span>
+                  ) : null}
+                </div>
               </div>
             </a>
           </div>
@@ -155,14 +161,17 @@ export const QueueList: FC<QueueListProps> = (props) => {
             </div>
             <div class="p-3">
               <p class="font-medium text-text">{row.title}</p>
-              <p class="mt-1 text-sm text-text-muted">
-                {row.channelName} · {row.categoryName}
+              <div class="mt-1 flex flex-wrap items-center gap-1.5 text-sm">
+                <span class="text-text">{row.channelName}</span>
+                <span class="rounded-full bg-surface-raised px-2 py-0.5 text-xs text-text-muted">
+                  {row.categoryName}
+                </span>
                 {row.ignoreMethod ? (
-                  <span class="ml-2 inline-block rounded-full bg-surface-raised px-2 py-0.5 text-xs text-text-muted">
+                  <span class="rounded-full bg-surface-raised px-2 py-0.5 text-xs text-text-muted">
                     {row.ignoreMethod}
                   </span>
                 ) : null}
-              </p>
+              </div>
               <button
                 type="button"
                 hx-post={unignoreHref(row.id, props.category)}
@@ -197,18 +206,23 @@ export const QueueList: FC<QueueListProps> = (props) => {
                 </div>
                 <div class="p-3">
                   <p class="font-medium text-text">{row.title}</p>
-                  <p class="mt-1 text-sm text-text-muted">
-                    {row.channelName} · {row.categoryName}
-                    {row.publishedAt
-                      ? ` · ${formatRelativeTime(row.publishedAt)}`
-                      : ""}
-                  </p>
+                  <div class="mt-1 flex flex-wrap items-center gap-1.5 text-sm">
+                    <span class="text-text">{row.channelName}</span>
+                    <span class="rounded-full bg-surface-raised px-2 py-0.5 text-xs text-text-muted">
+                      {row.categoryName}
+                    </span>
+                    {row.publishedAt ? (
+                      <span class="text-text-muted">
+                        {formatRelativeTime(row.publishedAt)}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
               </a>
               {row.status === "watching" ? (
                 <span class="mx-3 text-sm text-accent">▶ Watching</span>
               ) : null}
-              <div class="flex gap-2 p-3 pt-2">
+              <div class="mt-auto flex gap-2 p-3 pt-2">
                 <button
                   type="button"
                   hx-post={toggleHref(row.id, props.view, sort, props.category)}
@@ -218,7 +232,7 @@ export const QueueList: FC<QueueListProps> = (props) => {
                   class="rounded bg-accent-strong px-3 py-1 text-sm text-bg hover:bg-accent"
                 >
                   {row.status === "watching"
-                    ? "Clear to Unwatched"
+                    ? "Mark Unwatched"
                     : "Mark Watched"}
                 </button>
                 <button

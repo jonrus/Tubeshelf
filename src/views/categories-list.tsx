@@ -16,8 +16,24 @@ export const CategoriesList: FC<{
 }> = (props) => {
   return (
     <div id="category-list" class="rounded-lg border border-border bg-surface">
+      <form
+        hx-post="/categories"
+        hx-target="#category-list"
+        hx-swap="outerHTML"
+        class="flex gap-2 p-4"
+      >
+        <input
+          type="text"
+          name="name"
+          placeholder="New category"
+          class={`flex-1 ${INPUT_CLASS}`}
+        />
+        <button type="submit" class={PRIMARY_BUTTON_CLASS}>
+          Add
+        </button>
+      </form>
       {props.categories.length === 0 ? (
-        <EmptyState message="No categories yet — add one below." />
+        <EmptyState message="No categories yet — add one above." />
       ) : (
         <ul class="divide-y divide-border">
           {props.categories.map((category) =>
@@ -80,22 +96,6 @@ export const CategoriesList: FC<{
       {props.error ? (
         <p class="px-4 pt-2 text-sm text-danger">{props.error}</p>
       ) : null}
-      <form
-        hx-post="/categories"
-        hx-target="#category-list"
-        hx-swap="outerHTML"
-        class="flex gap-2 p-4"
-      >
-        <input
-          type="text"
-          name="name"
-          placeholder="New category"
-          class={`flex-1 ${INPUT_CLASS}`}
-        />
-        <button type="submit" class={PRIMARY_BUTTON_CLASS}>
-          Add
-        </button>
-      </form>
     </div>
   );
 };

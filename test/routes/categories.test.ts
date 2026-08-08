@@ -129,7 +129,7 @@ test("GET /categories highlights the Categories sidebar link and no other top-le
   const activeLinks = [
     ...html.matchAll(/<a href="[^"]*" data-active="true"[^>]*>([^(<]*)/g),
   ].map((m) => m[1]?.trim());
-  expect(activeLinks).toEqual(["Categories"]);
+  expect(activeLinks).toEqual(["Manage Categories"]);
 });
 
 test("creating a category over the length limit is rejected and not inserted", async () => {
@@ -304,7 +304,7 @@ test("GET /categories renders a category's unwatched count and a link to its fil
   expect(html).toContain(
     `<a href="/queue?category=${category.id}">${category.name} (2)</a>`,
   );
-  expect(html).not.toContain("No categories yet — add one below.");
+  expect(html).not.toContain("No categories yet — add one above.");
 });
 
 // Kept as the final test in this file (routes/categories.test.ts also runs
@@ -325,7 +325,7 @@ test("GET /categories shows the empty-state message when there are no categories
   });
   expect(res.status).toBe(200);
   const html = await res.text();
-  expect(html).toContain("No categories yet — add one below.");
+  expect(html).toContain("No categories yet — add one above.");
 
   db.insert(categories).values({ name: "Uncategorized", isSystem: true }).run();
 });
