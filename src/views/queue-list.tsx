@@ -101,7 +101,8 @@ const EMPTY_MESSAGES: Record<QueueListProps["view"], string> = {
 const THUMBNAIL_WRAPPER_CLASS =
   "aspect-video w-full overflow-hidden bg-surface-raised";
 const THUMBNAIL_IMG_CLASS = "h-full w-full object-cover";
-const CARD_CLASS = "rounded-lg border border-border bg-surface overflow-hidden";
+const CARD_CLASS =
+  "flex flex-col rounded-lg border border-border bg-surface overflow-hidden";
 
 export const QueueList: FC<QueueListProps> = (props) => {
   const isEmpty = props.rows.length === 0;
@@ -208,7 +209,7 @@ export const QueueList: FC<QueueListProps> = (props) => {
               {row.status === "watching" ? (
                 <span class="mx-3 text-sm text-accent">▶ Watching</span>
               ) : null}
-              <div class="flex gap-2 p-3 pt-2">
+              <div class="mt-auto flex gap-2 p-3 pt-2">
                 <button
                   type="button"
                   hx-post={toggleHref(row.id, props.view, sort, props.category)}

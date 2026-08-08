@@ -26,7 +26,7 @@ Generated: 2026-08-08
   happens in the final task's manual-verification section, once ~30 categories exist to
   make the sidebar overflow.)
 
-- [ ] 2. Fix video card button misalignment (spec Design §2). In
+- [x] 2. Fix video card button misalignment (spec Design §2). In
   `src/views/queue-list.tsx`, change `CARD_CLASS` (currently `"rounded-lg border
   border-border bg-surface overflow-hidden"`) to `"flex flex-col rounded-lg border
   border-border bg-surface overflow-hidden"`. Change the button row's class (currently
