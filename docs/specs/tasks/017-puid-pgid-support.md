@@ -144,7 +144,7 @@ Generated: 2026-08-08
   Done when: `.env.example` contains this block appended after the existing three vars, and
   `grep -c '^# [A-Z_]*:' .env.example` returns `6` (3 existing + 3 new).
 
-- [ ] 4. Rewrite `docs/DEPLOYMENT.md` §4 and add rows to §2's Configuration table.
+- [x] 4. Rewrite `docs/DEPLOYMENT.md` §4 and add rows to §2's Configuration table.
 
   Replace all of current §4 ("## 4. Bind-mount permissions", currently the manual-chown-only
   content) with:
