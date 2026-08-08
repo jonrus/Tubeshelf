@@ -199,7 +199,7 @@ Generated: 2026-08-08
   total (3 existing + 3 new), and `bun run lint` (via `devcontainer exec`) is still clean
   (Biome doesn't lint Markdown, but confirms nothing else broke).
 
-- [ ] 5. Add two verification steps to `docker-build-check` in `.github/workflows/pr.yml`,
+- [x] 5. Add two verification steps to `docker-build-check` in `.github/workflows/pr.yml`,
   reusing the exact commands already confirmed working by hand in task 1. Replace the job's
   current two-line `steps:` list with:
   ```yaml
