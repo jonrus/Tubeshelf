@@ -239,7 +239,7 @@ Generated: 2026-08-08
   `public/icons/source.svg` exists, and the user has explicitly approved the chosen design
   in this session's conversation (not just the first proposal — confirm before finalizing).
 
-- [ ] 10. Generate the icon set from `public/icons/source.svg` (spec Design §3). Add
+- [x] 10. Generate the icon set from `public/icons/source.svg` (spec Design §3). Add
   `sharp` as a devDependency: `bun add -d sharp` (via `devcontainer exec`). Create
   `scripts/generate-icons.ts`:
   ```ts
