@@ -20,22 +20,22 @@ test("clamps a future date (negative diff) to 'just now'", () => {
 
 test("formats minutes for a diff under an hour", () => {
   const date = new Date(NOW.getTime() - 5 * MINUTE);
-  expect(formatRelativeTime(date, NOW)).toBe("5m");
+  expect(formatRelativeTime(date, NOW)).toBe("5m ago");
 });
 
 test("formats hours for a diff under a day", () => {
   const date = new Date(NOW.getTime() - 3 * HOUR);
-  expect(formatRelativeTime(date, NOW)).toBe("3h");
+  expect(formatRelativeTime(date, NOW)).toBe("3h ago");
 });
 
 test("formats days for a diff under a week", () => {
   const date = new Date(NOW.getTime() - 2 * DAY);
-  expect(formatRelativeTime(date, NOW)).toBe("2d");
+  expect(formatRelativeTime(date, NOW)).toBe("2d ago");
 });
 
 test("formats weeks for a diff under four weeks", () => {
   const date = new Date(NOW.getTime() - 2 * WEEK);
-  expect(formatRelativeTime(date, NOW)).toBe("2w");
+  expect(formatRelativeTime(date, NOW)).toBe("2w ago");
 });
 
 test("falls back to an absolute date without a year when the year matches now", () => {

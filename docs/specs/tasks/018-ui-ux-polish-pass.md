@@ -150,7 +150,7 @@ Generated: 2026-08-08
   `" · "` separator or matches on the old `<p class="mt-1 text-sm text-text-muted">`
   wrapper — confirmed via `grep -rn "·" test/routes/*.test.ts`, no hits).
 
-- [ ] 6. Append "ago" to relative video-age timestamps (spec Design §7). In
+- [x] 6. Append "ago" to relative video-age timestamps (spec Design §7). In
   `src/lib/relative-time.ts`, change the four duration-branch returns:
   ```ts
   if (diffMs < HOUR) return `${Math.floor(diffMs / MINUTE)}m`;
