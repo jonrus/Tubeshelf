@@ -2,7 +2,7 @@
 Spec: docs/specs/017-puid-pgid-support.md
 Generated: 2026-08-08
 
-- [ ] 1. Create `docker-entrypoint.sh` at the repo root and update the `Dockerfile`'s runtime
+- [x] 1. Create `docker-entrypoint.sh` at the repo root and update the `Dockerfile`'s runtime
   stage to use it, then build and verify the remap behavior locally — per the spec's
   "Operational note" precedent (spec014), building/running the production image happens
   directly on the host via `podman`, not `devcontainer exec`.
