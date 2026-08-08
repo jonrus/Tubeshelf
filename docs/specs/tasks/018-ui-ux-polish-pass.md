@@ -36,7 +36,7 @@ Generated: 2026-08-08
   class strings, so `bun test` isn't expected to catch a mistake here — rely on the lint/tsc
   pass plus the manual verification in the final task).
 
-- [ ] 3. Move the "add category" form above the category listing (spec Design §4). In
+- [x] 3. Move the "add category" form above the category listing (spec Design §4). In
   `src/views/categories-list.tsx`, move the trailing `<form hx-post="/categories" ...>`
   block (currently the last child of the outer `<div id="category-list">`, after the
   `{props.error ? ... : null}` block) to be the *first* child of that `<div>`, immediately
