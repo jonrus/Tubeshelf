@@ -15,6 +15,24 @@ export const LoginPage: FC<{
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Log in — Tubeshelf</title>
+        <link
+          rel="icon"
+          type="image/png"
+          sizes="32x32"
+          href="/icons/icon-32.png"
+        />
+        <link
+          rel="icon"
+          type="image/png"
+          sizes="16x16"
+          href="/icons/icon-16.png"
+        />
+        <link
+          rel="apple-touch-icon"
+          sizes="180x180"
+          href="/icons/icon-180.png"
+        />
+        <link rel="manifest" href="/manifest.json" />
         <link rel="stylesheet" href="/css/tailwind.css" />
       </head>
       <body class="flex min-h-screen items-center justify-center bg-bg text-text">

@@ -278,7 +278,7 @@ Generated: 2026-08-08
   `icon-192.png`, `icon-512.png`, `icon-512-maskable.png`), all 6 exist under
   `public/icons/`, and `bun run lint` / `bunx tsc --noEmit` are clean.
 
-- [ ] 11. Wire up the manifest, static serving, and `<head>` links (spec Design §3). Create
+- [x] 11. Wire up the manifest, static serving, and `<head>` links (spec Design §3). Create
   `public/manifest.json`:
   ```json
   {
