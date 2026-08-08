@@ -200,6 +200,26 @@ export const Layout: FC<{
               Channels
             </a>
 
+            <p class="mt-2 px-3 text-xs font-semibold uppercase tracking-wide text-text-muted">
+              YouTube
+            </p>
+            <a
+              href="https://www.youtube.com/feed/subscriptions"
+              target="_blank"
+              rel="noopener noreferrer"
+              class={NAV_SUBLINK_CLASS}
+            >
+              Subscriptions
+            </a>
+            <a
+              href="https://www.youtube.com/playlist?list=WL"
+              target="_blank"
+              rel="noopener noreferrer"
+              class={NAV_SUBLINK_CLASS}
+            >
+              Watch Later
+            </a>
+
             <form action="/logout" method="post" class="mt-auto pt-4">
               <button
                 type="submit"

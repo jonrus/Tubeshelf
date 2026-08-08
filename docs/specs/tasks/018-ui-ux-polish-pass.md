@@ -194,7 +194,7 @@ Generated: 2026-08-08
   test` passes (including this updated test), and `bun run lint` / `bunx tsc --noEmit` are
   clean.
 
-- [ ] 8. Add a "YouTube" links section to the sidebar (spec Design §9). In
+- [x] 8. Add a "YouTube" links section to the sidebar (spec Design §9). In
   `src/views/layout.tsx`, insert a new block after the "Channels" `<a>` link and before the
   `<form action="/logout" ...>` block:
   ```jsx
