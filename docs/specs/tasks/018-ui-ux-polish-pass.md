@@ -68,7 +68,7 @@ Generated: 2026-08-08
   existing test asserts the old "Clear to Unwatched" string — confirmed via `grep -rn
   "Clear to Unwatched" test/`).
 
-- [ ] 5. Make channel name and category more visually distinct on video cards (spec Design
+- [x] 5. Make channel name and category more visually distinct on video cards (spec Design
   §6), across all three card-rendering blocks in `src/views/queue-list.tsx` that build a
   `{channelName} · {categoryName}` line.
 
