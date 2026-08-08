@@ -103,7 +103,7 @@ Generated: 2026-08-08
   / `bunx tsc --noEmit` (via `devcontainer exec --docker-path podman --workspace-folder .`)
   are still clean (neither file is TypeScript, but this confirms nothing else regressed).
 
-- [ ] 2. Confirm the entrypoint's `shadow`/`su-exec` packages and remap logic also work
+- [x] 2. Confirm the entrypoint's `shadow`/`su-exec` packages and remap logic also work
   under `linux/arm64` — the one manual confirmation the spec flags as needed since
   `release.yml` publishes `linux/amd64,linux/arm64` but `docker-build-check`/task 1 above
   only exercise the runner's native `amd64`. This host's `podman` already has working QEMU
