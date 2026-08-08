@@ -1,6 +1,7 @@
 ---
-status: refined
+status: promoted
 created: 2026-08-08
+promoted_to: docs/specs/017-puid-pgid-support.md
 ---
 
 # PUID/PGID Environment Variable Support
@@ -34,7 +35,11 @@ instead of only working when that host uid happens to already be `1000`.
       Nothing under `/app` needs chowning; app code stays root-owned/read-only.
     - If `PUID` or `PGID` resolves to `0`, prints a clear warning to stdout (e.g. "running
       as root — this is almost never what you want") but does **not** hard-fail. (Rationale
-      in Resolved Decisions.)
+      in Resolved Decisions.) **Superseded during spec writing** — see
+      `docs/specs/017-puid-pgid-support.md`'s Design section: the warning goes to **stderr**,
+      not stdout. Deliberate correction, not an oversight: warning/diagnostic output
+      conventionally goes to stderr, and `docker logs` captures and interleaves both streams
+      identically, so there's no practical difference for a self-hoster tailing logs.
     - Sets `umask "${UMASK:-022}"` immediately before the final exec.
     - `exec su-exec bun "$@"` — hands off to the real `bun run start` process as the
       remapped user. Using `exec` (not a forked wrapper) matters so the app process becomes
