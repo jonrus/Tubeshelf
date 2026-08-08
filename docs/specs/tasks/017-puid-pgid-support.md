@@ -304,7 +304,7 @@ Generated: 2026-08-08
   scenario's logs show no privilege-drop errors, and all temp containers/directories/images
   from this task and tasks 1–2 are cleaned up (`podman rmi tubeshelf:puid-check`).
 
-- [ ] 7. Final verification, spec status, and PR. Run `bun test`, `bun run lint`, and
+- [x] 7. Final verification, spec status, and PR. Run `bun test`, `bun run lint`, and
   `bunx tsc --noEmit` clean across the whole repo (all via `devcontainer exec
   --docker-path podman --workspace-folder .`) — confirms nothing in tasks 1–6 broke the
   application itself, even though this spec touches no `src`/`test` files directly.
