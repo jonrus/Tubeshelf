@@ -47,7 +47,7 @@ rather than Docker as its backend — no extra setup is needed beyond that.
 
 ## Deployment
 
-See `docs/DEPLOYMENT.md` for running Tubeshelf as a self-hosted Docker Compose service.
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for running Tubeshelf as a self-hosted Docker Compose service.
 
 ## License
 
