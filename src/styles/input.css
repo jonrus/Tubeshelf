@@ -11,3 +11,18 @@
   --color-accent-strong: #14b8a6; /* button backgrounds/hover */
   --color-danger: #f87171; /* errors, warnings -- replaces text-red-600 */
 }
+
+#sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) var(--color-surface);
+}
+#sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+#sidebar::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+#sidebar::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: 9999px;
+}

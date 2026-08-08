@@ -2,7 +2,7 @@
 Spec: docs/specs/018-ui-ux-polish-pass.md
 Generated: 2026-08-08
 
-- [ ] 1. Style the sidebar scrollbar (spec Design §1). Add to
+- [x] 1. Style the sidebar scrollbar (spec Design §1). Add to
   `src/styles/input.css`, after the existing `@theme` block:
   ```css
   #sidebar {
