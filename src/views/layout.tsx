@@ -221,22 +221,28 @@ export const Layout: FC<{
             <p class="mt-2 px-3 text-xs font-semibold uppercase tracking-wide text-text-muted">
               YouTube
             </p>
-            <a
-              href="https://www.youtube.com/feed/subscriptions"
-              target="_blank"
-              rel="noopener noreferrer"
-              class={NAV_SUBLINK_CLASS}
-            >
-              Subscriptions
-            </a>
-            <a
-              href="https://www.youtube.com/playlist?list=WL"
-              target="_blank"
-              rel="noopener noreferrer"
-              class={NAV_SUBLINK_CLASS}
-            >
-              Watch Later
-            </a>
+            <ul class="ml-3 flex flex-col gap-1 border-l border-border pl-3">
+              <li>
+                <a
+                  href="https://www.youtube.com/feed/subscriptions"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class={NAV_SUBLINK_CLASS}
+                >
+                  Subscriptions
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://www.youtube.com/playlist?list=WL"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class={NAV_SUBLINK_CLASS}
+                >
+                  Watch Later
+                </a>
+              </li>
+            </ul>
 
             <form action="/logout" method="post" class="mt-auto pt-4">
               <button

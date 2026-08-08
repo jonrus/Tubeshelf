@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: implemented
 created: 2026-08-08
 ---
 
@@ -160,7 +160,12 @@ rather than headings over their sublists. "YouTube" needs a small non-link capti
 label rather than a dead link; the two URLs below it use `NAV_SUBLINK_CLASS` (or similar)
 without any `data-active` logic, since neither URL ever matches an app route. Exact
 placement within the sidebar (relative to Channels / Log out) is left to implementation
-judgment during `/work-task` — not a decision worth blocking the spec on.
+judgment during `/work-task` — not a decision worth blocking the spec on. **Confirmed
+2026-08-08 (task 12 manual verification):** the two links also need the same `<ul class="ml-3
+... border-l border-border pl-3">` wrapper the other sublists (category filters, "Ignore
+Rules") use — without it they sit flush-left at `NAV_SUBLINK_CLASS`'s own `px-2` and don't
+align under the "YouTube" heading's `px-3`. Caught by the user during live browser
+verification, not by lint/tsc/tests (a visual alignment issue, not a type or logic error).
 
 ## Open Questions
 

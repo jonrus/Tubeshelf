@@ -325,7 +325,7 @@ Generated: 2026-08-08
   both return `200` against a running dev server (`bun run dev` in the background, or
   `bun run start` after a build).
 
-- [ ] 12. Final verification, spec status, and PR.
+- [x] 12. Final verification, spec status, and PR.
 
   **Claude performs directly** (via `devcontainer exec --docker-path podman
   --workspace-folder .`):
