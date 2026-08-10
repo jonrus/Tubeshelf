@@ -1,6 +1,7 @@
 ---
-status: refined
+status: promoted
 created: 2026-08-10
+promoted_to: docs/specs/019-endless-scroll.md
 ---
 
 # Endless Scroll for Video List Views

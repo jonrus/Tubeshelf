@@ -46,6 +46,7 @@
     system Uncategorized category (docs/specs/006-category-queue-filtering.md); the
     **Ignored** view below gets the same category filter (docs/specs/007-ignore-rules-and-ignored-view.md).
   - **Ignored** view = Ignored videos only, with an un-ignore action (reverts to Unwatched) for reviewing/undoing mistaken ignores. Scoped to active subscriptions like the default queue and Continue Watching views above, not true history like Watched (docs/specs/007-ignore-rules-and-ignored-view.md).
+  - All four views above (Queue, Continue Watching, Watched, Ignored) load 20 videos at a time via cursor-based infinite scroll rather than rendering every matching video on each visit (docs/specs/019-endless-scroll.md).
 
 ### Ingestion Notes (MVP)
 - YouTube's channel RSS feed is an **unofficial, undocumented endpoint** - it could change format or access rules with no notice, and the whole "zero API" architecture has no fallback if that happens. This is an accepted risk, not something to be surprised by later.
