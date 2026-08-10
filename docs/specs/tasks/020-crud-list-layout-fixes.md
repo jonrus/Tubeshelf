@@ -38,7 +38,7 @@ Generated: 2026-08-10
       substring-based, not order-sensitive, per the spec's Testing section — no test changes
       expected).
 
-- [ ] 3. Run the full verification suite and do manual end-to-end verification, per
+- [x] 3. Run the full verification suite and do manual end-to-end verification, per
       `CLAUDE.md`'s convention of splitting manual verification into what Claude can check
       directly vs. what needs a live browser:
       - **Claude performs directly** (via `devcontainer exec --docker-path podman
