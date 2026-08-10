@@ -107,6 +107,28 @@ function queueVideos(
   return { rows, nextCursor };
 }
 
+function queueRowById(id: number) {
+  return db
+    .select({
+      id: videos.id,
+      youtubeVideoId: videos.youtubeVideoId,
+      title: videos.title,
+      publishedAt: videos.publishedAt,
+      status: videos.status,
+      channelName: youtubeChannels.name,
+      categoryName: categories.name,
+    })
+    .from(videos)
+    .innerJoin(youtubeChannels, eq(videos.channelId, youtubeChannels.id))
+    .innerJoin(
+      subscriptions,
+      eq(subscriptions.youtubeChannelId, youtubeChannels.id),
+    )
+    .innerJoin(categories, eq(subscriptions.categoryId, categories.id))
+    .where(eq(videos.id, id))
+    .get();
+}
+
 function continueWatchingVideos(
   userId: number,
   categoryId: number | undefined,

@@ -51,7 +51,7 @@ Generated: 2026-08-10
       same expected call-site errors as step 3 (not new ones from these three functions'
       own bodies).
 
-- [ ] 5. Add a new `queueRowById(id: number)` function in `src/routes/queue.tsx`, running
+- [x] 5. Add a new `queueRowById(id: number)` function in `src/routes/queue.tsx`, running
       the same `videos`/`youtubeChannels`/`subscriptions`/`categories` join `queueVideos`
       uses but scoped to `eq(videos.id, id)` with no cursor/limit/status filter, returning
       the same select shape as `queueVideos`'s rows (so it satisfies `QueueRow` from
