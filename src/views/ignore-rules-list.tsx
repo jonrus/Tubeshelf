@@ -20,6 +20,22 @@ export const IgnoreRulesList: FC<{
     id="ignore-rules-list"
     class="rounded-lg border border-border bg-surface"
   >
+    <form
+      hx-post="/ignore-rules"
+      hx-target="#ignore-rules-list"
+      hx-swap="outerHTML"
+      class="flex gap-2 p-4"
+    >
+      <input
+        type="text"
+        name="keyword"
+        placeholder="New keyword"
+        class={`flex-1 ${INPUT_CLASS}`}
+      />
+      <button type="submit" class={PRIMARY_BUTTON_CLASS}>
+        Add
+      </button>
+    </form>
     {props.rules.length === 0 ? (
       <EmptyState message="No ignore rules yet — add one below." />
     ) : (
@@ -88,21 +104,5 @@ export const IgnoreRulesList: FC<{
     {props.error ? (
       <p class="px-4 pt-2 text-sm text-danger">{props.error}</p>
     ) : null}
-    <form
-      hx-post="/ignore-rules"
-      hx-target="#ignore-rules-list"
-      hx-swap="outerHTML"
-      class="flex gap-2 p-4"
-    >
-      <input
-        type="text"
-        name="keyword"
-        placeholder="New keyword"
-        class={`flex-1 ${INPUT_CLASS}`}
-      />
-      <button type="submit" class={PRIMARY_BUTTON_CLASS}>
-        Add
-      </button>
-    </form>
   </div>
 );
