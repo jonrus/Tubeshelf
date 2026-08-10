@@ -2,7 +2,7 @@
 Spec: docs/specs/020-crud-list-layout-fixes.md
 Generated: 2026-08-10
 
-- [ ] 1. In `src/views/ignore-rules-list.tsx`, move the standalone "Add" `<form>` (currently
+- [x] 1. In `src/views/ignore-rules-list.tsx`, move the standalone "Add" `<form>` (currently
       the last child of the `#ignore-rules-list` div, lines 91-106, `hx-post="/ignore-rules"`
       `hx-target="#ignore-rules-list"` `hx-swap="outerHTML"`) to immediately before the
       `{props.rules.length === 0 ? (<EmptyState .../>) : (<ul>...</ul>)}` block (currently
