@@ -38,7 +38,7 @@ Generated: 2026-08-10
       until steps 8/9 update them — that's expected and resolved by those later steps, not
       this one).
 
-- [ ] 4. Apply the same rewrite to `continueWatchingVideos`, `watchedVideos`, and
+- [x] 4. Apply the same rewrite to `continueWatchingVideos`, `watchedVideos`, and
       `ignoredVideos` in `src/routes/queue.tsx` (currently lines 64-94, 96-131, 133-162),
       per the per-function deltas listed in the spec's "Query changes" section (each keeps
       its own existing status filter and sort column; `continueWatchingVideos` and

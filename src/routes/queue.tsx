@@ -107,8 +107,12 @@ function queueVideos(
   return { rows, nextCursor };
 }
 
-function continueWatchingVideos(userId: number, categoryId?: number) {
-  return db
+function continueWatchingVideos(
+  userId: number,
+  categoryId: number | undefined,
+  cursor: { at: Date; id: number } | undefined,
+) {
+  const fetched = db
     .select({
       id: videos.id,
       youtubeVideoId: videos.youtubeVideoId,
@@ -133,14 +137,40 @@ function continueWatchingVideos(userId: number, categoryId?: number) {
         ...(categoryId !== undefined
           ? [eq(subscriptions.categoryId, categoryId)]
           : []),
+        ...(cursor
+          ? [
+              or(
+                lt(videos.publishedAt, cursor.at),
+                and(
+                  eq(videos.publishedAt, cursor.at),
+                  lt(videos.id, cursor.id),
+                ),
+              ),
+            ]
+          : []),
       ),
     )
-    .orderBy(desc(videos.publishedAt))
+    .orderBy(desc(videos.publishedAt), desc(videos.id))
+    .limit(PAGE_SIZE + 1)
     .all();
+
+  const hasMore = fetched.length > PAGE_SIZE;
+  const rows = hasMore ? fetched.slice(0, PAGE_SIZE) : fetched;
+  const lastRow = rows.length > 0 ? rows[rows.length - 1] : undefined;
+  const nextCursor =
+    hasMore && lastRow && lastRow.publishedAt !== null
+      ? { at: lastRow.publishedAt, id: lastRow.id }
+      : undefined;
+
+  return { rows, nextCursor };
 }
 
-function watchedVideos(userId: number, categoryId?: number) {
-  return db
+function watchedVideos(
+  userId: number,
+  categoryId: number | undefined,
+  cursor: { at: Date; id: number } | undefined,
+) {
+  const fetched = db
     .select({
       id: videos.id,
       youtubeVideoId: videos.youtubeVideoId,
@@ -170,14 +200,40 @@ function watchedVideos(userId: number, categoryId?: number) {
         ...(categoryId !== undefined
           ? [eq(subscriptions.categoryId, categoryId)]
           : []),
+        ...(cursor
+          ? [
+              or(
+                lt(videos.watchedAt, cursor.at),
+                and(eq(videos.watchedAt, cursor.at), lt(videos.id, cursor.id)),
+              ),
+            ]
+          : []),
       ),
     )
-    .orderBy(desc(videos.watchedAt))
+    .orderBy(desc(videos.watchedAt), desc(videos.id))
+    .limit(PAGE_SIZE + 1)
     .all();
+
+  const hasMore = fetched.length > PAGE_SIZE;
+  const rows = hasMore ? fetched.slice(0, PAGE_SIZE) : fetched;
+  const lastRow = rows.length > 0 ? rows[rows.length - 1] : undefined;
+  // watchedAt is DB-guaranteed non-null here via the watched_at_check constraint
+  // (schema.ts) given the fixed status = "watched" filter above, but the column's
+  // schema type is still nullable, so this guard stays for tsc's benefit.
+  const nextCursor =
+    hasMore && lastRow && lastRow.watchedAt !== null
+      ? { at: lastRow.watchedAt, id: lastRow.id }
+      : undefined;
+
+  return { rows, nextCursor };
 }
 
-function ignoredVideos(userId: number, categoryId?: number) {
-  return db
+function ignoredVideos(
+  userId: number,
+  categoryId: number | undefined,
+  cursor: { at: Date; id: number } | undefined,
+) {
+  const fetched = db
     .select({
       id: videos.id,
       youtubeVideoId: videos.youtubeVideoId,
@@ -185,6 +241,7 @@ function ignoredVideos(userId: number, categoryId?: number) {
       channelName: youtubeChannels.name,
       categoryName: categories.name,
       ignoreMethod: videos.ignoreMethod,
+      createdAt: videos.createdAt,
     })
     .from(videos)
     .innerJoin(youtubeChannels, eq(videos.channelId, youtubeChannels.id))
@@ -201,10 +258,27 @@ function ignoredVideos(userId: number, categoryId?: number) {
         ...(categoryId !== undefined
           ? [eq(subscriptions.categoryId, categoryId)]
           : []),
+        ...(cursor
+          ? [
+              or(
+                lt(videos.createdAt, cursor.at),
+                and(eq(videos.createdAt, cursor.at), lt(videos.id, cursor.id)),
+              ),
+            ]
+          : []),
       ),
     )
-    .orderBy(desc(videos.createdAt))
+    .orderBy(desc(videos.createdAt), desc(videos.id))
+    .limit(PAGE_SIZE + 1)
     .all();
+
+  const hasMore = fetched.length > PAGE_SIZE;
+  const rows = hasMore ? fetched.slice(0, PAGE_SIZE) : fetched;
+  const lastRow = rows.length > 0 ? rows[rows.length - 1] : undefined;
+  const nextCursor =
+    hasMore && lastRow ? { at: lastRow.createdAt, id: lastRow.id } : undefined;
+
+  return { rows, nextCursor };
 }
 
 function resolveCategoryFilter(raw: string | undefined): number | undefined {
