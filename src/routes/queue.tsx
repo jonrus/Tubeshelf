@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, lt, or } from "drizzle-orm";
 import { Hono } from "hono";
 import { db } from "../db/client";
 import {
@@ -22,6 +22,19 @@ import {
 import { Layout } from "../views/layout";
 import { QueueList } from "../views/queue-list";
 import { WatchingPage, WatchStatusBadge } from "../views/watching-page";
+
+const PAGE_SIZE = 20;
+
+function parseCursor(
+  cursor: string | undefined,
+  cursorId: string | undefined,
+): { at: Date; id: number } | undefined {
+  if (cursor === undefined || cursorId === undefined) return undefined;
+  const at = new Date(Number(cursor));
+  const id = Number(cursorId);
+  if (Number.isNaN(at.getTime()) || !Number.isInteger(id)) return undefined;
+  return { at, id };
+}
 
 function queueVideos(
   userId: number,

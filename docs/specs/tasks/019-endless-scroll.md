@@ -14,7 +14,7 @@ Generated: 2026-08-10
       `devcontainer exec --docker-path podman --workspace-folder . bunx tsc --noEmit`
       passes.
 
-- [ ] 2. In `src/routes/queue.tsx`, add a `PAGE_SIZE = 20` constant and a `parseCursor`
+- [x] 2. In `src/routes/queue.tsx`, add a `PAGE_SIZE = 20` constant and a `parseCursor`
       helper per the spec's Design → "Page size, sort keys, and cursor shape" section
       (signature `parseCursor(cursor: string | undefined, cursorId: string | undefined):
       { at: Date; id: number } | undefined`, returns `undefined` on missing/malformed
