@@ -1,5 +1,5 @@
 ---
-status: draft
+status: in-progress
 created: 2026-08-10
 ---
 
@@ -105,7 +105,9 @@ reported.
 ### Query changes
 
 All four list functions in `src/routes/queue.tsx` gain a `cursor` parameter and return
-`{ rows, hasMore }` instead of a bare array. `queueVideos` (`queue.tsx:26-62`) becomes:
+`{ rows, nextCursor }` instead of a bare array — `nextCursor` is `undefined` exactly when
+there is no further page, so callers never need a separate `hasMore` boolean: "render the
+sentinel" is simply "`nextCursor` is defined." `queueVideos` (`queue.tsx:26-62`) becomes:
 
 ```ts
 function queueVideos(
@@ -114,7 +116,7 @@ function queueVideos(
   categoryId: number | undefined,
   cursor: { at: Date; id: number } | undefined,
 ) {
-  const rows = db
+  const fetched = db
     .select({ /* unchanged */ })
     .from(videos)
     .innerJoin(youtubeChannels, eq(videos.channelId, youtubeChannels.id))
@@ -149,31 +151,61 @@ function queueVideos(
     .limit(PAGE_SIZE + 1)
     .all();
 
-  const hasMore = rows.length > PAGE_SIZE;
-  return { rows: hasMore ? rows.slice(0, PAGE_SIZE) : rows, hasMore };
+  const hasMore = fetched.length > PAGE_SIZE;
+  const rows = hasMore ? fetched.slice(0, PAGE_SIZE) : fetched;
+  const lastRow = rows.length > 0 ? rows[rows.length - 1] : undefined;
+  const nextCursor =
+    hasMore && lastRow && lastRow.publishedAt !== null
+      ? { at: lastRow.publishedAt, id: lastRow.id }
+      : undefined;
+
+  return { rows, nextCursor };
 }
 ```
 
-Fetching `PAGE_SIZE + 1` and slicing is how `hasMore` is determined without a separate
-`COUNT` query. `orderBy` must include `id` as an explicit secondary key, matching the
-cursor's tuple exactly — not just in the `WHERE` comparison — because two rows sharing an
-identical `publishedAt`/`watchedAt`/`createdAt` would otherwise have no guaranteed stable
+Fetching `PAGE_SIZE + 1` and slicing is how "is there a next page" is determined without a
+separate `COUNT` query. `orderBy` must include `id` as an explicit secondary key, matching
+the cursor's tuple exactly — not just in the `WHERE` comparison — because two rows sharing
+an identical `publishedAt`/`watchedAt`/`createdAt` would otherwise have no guaranteed stable
 relative order between page 1 and page 2, which could silently skip or duplicate a row
 across the page boundary.
+
+`nextCursor`'s computation uses an explicit `rows.length > 0 ? rows[rows.length - 1] :
+undefined` check rather than `rows.at(-1)` or a non-null assertion — this project's
+`tsconfig.json` has `noUncheckedIndexedAccess` on, and `CLAUDE.md` specifically flags this
+exact class of `tsc --noEmit`-only-visible gotcha (a prior `match[1]: string | undefined`
+slipped past `bun test`/`bun run lint` across multiple commits in spec005/006). The
+`lastRow.publishedAt !== null` check exists purely to satisfy the type checker given the
+column's nullable schema type — per the NULL-handling invariant above, this branch is not
+expected to actually be reached in practice; if it somehow were, the practical effect is
+that the sentinel is omitted one page earlier than `hasMore` would suggest (the list
+appears to end at that point rather than crashing), which is an acceptable degradation of
+an already-documented edge case, not a new failure mode this design introduces.
+
+Placing `nextCursor` construction *inside* each list function (rather than, say, in the
+route handler or the view component) matters: each function is the only place that already
+knows which sort column it's keyed on, so the alternative — recomputing "which field is the
+cursor" once per call site (4 routes) and again in the view layer — would duplicate
+per-view logic that belongs in exactly one place. Every downstream consumer (routes, view
+components) treats `nextCursor` as an opaque value to forward, never inspects or rebuilds
+it.
 
 New imports needed in `queue.tsx`: `gt`, `lt`, `or` from `drizzle-orm` (currently imports
 `and, asc, desc, eq, inArray, isNull`).
 
-The other three functions follow the identical shape with these deltas:
+The other three functions follow the identical shape (including `nextCursor` construction)
+with these deltas:
 - **`continueWatchingVideos`** (`queue.tsx:64-94`): no `sort` param (fixed
   `desc(publishedAt), desc(id)` only), cursor on `(publishedAt, id)`, status filter
   `eq(videos.status, "watching")`.
 - **`watchedVideos`** (`queue.tsx:96-131`): order `desc(watchedAt), desc(id)`; cursor on
   `(watchedAt, id)`; status filter `eq(videos.status, "watched")`; unchanged — still no
   `isNull(subscriptions.unsubscribedAt)` filter (true history, per the existing comment at
-  `queue.tsx:117-123`).
+  `queue.tsx:117-123`); no `publishedAt !== null` guard needed since `watchedAt` is
+  DB-guaranteed non-null here (see NULL-handling invariant above).
 - **`ignoredVideos`** (`queue.tsx:133-162`): order `desc(createdAt), desc(id)`; cursor on
-  `(createdAt, id)`; status filter `eq(videos.status, "ignored")`.
+  `(createdAt, id)`; status filter `eq(videos.status, "ignored")`; no null guard needed
+  (`createdAt` is `.notNull()`).
 
 ### New DB indexes
 
@@ -221,30 +253,24 @@ Each of the four `GET` routes (`/queue`, `/continue-watching`, `/watched`, `/ign
 `queue.tsx:260-345`) parses `cursor`/`cursorId` and branches:
 
 - **No cursor (first visit)** — unchanged shape: `c.html(<Layout>...<QueueList /></Layout>)`,
-  but `QueueList` now receives only the first page's rows (≤20) and the `hasMore` flag, and
-  renders a `LoadMoreSentinel` as the last grid child when `hasMore` is true.
+  but `QueueList` now receives only the first page's rows (≤20) and the `nextCursor` value
+  returned alongside them, and renders a `LoadMoreSentinel` as the last grid child when
+  `nextCursor` is defined.
 - **Cursor present (htmx load-more request)** — return only the next batch: new cards plus
-  a new `LoadMoreSentinel` (or nothing if `hasMore` is false) — no `<Layout>`, nothing from
-  the already-rendered pages re-sent. This mirrors the existing pattern where
-  `POST /videos/:id/toggle` etc. already return a bare partial with no `<Layout>`.
+  a new `LoadMoreSentinel` (or nothing if `nextCursor` comes back `undefined`) — no
+  `<Layout>`, nothing from the already-rendered pages re-sent. This mirrors the existing
+  pattern where `POST /videos/:id/toggle` etc. already return a bare partial with no
+  `<Layout>`.
 
-The `LoadMoreSentinel`'s `hx-get` href is built from the last row of whichever page was
-just rendered, turned into a URL via `src/lib/queue-urls.ts`, which gains a
-`cursor`/`cursorId` param alongside each existing `build*Href` function (e.g.
-`buildQueueHref(sort, category, cursor?)`). `LoadMoreSentinel` itself sets
-`hx-target="this" hx-swap="outerHTML"` explicitly — htmx's defaults are target=self,
-swap=`innerHTML`, and without an explicit `outerHTML` override each load-more response
-would nest inside the previous sentinel instead of replacing it and appending the new cards
-as siblings.
+Each route passes the list function's `nextCursor` straight through to `QueueList`/
+`QueueListMore` as a prop, unmodified — it's already an opaque `{ at: Date; id: number } |
+undefined` value by the time it leaves the query function (see "Query changes" above),
+so no route handler needs to know which column it came from.
 
-Getting "the last row of whichever page was just rendered" needs an explicit
-`rows.length > 0 ? rows[rows.length - 1] : undefined` check rather than `rows.at(-1)` at
-the call site — this project's `tsconfig.json` has `noUncheckedIndexedAccess` on, and
-`CLAUDE.md` specifically flags this exact class of `tsc --noEmit`-only-visible gotcha
-(a prior `match[1]: string | undefined` slipped past `bun test`/`bun run lint` across
-multiple commits in spec005/006). It's runtime-safe here (the sentinel is only ever
-rendered when `hasMore`, i.e. `rows.length === PAGE_SIZE`), but the type still needs an
-explicit narrowing, not a non-null assertion.
+`LoadMoreSentinel` sets `hx-target="this" hx-swap="outerHTML"` explicitly — htmx's defaults
+are target=self, swap=`innerHTML`, and without an explicit `outerHTML` override each
+load-more response would nest inside the previous sentinel instead of replacing it and
+appending the new cards as siblings.
 
 ### `QueueList` / card rendering restructuring (`src/views/queue-list.tsx`)
 
@@ -255,13 +281,20 @@ Two changes support both (a) a load-more response with no wrapping `#queue-list`
    currently only a JSX `key`, no DOM id.
 2. The three inline `.map()` branches inside `QueueList` are extracted into standalone
    per-row card functions — `queueCard(row, view, sort, category)`, `watchedCard(row,
-   category)`, `ignoredCard(row, category)` — each returning one card's JSX. `QueueList`
-   becomes a thin wrapper: `<div id="queue-list">{rows.map(cardFn)}{hasMore &&
-   <LoadMoreSentinel .../>}</div>`. A new export, `QueueListMore`, renders the bare
-   `rows.map(cardFn)` + sentinel with **no** wrapping div, for the load-more fragment
-   response. Both call the same per-row functions — exactly one JSX implementation per card
-   shape — which is also what lets the action handlers below reuse identical markup for a
-   single-card swap response instead of a second hand-maintained copy.
+   category)`, `ignoredCard(row, category)` — each returning one card's JSX.
+   `QueueList`/`QueueListMore`'s props gain `nextCursor: { at: Date; id: number } |
+   undefined` (forwarded opaquely from the route, per "Route/handler changes" above).
+   When `nextCursor` is defined, the component builds the sentinel's href itself by calling
+   the `build*Href` function matching its own `props.view` (already known — the same
+   discriminator that picks which card-rendering branch runs) with `nextCursor` as that
+   function's new cursor argument, from `src/lib/queue-urls.ts` (extended in a prior step
+   to accept it). `QueueList` becomes a thin wrapper: `<div id="queue-list">
+   {rows.map(cardFn)}{sentinelHref && <LoadMoreSentinel href={sentinelHref} />}</div>`. A
+   new export, `QueueListMore`, renders the bare `rows.map(cardFn)` + sentinel with **no**
+   wrapping div, for the load-more fragment response. Both call the same per-row
+   functions — exactly one JSX implementation per card shape — which is also what lets the
+   action handlers below reuse identical markup for a single-card swap response instead of
+   a second hand-maintained copy.
 
 ### Action handlers: single-card update-or-delete instead of full-list re-fetch
 
@@ -380,3 +413,16 @@ correctly-described htmx APIs, and that no other call site anywhere in `src/`/`t
 depends on the four list functions' or `QueueList`'s current signatures. No second full
 pass was run — the findings were concrete corrections with clear fixes, not new design
 questions requiring further review.
+
+**Decomposition-review retrospective (from `/spec-tasks`):** breaking this spec into
+`docs/specs/tasks/019-endless-scroll.md` surfaced one real content gap rather than a pure
+task-ordering issue: the original Design left "how the sentinel's next-page href gets
+built" underspecified — the list functions returned a separate `hasMore` boolean with no
+stated owner for computing the actual cursor values from the last row, which would have let
+an implementer duplicate that per-view logic across four route handlers and/or the view
+layer. Fixed by having each list function return `{ rows, nextCursor }` directly
+(`nextCursor` replaces `hasMore` — "is there a next page" is just "is `nextCursor`
+defined") with the last-row/cursor computation done once, in the one place that already
+knows its own sort column, and treated as an opaque value by every downstream consumer.
+"Query changes," "Route/handler changes," and the `QueueList` restructuring section above
+reflect the corrected shape.
