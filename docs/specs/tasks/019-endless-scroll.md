@@ -152,7 +152,7 @@ Generated: 2026-08-10
       — done when: `devcontainer exec --docker-path podman --workspace-folder . bun test`
       passes, including the new pagination-boundary and tiebreak tests.
 
-- [ ] 11. Run the full verification suite and do manual end-to-end verification, per
+- [x] 11. Run the full verification suite and do manual end-to-end verification, per
       `CLAUDE.md`'s convention of splitting manual verification into what Claude can check
       directly vs. what needs a live browser:
       - **Claude performs directly** (via `devcontainer exec ... curl` and/or direct SQLite
