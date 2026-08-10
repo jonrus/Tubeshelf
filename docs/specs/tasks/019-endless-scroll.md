@@ -62,7 +62,7 @@ Generated: 2026-08-10
       `undefined`/`null`-safe (single row via `.get()`) matching `QueueRow`'s shape, and
       `bunx tsc --noEmit` passes for this function in isolation.
 
-- [ ] 6. Extend each `build*Href` function in `src/lib/queue-urls.ts`
+- [x] 6. Extend each `build*Href` function in `src/lib/queue-urls.ts`
       (`buildQueueHref`, `buildContinueWatchingHref`, `buildWatchedHref`,
       `buildIgnoredHref`) to accept an optional `cursor?: { at: Date; id: number }`
       parameter, adding `cursor`/`cursorId` (epoch-milliseconds string + row id string) to
