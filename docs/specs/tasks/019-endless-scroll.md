@@ -72,7 +72,7 @@ Generated: 2026-08-10
       parameter, existing call sites (which don't pass it) still compile unchanged, and
       `bunx tsc --noEmit` passes.
 
-- [ ] 7. Restructure `src/views/queue-list.tsx` per the spec's "`QueueList` / card rendering
+- [x] 7. Restructure `src/views/queue-list.tsx` per the spec's "`QueueList` / card rendering
       restructuring" section:
       - Add `id={`video-${row.id}`}` to every card `<div>` across all four `props.view`
         branches (currently only a JSX `key`).
