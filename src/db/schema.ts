@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   check,
+  index,
   integer,
   sqliteTable,
   text,
@@ -123,6 +124,9 @@ export const videos = sqliteTable(
       "watched_at_check",
       sql`(${t.status} = 'watched') = (${t.watchedAt} is not null)`,
     ),
+    index("videos_status_published_idx").on(t.status, t.publishedAt, t.id),
+    index("videos_status_watched_idx").on(t.status, t.watchedAt, t.id),
+    index("videos_status_created_idx").on(t.status, t.createdAt, t.id),
   ],
 );
 
