@@ -116,6 +116,17 @@ test is expected to break. No new tests are needed — both changes are purely v
 structural with no new logic to cover; existing tests continue to assert the same
 add/edit/delete/dismiss/unsubscribe *behavior*, which is unchanged.
 
+~~No existing test is expected to break.~~ **Confirmed false at implementation time (task
+step 2):** `extractSubscriptionRow` in `test/routes/channels.test.ts` (line 146) anchors its
+regex to match the channel name *immediately* after `<li[^>]*>`, with no tag allowed in
+between — it is position-sensitive in exactly the way this section said no test was. Wrapping
+the channel name in the new left-side `<span>` (Design item 2) broke 5 tests
+(`no subscription row found for "..."`). Fixed by relaxing the regex to
+`` <li[^>]*>(?:<[^>]+>)*${escaped}[\s\S]*?</li> `` — allowing zero or more wrapping tags
+between `<li>` and the channel name — rather than avoiding the wrapping-span structure, since
+the two-span structure is required by the "Structural note" above. All 218 tests pass after
+the fix.
+
 ## Verification
 
 Per CLAUDE.md's split:

@@ -140,10 +140,13 @@ function extractCategoryId(previewHtml: string): string {
 // The subscription list HTML accumulates every subscription created across
 // this whole test file (no per-test isolation of the shared in-memory DB), so
 // asserting the badge's presence/absence must scope to a single channel's
-// <li> rather than the full document.
+// <li> rather than the full document. Allows zero or more wrapping tags
+// (e.g. the row's left-side <span>) between <li> and the channel name.
 function extractSubscriptionRow(html: string, channelName: string): string {
   const escaped = channelName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = html.match(new RegExp(`<li[^>]*>${escaped}[\\s\\S]*?</li>`));
+  const match = html.match(
+    new RegExp(`<li[^>]*>(?:<[^>]+>)*${escaped}[\\s\\S]*?</li>`),
+  );
   if (!match) throw new Error(`no subscription row found for "${channelName}"`);
   return match[0];
 }

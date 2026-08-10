@@ -30,36 +30,40 @@ export const SubscriptionList: FC<{
           {props.subscriptions.map((subscription) => (
             <li
               key={subscription.id}
-              class="flex flex-wrap items-center gap-2 px-4 py-3 hover:bg-surface-raised"
+              class="flex items-center justify-between gap-2 px-4 py-3 hover:bg-surface-raised"
             >
-              {subscription.channelName} ({subscription.unwatchedCount}) (
-              {subscription.categoryName})
-              {subscription.showMissedVideosBadge ? (
-                <>
-                  {" "}
-                  <span class="text-sm text-danger">
-                    ⚠ Possible missed videos
-                  </span>
-                  <button
-                    type="button"
-                    hx-post={`/subscriptions/${subscription.id}/dismiss-missed-videos`}
-                    hx-target="#subscription-list"
-                    hx-swap="outerHTML"
-                    class={SECONDARY_BUTTON_CLASS}
-                  >
-                    Dismiss
-                  </button>
-                </>
-              ) : null}
-              <button
-                type="button"
-                hx-delete={`/subscriptions/${subscription.id}`}
-                hx-target="#subscription-list"
-                hx-swap="outerHTML"
-                class={SECONDARY_BUTTON_CLASS}
-              >
-                Unsubscribe
-              </button>
+              <span class="flex flex-wrap items-center gap-2">
+                {subscription.channelName} ({subscription.unwatchedCount}) (
+                {subscription.categoryName})
+                {subscription.showMissedVideosBadge ? (
+                  <>
+                    {" "}
+                    <span class="text-sm text-danger">
+                      ⚠ Possible missed videos
+                    </span>
+                    <button
+                      type="button"
+                      hx-post={`/subscriptions/${subscription.id}/dismiss-missed-videos`}
+                      hx-target="#subscription-list"
+                      hx-swap="outerHTML"
+                      class={SECONDARY_BUTTON_CLASS}
+                    >
+                      Dismiss
+                    </button>
+                  </>
+                ) : null}
+              </span>
+              <span class="flex items-center gap-2">
+                <button
+                  type="button"
+                  hx-delete={`/subscriptions/${subscription.id}`}
+                  hx-target="#subscription-list"
+                  hx-swap="outerHTML"
+                  class={SECONDARY_BUTTON_CLASS}
+                >
+                  Unsubscribe
+                </button>
+              </span>
             </li>
           ))}
         </ul>

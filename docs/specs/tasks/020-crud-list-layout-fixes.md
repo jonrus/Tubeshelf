@@ -16,7 +16,7 @@ Generated: 2026-08-10
       the file changed, and `devcontainer exec --docker-path podman --workspace-folder .
       bunx tsc --noEmit` passes.
 
-- [ ] 2. In `src/views/subscription-list.tsx`, restructure the row `<li>` (currently lines
+- [x] 2. In `src/views/subscription-list.tsx`, restructure the row `<li>` (currently lines
       31-63, class `flex flex-wrap items-center gap-2 px-4 py-3 hover:bg-surface-raised`) per
       the spec's Design item 2:
       - Change the `<li>`'s class to `flex items-center justify-between gap-2 px-4 py-3
