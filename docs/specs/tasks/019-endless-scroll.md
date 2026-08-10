@@ -106,7 +106,7 @@ Generated: 2026-08-10
       card has a `video-${id}` DOM id, and `bunx tsc --noEmit` passes (call sites in
       `queue.tsx` will still be on the old shape until steps 8-9 — expected).
 
-- [ ] 8. Update the four `GET` routes in `src/routes/queue.tsx` (`/queue`,
+- [x] 8. Update the four `GET` routes in `src/routes/queue.tsx` (`/queue`,
       `/continue-watching`, `/watched`, `/ignored`, currently lines 260-345) to parse
       `cursor`/`cursorId` via `parseCursor`, pass it through to the corresponding list
       function, and branch per the spec's "Route/handler changes" section: no cursor →

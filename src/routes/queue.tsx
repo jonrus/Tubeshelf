@@ -20,7 +20,7 @@ import {
   unignoreVideo,
 } from "../lib/watch-status";
 import { Layout } from "../views/layout";
-import { QueueList } from "../views/queue-list";
+import { QueueList, QueueListMore } from "../views/queue-list";
 import { WatchingPage, WatchStatusBadge } from "../views/watching-page";
 
 const PAGE_SIZE = 20;
@@ -403,6 +403,21 @@ queueRoute.get("/queue", (c) => {
   const user = getCurrentUser();
   const sort = resolveSort(c.req.query("sort"));
   const category = resolveCategoryFilter(c.req.query("category"));
+  const cursor = parseCursor(c.req.query("cursor"), c.req.query("cursorId"));
+  const { rows, nextCursor } = queueVideos(user.id, sort, category, cursor);
+
+  if (cursor !== undefined) {
+    return c.html(
+      <QueueListMore
+        view="queue"
+        sort={sort}
+        category={category}
+        rows={rows}
+        nextCursor={nextCursor}
+      />,
+    );
+  }
+
   return c.html(
     <Layout
       title="Queue"
@@ -420,7 +435,8 @@ queueRoute.get("/queue", (c) => {
         view="queue"
         sort={sort}
         category={category}
-        rows={queueVideos(user.id, sort, category)}
+        rows={rows}
+        nextCursor={nextCursor}
       />
     </Layout>,
   );
@@ -429,6 +445,24 @@ queueRoute.get("/queue", (c) => {
 queueRoute.get("/continue-watching", (c) => {
   const user = getCurrentUser();
   const category = resolveCategoryFilter(c.req.query("category"));
+  const cursor = parseCursor(c.req.query("cursor"), c.req.query("cursorId"));
+  const { rows, nextCursor } = continueWatchingVideos(
+    user.id,
+    category,
+    cursor,
+  );
+
+  if (cursor !== undefined) {
+    return c.html(
+      <QueueListMore
+        view="continue-watching"
+        category={category}
+        rows={rows}
+        nextCursor={nextCursor}
+      />,
+    );
+  }
+
   return c.html(
     <Layout
       title="Continue Watching"
@@ -440,7 +474,8 @@ queueRoute.get("/continue-watching", (c) => {
       <QueueList
         view="continue-watching"
         category={category}
-        rows={continueWatchingVideos(user.id, category)}
+        rows={rows}
+        nextCursor={nextCursor}
       />
     </Layout>,
   );
@@ -449,6 +484,20 @@ queueRoute.get("/continue-watching", (c) => {
 queueRoute.get("/watched", (c) => {
   const user = getCurrentUser();
   const category = resolveCategoryFilter(c.req.query("category"));
+  const cursor = parseCursor(c.req.query("cursor"), c.req.query("cursorId"));
+  const { rows, nextCursor } = watchedVideos(user.id, category, cursor);
+
+  if (cursor !== undefined) {
+    return c.html(
+      <QueueListMore
+        view="watched"
+        category={category}
+        rows={rows}
+        nextCursor={nextCursor}
+      />,
+    );
+  }
+
   return c.html(
     <Layout
       title="Watched"
@@ -460,7 +509,8 @@ queueRoute.get("/watched", (c) => {
       <QueueList
         view="watched"
         category={category}
-        rows={watchedVideos(user.id, category)}
+        rows={rows}
+        nextCursor={nextCursor}
       />
     </Layout>,
   );
@@ -469,6 +519,20 @@ queueRoute.get("/watched", (c) => {
 queueRoute.get("/ignored", (c) => {
   const user = getCurrentUser();
   const category = resolveCategoryFilter(c.req.query("category"));
+  const cursor = parseCursor(c.req.query("cursor"), c.req.query("cursorId"));
+  const { rows, nextCursor } = ignoredVideos(user.id, category, cursor);
+
+  if (cursor !== undefined) {
+    return c.html(
+      <QueueListMore
+        view="ignored"
+        category={category}
+        rows={rows}
+        nextCursor={nextCursor}
+      />,
+    );
+  }
+
   return c.html(
     <Layout
       title="Ignored"
@@ -480,7 +544,8 @@ queueRoute.get("/ignored", (c) => {
       <QueueList
         view="ignored"
         category={category}
-        rows={ignoredVideos(user.id, category)}
+        rows={rows}
+        nextCursor={nextCursor}
       />
     </Layout>,
   );
