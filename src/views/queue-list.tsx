@@ -210,7 +210,7 @@ function ignoredCard(row: IgnoredRow, category: number | undefined) {
   );
 }
 
-function queueCard(
+export function queueCard(
   row: QueueRow,
   view: "queue" | "continue-watching",
   sort: "newest" | "oldest" | undefined,

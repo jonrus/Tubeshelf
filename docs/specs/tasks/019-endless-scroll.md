@@ -119,7 +119,7 @@ Generated: 2026-08-10
       before this spec still pass conceptually, pending step 10's updates), and
       `bunx tsc --noEmit` passes.
 
-- [ ] 9. Rewrite `POST /videos/:id/toggle`, `/videos/:id/ignore`, `/videos/:id/unignore` in
+- [x] 9. Rewrite `POST /videos/:id/toggle`, `/videos/:id/ignore`, `/videos/:id/unignore` in
       `src/routes/queue.tsx` (currently lines 395-467) per the spec's "Action handlers"
       section:
       - `/ignore` and `/unignore`: after the mutation succeeds, return an empty body with

@@ -20,7 +20,7 @@ import {
   unignoreVideo,
 } from "../lib/watch-status";
 import { Layout } from "../views/layout";
-import { QueueList, QueueListMore } from "../views/queue-list";
+import { QueueList, QueueListMore, queueCard } from "../views/queue-list";
 import { WatchingPage, WatchStatusBadge } from "../views/watching-page";
 
 const PAGE_SIZE = 20;
@@ -604,28 +604,22 @@ queueRoute.post("/videos/:id/toggle", (c) => {
   const result = toggleQueueStatus(id);
   if (!result) return c.notFound();
 
-  const user = getCurrentUser();
   const view = resolveToggleView(c.req.query("view"));
+
+  if (result.status === "watched") {
+    c.header("HX-Reswap", "delete");
+    return c.body(null);
+  }
+  if (view === "continue-watching") {
+    c.header("HX-Reswap", "delete");
+    return c.body(null);
+  }
+
   const sort = resolveSort(c.req.query("sort"));
   const category = resolveCategoryFilter(c.req.query("category"));
-
-  if (view === "continue-watching") {
-    return c.html(
-      <QueueList
-        view="continue-watching"
-        category={category}
-        rows={continueWatchingVideos(user.id, category)}
-      />,
-    );
-  }
-  return c.html(
-    <QueueList
-      view="queue"
-      sort={sort}
-      category={category}
-      rows={queueVideos(user.id, sort, category)}
-    />,
-  );
+  const row = queueRowById(id);
+  if (!row) return c.notFound();
+  return c.html(queueCard(row, "queue", sort, category));
 });
 
 queueRoute.post("/videos/:id/ignore", (c) => {
@@ -633,28 +627,8 @@ queueRoute.post("/videos/:id/ignore", (c) => {
   const result = ignoreVideo(id);
   if (!result) return c.notFound();
 
-  const user = getCurrentUser();
-  const view = resolveToggleView(c.req.query("view"));
-  const sort = resolveSort(c.req.query("sort"));
-  const category = resolveCategoryFilter(c.req.query("category"));
-
-  if (view === "continue-watching") {
-    return c.html(
-      <QueueList
-        view="continue-watching"
-        category={category}
-        rows={continueWatchingVideos(user.id, category)}
-      />,
-    );
-  }
-  return c.html(
-    <QueueList
-      view="queue"
-      sort={sort}
-      category={category}
-      rows={queueVideos(user.id, sort, category)}
-    />,
-  );
+  c.header("HX-Reswap", "delete");
+  return c.body(null);
 });
 
 queueRoute.post("/videos/:id/unignore", (c) => {
@@ -662,13 +636,6 @@ queueRoute.post("/videos/:id/unignore", (c) => {
   const result = unignoreVideo(id);
   if (!result) return c.notFound();
 
-  const user = getCurrentUser();
-  const category = resolveCategoryFilter(c.req.query("category"));
-  return c.html(
-    <QueueList
-      view="ignored"
-      category={category}
-      rows={ignoredVideos(user.id, category)}
-    />,
-  );
+  c.header("HX-Reswap", "delete");
+  return c.body(null);
 });
