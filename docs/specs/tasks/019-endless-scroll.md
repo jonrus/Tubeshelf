@@ -23,7 +23,7 @@ Generated: 2026-08-10
       module-local as appropriate for use later in this file, and
       `bunx tsc --noEmit` passes.
 
-- [ ] 3. Rewrite `queueVideos` in `src/routes/queue.tsx` (currently lines 26-62) to accept a
+- [x] 3. Rewrite `queueVideos` in `src/routes/queue.tsx` (currently lines 26-62) to accept a
       fourth `cursor: { at: Date; id: number } | undefined` parameter, add the compound
       cursor `WHERE` clause (`or(lt/gt(publishedAt, cursor.at), and(eq(publishedAt,
       cursor.at), lt/gt(id, cursor.id)))`, direction matching `sort`), add `id` as an

@@ -39,9 +39,10 @@ function parseCursor(
 function queueVideos(
   userId: number,
   sort: "newest" | "oldest",
-  categoryId?: number,
+  categoryId: number | undefined,
+  cursor: { at: Date; id: number } | undefined,
 ) {
-  return db
+  const fetched = db
     .select({
       id: videos.id,
       youtubeVideoId: videos.youtubeVideoId,
@@ -66,12 +67,44 @@ function queueVideos(
         ...(categoryId !== undefined
           ? [eq(subscriptions.categoryId, categoryId)]
           : []),
+        ...(cursor
+          ? [
+              sort === "oldest"
+                ? or(
+                    gt(videos.publishedAt, cursor.at),
+                    and(
+                      eq(videos.publishedAt, cursor.at),
+                      gt(videos.id, cursor.id),
+                    ),
+                  )
+                : or(
+                    lt(videos.publishedAt, cursor.at),
+                    and(
+                      eq(videos.publishedAt, cursor.at),
+                      lt(videos.id, cursor.id),
+                    ),
+                  ),
+            ]
+          : []),
       ),
     )
     .orderBy(
-      sort === "oldest" ? asc(videos.publishedAt) : desc(videos.publishedAt),
+      ...(sort === "oldest"
+        ? [asc(videos.publishedAt), asc(videos.id)]
+        : [desc(videos.publishedAt), desc(videos.id)]),
     )
+    .limit(PAGE_SIZE + 1)
     .all();
+
+  const hasMore = fetched.length > PAGE_SIZE;
+  const rows = hasMore ? fetched.slice(0, PAGE_SIZE) : fetched;
+  const lastRow = rows.length > 0 ? rows[rows.length - 1] : undefined;
+  const nextCursor =
+    hasMore && lastRow && lastRow.publishedAt !== null
+      ? { at: lastRow.publishedAt, id: lastRow.id }
+      : undefined;
+
+  return { rows, nextCursor };
 }
 
 function continueWatchingVideos(userId: number, categoryId?: number) {
