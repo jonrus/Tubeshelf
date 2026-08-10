@@ -174,7 +174,7 @@ Generated: 2026-08-10
       `bun run lint`, and `bunx tsc --noEmit` are all clean, Claude's direct checks above
       pass, and the user has confirmed the live-browser checks above.
 
-- [ ] 12. Flip `docs/specs/019-endless-scroll.md`'s frontmatter to `status: implemented`,
+- [x] 12. Flip `docs/specs/019-endless-scroll.md`'s frontmatter to `status: implemented`,
       then open the PR (summary + test plan filled out, referencing this task file and the
       manual verification results from step 11) — check this box *before* pushing, per
       `CLAUDE.md`'s git workflow ("Finishing a spec" section), so the push carries a
