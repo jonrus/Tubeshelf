@@ -2,7 +2,7 @@
 Spec: docs/specs/019-endless-scroll.md
 Generated: 2026-08-10
 
-- [ ] 1. Add three composite indexes to `videos` in `src/db/schema.ts` (import `index` from
+- [x] 1. Add three composite indexes to `videos` in `src/db/schema.ts` (import `index` from
       `drizzle-orm/sqlite-core` alongside the existing `check`/`unique`; add
       `index("videos_status_published_idx").on(t.status, t.publishedAt, t.id)`,
       `index("videos_status_watched_idx").on(t.status, t.watchedAt, t.id)`,
