@@ -137,7 +137,7 @@ Generated: 2026-08-10
       `continueWatchingVideos`/`ignoredVideos` anymore, the toggle handler's `queue`+
       `unwatched` branch renders via `queueRowById`, and `bunx tsc --noEmit` passes.
 
-- [ ] 10. Update `test/routes/queue.test.ts` per the spec's "Testing implications" section:
+- [x] 10. Update `test/routes/queue.test.ts` per the spec's "Testing implications" section:
       - Add a test seeding more than `PAGE_SIZE` (20) videos into one view (e.g. Watched)
         and asserting the first-page response contains exactly 20 cards plus a load-more
         sentinel, and that a follow-up request with that sentinel's `cursor`/`cursorId`

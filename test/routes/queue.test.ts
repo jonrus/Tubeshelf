@@ -250,6 +250,109 @@ test("GET /watched lists only watched videos, most-recently-watched-first, inclu
   expect(html).toContain(`/watching/${laterWatched.id}?from=watched`);
 });
 
+test("GET /watched paginates: first page returns exactly PAGE_SIZE cards plus a load-more sentinel, and the sentinel's cursor fetches the remaining rows with no overlap or gap", async () => {
+  const paginationCategory = db
+    .insert(categories)
+    .values({ name: "Pagination Test Category" })
+    .returning()
+    .get();
+  const channel = makeChannel("Pagination Watched Channel");
+  makeSubscription(channel.id, { categoryId: paginationCategory.id });
+
+  const pageSize = 20;
+  const total = pageSize + 1;
+  const baseTime = new Date("2026-01-01T00:00:00Z").getTime();
+  const seeded = Array.from({ length: total }, (_, i) =>
+    makeVideo(channel.id, {
+      status: "watched",
+      watchedAt: new Date(baseTime + i * 60_000),
+    }),
+  );
+  // Newest-first order: highest index (most recently watched) comes first.
+  const newestFirst = [...seeded].reverse();
+  const firstPageExpected = newestFirst.slice(0, pageSize);
+  const secondPageExpected = newestFirst.slice(pageSize);
+
+  const firstRes = await queueRoute.request(
+    `/watched?category=${paginationCategory.id}`,
+    { headers: authHeaders },
+  );
+  expect(firstRes.status).toBe(200);
+  const firstHtml = await firstRes.text();
+  expect(firstHtml).toContain("<html");
+
+  for (const v of firstPageExpected) expect(firstHtml).toContain(v.title);
+  for (const v of secondPageExpected) expect(firstHtml).not.toContain(v.title);
+
+  const sentinelMatch = firstHtml.match(
+    /hx-get="(\/watched\?[^"]*cursor=[^"]*)"/,
+  );
+  const rawSentinelHref = sentinelMatch?.[1];
+  if (rawSentinelHref === undefined) {
+    throw new Error("expected a load-more sentinel in the first page");
+  }
+  const sentinelHref = rawSentinelHref.replace(/&amp;/g, "&");
+
+  const secondRes = await queueRoute.request(sentinelHref, {
+    headers: authHeaders,
+  });
+  expect(secondRes.status).toBe(200);
+  const secondHtml = await secondRes.text();
+  expect(secondHtml).not.toContain("<html");
+
+  for (const v of secondPageExpected) expect(secondHtml).toContain(v.title);
+  for (const v of firstPageExpected) expect(secondHtml).not.toContain(v.title);
+  expect(secondHtml).not.toContain('hx-trigger="revealed"');
+});
+
+test("GET /watched paginates correctly when two videos share an identical watchedAt at the page boundary (id secondary sort, no duplicate or skip)", async () => {
+  const tiebreakCategory = db
+    .insert(categories)
+    .values({ name: "Tiebreak Test Category" })
+    .returning()
+    .get();
+  const channel = makeChannel("Tiebreak Watched Channel");
+  makeSubscription(channel.id, { categoryId: tiebreakCategory.id });
+
+  const tieAt = new Date("2026-02-01T00:00:00Z");
+  const distinctVideos = Array.from({ length: 19 }, (_, i) =>
+    makeVideo(channel.id, {
+      status: "watched",
+      watchedAt: new Date(tieAt.getTime() + (i + 1) * 60_000),
+    }),
+  );
+  const tieA = makeVideo(channel.id, { status: "watched", watchedAt: tieAt });
+  const tieB = makeVideo(channel.id, { status: "watched", watchedAt: tieAt });
+  // tieA and tieB share watchedAt; tieB was inserted second so it has the
+  // higher id and sorts first under desc(watchedAt), desc(id).
+
+  const firstRes = await queueRoute.request(
+    `/watched?category=${tiebreakCategory.id}`,
+    { headers: authHeaders },
+  );
+  const firstHtml = await firstRes.text();
+  for (const v of distinctVideos) expect(firstHtml).toContain(v.title);
+  expect(firstHtml).toContain(tieB.title);
+  expect(firstHtml).not.toContain(tieA.title);
+
+  const sentinelMatch = firstHtml.match(
+    /hx-get="(\/watched\?[^"]*cursor=[^"]*)"/,
+  );
+  const rawSentinelHref = sentinelMatch?.[1];
+  if (rawSentinelHref === undefined) {
+    throw new Error("expected a load-more sentinel in the first page");
+  }
+  const sentinelHref = rawSentinelHref.replace(/&amp;/g, "&");
+
+  const secondRes = await queueRoute.request(sentinelHref, {
+    headers: authHeaders,
+  });
+  const secondHtml = await secondRes.text();
+  expect(secondHtml).toContain(tieA.title);
+  expect(secondHtml).not.toContain(tieB.title);
+  for (const v of distinctVideos) expect(secondHtml).not.toContain(v.title);
+});
+
 test("GET /queue?category=<id> only returns that category's videos", async () => {
   const channel = makeChannel("Category Filter Queue Channel");
   makeSubscription(channel.id, { categoryId: category.id });
@@ -697,16 +800,12 @@ test("POST /videos/:id/watched-toggle 404s for a nonexistent video", async () =>
   expect(res.status).toBe(404);
 });
 
-test("POST /videos/:id/toggle changes status and the returned partial reflects the row's removal from view=queue", async () => {
+test("POST /videos/:id/toggle transitions unwatched to watched and responds with HX-Reswap: delete and an empty body", async () => {
   const channel = makeChannel("Toggle Queue View Channel");
   makeSubscription(channel.id);
   const toggled = makeVideo(channel.id, {
     status: "unwatched",
     publishedAt: new Date("2026-07-01T00:00:00Z"),
-  });
-  const stays = makeVideo(channel.id, {
-    status: "watching",
-    publishedAt: new Date("2026-07-02T00:00:00Z"),
   });
 
   const res = await queueRoute.request(
@@ -714,13 +813,12 @@ test("POST /videos/:id/toggle changes status and the returned partial reflects t
     { method: "POST", headers: authHeaders },
   );
   expect(res.status).toBe(200);
-  const html = await res.text();
-  expect(html).not.toContain(toggled.title);
-  expect(html).toContain(stays.title);
+  expect(res.headers.get("HX-Reswap")).toBe("delete");
+  expect(await res.text()).toBe("");
   expect(videoRow(toggled.id).status).toBe("watched");
 });
 
-test("POST /videos/:id/toggle re-renders continue-watching for view=continue-watching", async () => {
+test("POST /videos/:id/toggle transitions watching to unwatched and responds with HX-Reswap: delete for view=continue-watching", async () => {
   const channel = makeChannel("Toggle Continue Watching View Channel");
   makeSubscription(channel.id);
   const video = makeVideo(channel.id, { status: "watching" });
@@ -730,36 +828,32 @@ test("POST /videos/:id/toggle re-renders continue-watching for view=continue-wat
     { method: "POST", headers: authHeaders },
   );
   expect(res.status).toBe(200);
-  const html = await res.text();
-  // toggleQueueStatus clears a `watching` row to `unwatched` -- if the fallback
-  // incorrectly re-rendered `queue` instead, the now-unwatched video would still
-  // show up there (queue includes unwatched), so this also proves it's really
-  // re-rendering continue-watching (watching-only), not a silent fallback.
-  expect(html).not.toContain(video.title);
+  expect(res.headers.get("HX-Reswap")).toBe("delete");
+  expect(await res.text()).toBe("");
   expect(videoRow(video.id).status).toBe("unwatched");
 });
 
-test("POST /videos/:id/toggle falls back to queue when the view param is missing", async () => {
+test("POST /videos/:id/toggle falls back to queue when the view param is missing, rendering a single-card fragment for the still-unwatched row", async () => {
   const channel = makeChannel("Toggle Missing View Channel");
   makeSubscription(channel.id);
-  const toggled = makeVideo(channel.id, { status: "unwatched" });
-  const sibling = makeVideo(channel.id, { status: "unwatched" });
+  const toggled = makeVideo(channel.id, { status: "watching" });
 
   const res = await queueRoute.request(`/videos/${toggled.id}/toggle`, {
     method: "POST",
     headers: authHeaders,
   });
   expect(res.status).toBe(200);
+  expect(res.headers.get("HX-Reswap")).toBeNull();
   const html = await res.text();
-  expect(html).toContain(sibling.title);
-  expect(videoRow(toggled.id).status).toBe("watched");
+  expect(html).toContain(toggled.title);
+  expect(html).toContain(`id="video-${toggled.id}"`);
+  expect(videoRow(toggled.id).status).toBe("unwatched");
 });
 
-test("POST /videos/:id/toggle falls back to queue for an unrecognized view (e.g. view=watched)", async () => {
+test("POST /videos/:id/toggle falls back to queue for an unrecognized view (e.g. view=watched), rendering a single-card fragment", async () => {
   const channel = makeChannel("Toggle Unrecognized View Channel");
   makeSubscription(channel.id);
-  const toggled = makeVideo(channel.id, { status: "unwatched" });
-  const sibling = makeVideo(channel.id, { status: "unwatched" });
+  const toggled = makeVideo(channel.id, { status: "watching" });
 
   const res = await queueRoute.request(
     `/videos/${toggled.id}/toggle?view=watched`,
@@ -769,9 +863,10 @@ test("POST /videos/:id/toggle falls back to queue for an unrecognized view (e.g.
     },
   );
   expect(res.status).toBe(200);
+  expect(res.headers.get("HX-Reswap")).toBeNull();
   const html = await res.text();
-  expect(html).toContain(sibling.title);
-  expect(videoRow(toggled.id).status).toBe("watched");
+  expect(html).toContain(toggled.title);
+  expect(videoRow(toggled.id).status).toBe("unwatched");
 });
 
 test("POST /videos/:id/toggle 404s for a nonexistent video", async () => {
@@ -782,19 +877,10 @@ test("POST /videos/:id/toggle 404s for a nonexistent video", async () => {
   expect(res.status).toBe(404);
 });
 
-test("POST /videos/:id/toggle?view=queue&category=<id> keeps the re-rendered partial scoped to that category", async () => {
+test("POST /videos/:id/toggle?view=queue&category=<id> renders the single-card fragment with category preserved in its action links", async () => {
   const channel = makeChannel("Category Filter Toggle Queue Channel");
   makeSubscription(channel.id, { categoryId: category.id });
-  const toggled = makeVideo(channel.id, { status: "unwatched" });
-  const staysSameCategory = makeVideo(channel.id, { status: "watching" });
-
-  const otherChannel = makeChannel(
-    "Category Filter Toggle Queue Other Channel",
-  );
-  makeSubscription(otherChannel.id, { categoryId: otherCategory.id });
-  const otherCategoryVideo = makeVideo(otherChannel.id, {
-    status: "unwatched",
-  });
+  const toggled = makeVideo(channel.id, { status: "watching" });
 
   const res = await queueRoute.request(
     `/videos/${toggled.id}/toggle?view=queue&category=${category.id}`,
@@ -802,9 +888,14 @@ test("POST /videos/:id/toggle?view=queue&category=<id> keeps the re-rendered par
   );
   expect(res.status).toBe(200);
   const html = await res.text();
-  expect(html).not.toContain(toggled.title);
-  expect(html).toContain(staysSameCategory.title);
-  expect(html).not.toContain(otherCategoryVideo.title);
+  expect(html).toContain(toggled.title);
+  expect(html).toContain(
+    `hx-post="/videos/${toggled.id}/toggle?view=queue&amp;sort=newest&amp;category=${category.id}"`,
+  );
+  expect(html).toContain(
+    `hx-post="/videos/${toggled.id}/ignore?view=queue&amp;sort=newest&amp;category=${category.id}"`,
+  );
+  expect(videoRow(toggled.id).status).toBe("unwatched");
 });
 
 test("GET /watching/:id round-trips an adversarial category value as a single encoded param, not an injected second querystring key", async () => {
@@ -965,50 +1056,40 @@ test("End-to-end: a watched row's link round-trips through /watching/:id back to
   );
 });
 
-test("POST /videos/:id/toggle?view=continue-watching&category=<id> keeps the re-rendered partial scoped to that category", async () => {
+test("POST /videos/:id/toggle?view=continue-watching&category=<id> responds with HX-Reswap: delete and an empty body", async () => {
   const channel = makeChannel(
     "Category Filter Toggle Continue Watching Channel",
   );
   makeSubscription(channel.id, { categoryId: category.id });
   const toggled = makeVideo(channel.id, { status: "watching" });
 
-  const otherChannel = makeChannel(
-    "Category Filter Toggle Continue Watching Other Channel",
-  );
-  makeSubscription(otherChannel.id, { categoryId: otherCategory.id });
-  const otherCategoryVideo = makeVideo(otherChannel.id, {
-    status: "watching",
-  });
-
   const res = await queueRoute.request(
     `/videos/${toggled.id}/toggle?view=continue-watching&category=${category.id}`,
     { method: "POST", headers: authHeaders },
   );
   expect(res.status).toBe(200);
-  const html = await res.text();
-  expect(html).not.toContain(toggled.title);
-  expect(html).not.toContain(otherCategoryVideo.title);
+  expect(res.headers.get("HX-Reswap")).toBe("delete");
+  expect(await res.text()).toBe("");
+  expect(videoRow(toggled.id).status).toBe("unwatched");
 });
 
-test("POST /videos/:id/ignore?view=queue sets ignored/manual and removes the row from the re-rendered queue", async () => {
+test("POST /videos/:id/ignore?view=queue sets ignored/manual and responds with HX-Reswap: delete and an empty body", async () => {
   const channel = makeChannel("Ignore Queue View Channel");
   makeSubscription(channel.id);
   const ignored = makeVideo(channel.id, { status: "unwatched" });
-  const stays = makeVideo(channel.id, { status: "watching" });
 
   const res = await queueRoute.request(
     `/videos/${ignored.id}/ignore?view=queue&sort=newest`,
     { method: "POST", headers: authHeaders },
   );
   expect(res.status).toBe(200);
-  const html = await res.text();
-  expect(html).not.toContain(ignored.title);
-  expect(html).toContain(stays.title);
+  expect(res.headers.get("HX-Reswap")).toBe("delete");
+  expect(await res.text()).toBe("");
   expect(videoRow(ignored.id).status).toBe("ignored");
   expect(videoRow(ignored.id).ignoreMethod).toBe("manual");
 });
 
-test("POST /videos/:id/ignore?view=continue-watching sets ignored/manual and removes the row from the re-rendered continue-watching list", async () => {
+test("POST /videos/:id/ignore?view=continue-watching sets ignored/manual and responds with HX-Reswap: delete and an empty body", async () => {
   const channel = makeChannel("Ignore Continue Watching View Channel");
   makeSubscription(channel.id);
   const video = makeVideo(channel.id, { status: "watching" });
@@ -1018,8 +1099,8 @@ test("POST /videos/:id/ignore?view=continue-watching sets ignored/manual and rem
     { method: "POST", headers: authHeaders },
   );
   expect(res.status).toBe(200);
-  const html = await res.text();
-  expect(html).not.toContain(video.title);
+  expect(res.headers.get("HX-Reswap")).toBe("delete");
+  expect(await res.text()).toBe("");
   expect(videoRow(video.id).status).toBe("ignored");
   expect(videoRow(video.id).ignoreMethod).toBe("manual");
 });
@@ -1151,8 +1232,8 @@ test("POST /videos/:id/unignore reverts a manually-ignored video to unwatched wi
     headers: authHeaders,
   });
   expect(res.status).toBe(200);
-  const html = await res.text();
-  expect(html).not.toContain(video.title);
+  expect(res.headers.get("HX-Reswap")).toBe("delete");
+  expect(await res.text()).toBe("");
   expect(videoRow(video.id).status).toBe("unwatched");
   expect(videoRow(video.id).ignoreMethod).toBeNull();
 });
@@ -1170,8 +1251,8 @@ test("POST /videos/:id/unignore reverts an auto-ignored video to unwatched with 
     headers: authHeaders,
   });
   expect(res.status).toBe(200);
-  const html = await res.text();
-  expect(html).not.toContain(video.title);
+  expect(res.headers.get("HX-Reswap")).toBe("delete");
+  expect(await res.text()).toBe("");
   expect(videoRow(video.id).status).toBe("unwatched");
   expect(videoRow(video.id).ignoreMethod).toBeNull();
 });
@@ -1189,6 +1270,7 @@ test("POST /videos/:id/unignore against a watched video does not throw and clear
     headers: authHeaders,
   });
   expect(res.status).toBe(200);
+  expect(res.headers.get("HX-Reswap")).toBe("delete");
   expect(videoRow(video.id).status).toBe("unwatched");
   expect(videoRow(video.id).watchedAt).toBeNull();
 });
