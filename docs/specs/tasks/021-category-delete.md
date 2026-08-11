@@ -5,7 +5,7 @@ Generated: 2026-08-11
 Note: Scope item 6 (the `docs/app_idea.md:129` inline pointer to this spec) is already done
 — it was committed alongside the spec itself in `f28d55b`. No task step needed for it.
 
-- [ ] 1. In `src/lib/categories.ts`, add `getSystemCategory(): typeof categories.$inferSelect`
+- [x] 1. In `src/lib/categories.ts`, add `getSystemCategory(): typeof categories.$inferSelect`
       (queries `categories` where `isSystem = true`, throws `"seed did not create the system
       category"` if none found — exact code in the spec's Design > "`getSystemCategory()` —
       new shared helper" section) and `categoryChannelCount(categoryId: number): number`
