@@ -111,7 +111,7 @@ Note: Scope item 6 (the `docs/app_idea.md:129` inline pointer to this spec) is a
       lint` is clean, and `devcontainer exec --docker-path podman --workspace-folder . bun
       test test/routes/channels.test.ts` passes including the new pill-markup test.
 
-- [ ] 5. Run the full verification suite and do manual end-to-end verification, per
+- [x] 5. Run the full verification suite and do manual end-to-end verification, per
       `CLAUDE.md`'s Claude-performs-directly vs. user-performs-live-in-a-browser split (spec's
       own Verification section spells out the same list):
       - **Claude performs directly** (via `devcontainer exec --docker-path podman
