@@ -314,6 +314,27 @@ test("GET /categories renders a category's unwatched count and a link to its fil
   expect(html).not.toContain("No categories yet — add one above.");
 });
 
+test("GET /categories renders a Delete button with an hx-confirm channel count for a non-system category, and no Delete button for the system row", async () => {
+  const category = db
+    .insert(categories)
+    .values({ name: "Delete Button Category" })
+    .returning()
+    .get();
+  const channel = makeChannel("Delete Button Category Channel");
+  makeSubscription(channel.id, category.id);
+
+  const res = await categoriesRoute.request("/categories", {
+    headers: authHeaders,
+  });
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).toContain(`hx-delete="/categories/${category.id}"`);
+  expect(html).toContain(
+    `Delete &quot;${category.name}&quot;? 1 channel will move to Uncategorized.`,
+  );
+  expect(html).not.toContain(`hx-delete="/categories/${systemCategory.id}"`);
+});
+
 test("DELETE /categories/:id on a category with an active subscription moves it to the system category and removes the category row", async () => {
   const category = db
     .insert(categories)

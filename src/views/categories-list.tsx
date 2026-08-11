@@ -77,15 +77,27 @@ export const CategoriesList: FC<{
                 <span class="flex items-center gap-2 text-sm text-text-muted">
                   {category.isSystem ? "[system]" : null}
                   {category.isSystem ? null : (
-                    <button
-                      type="button"
-                      hx-get={`/categories/${category.id}/edit`}
-                      hx-target="#category-list"
-                      hx-swap="outerHTML"
-                      class={SECONDARY_BUTTON_CLASS}
-                    >
-                      Edit
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        hx-get={`/categories/${category.id}/edit`}
+                        hx-target="#category-list"
+                        hx-swap="outerHTML"
+                        class={SECONDARY_BUTTON_CLASS}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        hx-delete={`/categories/${category.id}`}
+                        hx-target="#category-list"
+                        hx-swap="outerHTML"
+                        hx-confirm={`Delete "${category.name}"? ${category.channelCount} channel${category.channelCount === 1 ? "" : "s"} will move to Uncategorized.`}
+                        class={SECONDARY_BUTTON_CLASS}
+                      >
+                        Delete
+                      </button>
+                    </>
                   )}
                 </span>
               </li>

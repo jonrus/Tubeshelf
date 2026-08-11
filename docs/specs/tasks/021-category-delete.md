@@ -68,7 +68,7 @@ Note: Scope item 6 (the `docs/app_idea.md:129` inline pointer to this spec) is a
       lint` is clean, and `devcontainer exec --docker-path podman --workspace-folder . bun
       test test/routes/categories.test.ts` passes including all four new cases above.
 
-- [ ] 3. In `src/views/categories-list.tsx`, add a "Delete" button next to the existing "Edit"
+- [x] 3. In `src/views/categories-list.tsx`, add a "Delete" button next to the existing "Edit"
       button inside the non-edit-mode row's action `<span>` (currently `{category.isSystem ?
       "[system]" : null}{category.isSystem ? null : (<button ...>Edit</button>)}`) — wrap
       Edit and the new Delete button in a fragment (`<>...</>`, same pattern already used at
