@@ -1,9 +1,13 @@
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { db } from "../db/client";
-import { CATEGORY_NAME_MAX_LENGTH, categories } from "../db/schema";
+import {
+  CATEGORY_NAME_MAX_LENGTH,
+  categories,
+  subscriptions,
+} from "../db/schema";
 import { csrfCheck, requireAuth } from "../lib/auth";
-import { listCategoriesWithCounts } from "../lib/categories";
+import { getSystemCategory, listCategoriesWithCounts } from "../lib/categories";
 import { getCurrentUser } from "../lib/current-user";
 import { getNavCounts } from "../lib/nav-counts";
 import { CategoriesList } from "../views/categories-list";
@@ -160,6 +164,40 @@ categoriesRoute.post("/categories/:id", async (c) => {
     }
     throw err;
   }
+
+  return c.html(
+    <CategoriesList categories={listCategoriesWithCounts(user.id)} />,
+  );
+});
+
+categoriesRoute.delete("/categories/:id", (c) => {
+  const user = getCurrentUser();
+  const id = Number(c.req.param("id"));
+  const category = db
+    .select()
+    .from(categories)
+    .where(eq(categories.id, id))
+    .get();
+  if (!category) return c.notFound();
+
+  if (category.isSystem) {
+    return c.html(
+      <CategoriesList
+        categories={listCategoriesWithCounts(user.id)}
+        error="Cannot delete the system category."
+      />,
+    );
+  }
+
+  const systemCategory = getSystemCategory();
+
+  db.transaction((tx) => {
+    tx.update(subscriptions)
+      .set({ categoryId: systemCategory.id })
+      .where(eq(subscriptions.categoryId, id))
+      .run();
+    tx.delete(categories).where(eq(categories.id, id)).run();
+  });
 
   return c.html(
     <CategoriesList categories={listCategoriesWithCounts(user.id)} />,

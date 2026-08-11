@@ -35,7 +35,7 @@ Note: Scope item 6 (the `docs/app_idea.md:129` inline pointer to this spec) is a
       covers `resolveCategoryId`'s existing behavior, unchanged from the caller's
       perspective, so no existing assertion there should break).
 
-- [ ] 2. In `src/routes/categories.tsx`, add a `DELETE /categories/:id` handler placed after
+- [x] 2. In `src/routes/categories.tsx`, add a `DELETE /categories/:id` handler placed after
       the existing `POST /categories/:id` (rename) handler — exact code in the spec's Design
       > "`DELETE /categories/:id` route" section: look up the category by id (404 via
       `c.notFound()` if missing, matching the existing not-found branch at line 106);
