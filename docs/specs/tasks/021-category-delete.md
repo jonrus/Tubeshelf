@@ -90,7 +90,7 @@ Note: Scope item 6 (the `docs/app_idea.md:129` inline pointer to this spec) is a
       lint` is clean, and `devcontainer exec --docker-path podman --workspace-folder . bun
       test test/routes/categories.test.ts` passes including the new rendering test.
 
-- [ ] 4. In `src/views/subscription-list.tsx`, replace the category-name parenthetical
+- [x] 4. In `src/views/subscription-list.tsx`, replace the category-name parenthetical
       (currently lines 35-37: `{subscription.channelName} ({subscription.unwatchedCount}) (
       {subscription.categoryName})`) with a pill-styled `<span>` around just the category
       name — exact markup in the spec's Design > "`SubscriptionList` pill restyle" section:

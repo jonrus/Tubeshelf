@@ -33,8 +33,10 @@ export const SubscriptionList: FC<{
               class="flex items-center justify-between gap-2 px-4 py-3 hover:bg-surface-raised"
             >
               <span class="flex flex-wrap items-center gap-2">
-                {subscription.channelName} ({subscription.unwatchedCount}) (
-                {subscription.categoryName})
+                {subscription.channelName} ({subscription.unwatchedCount})
+                <span class="rounded-full bg-surface-raised px-2 py-0.5 text-xs text-text-muted">
+                  {subscription.categoryName}
+                </span>
                 {subscription.showMissedVideosBadge ? (
                   <>
                     {" "}
