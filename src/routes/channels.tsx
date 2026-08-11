@@ -8,7 +8,7 @@ import {
   youtubeChannels,
 } from "../db/schema";
 import { csrfCheck, requireAuth } from "../lib/auth";
-import { listCategoriesWithCounts } from "../lib/categories";
+import { getSystemCategory, listCategoriesWithCounts } from "../lib/categories";
 import { CHANNEL_ID_PATTERN, rssUrlFor } from "../lib/channel-input";
 import { resolveChannelInput } from "../lib/channel-resolve";
 import { getCurrentUser } from "../lib/current-user";
@@ -30,14 +30,7 @@ type CategoryResolution =
 
 function resolveCategoryId(categoryIdRaw: string): CategoryResolution {
   if (categoryIdRaw === "") {
-    const systemCategory = db
-      .select()
-      .from(categories)
-      .where(eq(categories.isSystem, true))
-      .get();
-    if (!systemCategory)
-      throw new Error("seed did not create the system category");
-    return { ok: true, categoryId: systemCategory.id };
+    return { ok: true, categoryId: getSystemCategory().id };
   }
   const category = db
     .select()

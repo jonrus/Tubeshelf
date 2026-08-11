@@ -120,6 +120,13 @@ function getEdit(id: number) {
   });
 }
 
+function deleteCategory(id: number) {
+  return categoriesRoute.request(`/categories/${id}`, {
+    method: "DELETE",
+    headers: authHeaders,
+  });
+}
+
 test("GET /categories highlights the Categories sidebar link and no other top-level link", async () => {
   const res = await categoriesRoute.request("/categories", {
     headers: authHeaders,
@@ -305,6 +312,103 @@ test("GET /categories renders a category's unwatched count and a link to its fil
     `<a href="/queue?category=${category.id}">${category.name} (2)</a>`,
   );
   expect(html).not.toContain("No categories yet — add one above.");
+});
+
+test("GET /categories renders a Delete button with an hx-confirm channel count for a non-system category, and no Delete button for the system row", async () => {
+  const category = db
+    .insert(categories)
+    .values({ name: "Delete Button Category" })
+    .returning()
+    .get();
+  const channel = makeChannel("Delete Button Category Channel");
+  makeSubscription(channel.id, category.id);
+
+  const res = await categoriesRoute.request("/categories", {
+    headers: authHeaders,
+  });
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).toContain(`hx-delete="/categories/${category.id}"`);
+  expect(html).toContain(
+    `Delete &quot;${category.name}&quot;? 1 channel will move to Uncategorized.`,
+  );
+  expect(html).not.toContain(`hx-delete="/categories/${systemCategory.id}"`);
+});
+
+test("DELETE /categories/:id on a category with an active subscription moves it to the system category and removes the category row", async () => {
+  const category = db
+    .insert(categories)
+    .values({ name: "Delete Me Active" })
+    .returning()
+    .get();
+  const channel = makeChannel("Delete Me Active Channel");
+  const subscription = makeSubscription(channel.id, category.id);
+
+  const res = await deleteCategory(category.id);
+  expect(res.status).toBe(200);
+
+  const updatedSubscription = db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.id, subscription.id))
+    .get();
+  expect(updatedSubscription?.categoryId).toBe(systemCategory.id);
+
+  const deletedCategory = db
+    .select()
+    .from(categories)
+    .where(eq(categories.id, category.id))
+    .get();
+  expect(deletedCategory).toBeUndefined();
+});
+
+test("DELETE /categories/:id also reassigns an unsubscribed subscription in that category rather than leaving it dangling", async () => {
+  const category = db
+    .insert(categories)
+    .values({ name: "Delete Me Unsubscribed" })
+    .returning()
+    .get();
+  const channel = makeChannel("Delete Me Unsubscribed Channel");
+  const subscription = makeSubscription(channel.id, category.id);
+  db.update(subscriptions)
+    .set({ unsubscribedAt: new Date() })
+    .where(eq(subscriptions.id, subscription.id))
+    .run();
+
+  const res = await deleteCategory(category.id);
+  expect(res.status).toBe(200);
+
+  const updatedSubscription = db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.id, subscription.id))
+    .get();
+  expect(updatedSubscription?.categoryId).toBe(systemCategory.id);
+
+  const deletedCategory = db
+    .select()
+    .from(categories)
+    .where(eq(categories.id, category.id))
+    .get();
+  expect(deletedCategory).toBeUndefined();
+});
+
+test("attempting to delete the system category via DELETE is rejected without changing it", async () => {
+  const res = await deleteCategory(systemCategory.id);
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).toContain("Cannot delete the system category.");
+  const stillThere = db
+    .select()
+    .from(categories)
+    .where(eq(categories.id, systemCategory.id))
+    .get();
+  expect(stillThere?.name).toBe(systemCategory.name);
+});
+
+test("deleting a nonexistent id 404s", async () => {
+  const res = await deleteCategory(999999);
+  expect(res.status).toBe(404);
 });
 
 // Kept as the final test in this file (routes/categories.test.ts also runs

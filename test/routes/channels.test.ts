@@ -840,6 +840,38 @@ test("a channel's row shows its unwatched video count", async () => {
   expect(html).not.toContain("No subscriptions yet — add a channel above.");
 });
 
+test("a subscription's category name renders in a pill, not a bare parenthetical", async () => {
+  const channel = db
+    .insert(youtubeChannels)
+    .values({
+      youtubeChannelId: "UCcategoryPillAAAAAAAAA",
+      name: "Category Pill Channel",
+      rssUrl:
+        "https://www.youtube.com/feeds/videos.xml?channel_id=UCcategoryPillAAAAAAAAA",
+    })
+    .returning()
+    .get();
+
+  db.insert(subscriptions)
+    .values({
+      userId: defaultUser.id,
+      youtubeChannelId: channel.id,
+      categoryId: realCategory.id,
+    })
+    .run();
+
+  const res = await channelsRoute.request("/channels", {
+    headers: authHeaders,
+  });
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  const row = extractSubscriptionRow(html, "Category Pill Channel");
+  expect(row).toContain(
+    `<span class="rounded-full bg-surface-raised px-2 py-0.5 text-xs text-text-muted">Tech</span>`,
+  );
+  expect(row).not.toContain("(Tech)");
+});
+
 test("a brand-new subscription to a channel with a pre-existing old gap does not show the badge", async () => {
   const id = channelId("preExistingGap");
   const channel = db

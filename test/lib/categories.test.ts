@@ -49,13 +49,18 @@ function makeChannel(name: string) {
     .get();
 }
 
-function makeSubscription(channelId: number, categoryId: number) {
+function makeSubscription(
+  channelId: number,
+  categoryId: number,
+  opts?: { userId?: number; unsubscribedAt?: Date },
+) {
   return db
     .insert(subscriptions)
     .values({
-      userId: defaultUser.id,
+      userId: opts?.userId ?? defaultUser.id,
       youtubeChannelId: channelId,
       categoryId,
+      unsubscribedAt: opts?.unsubscribedAt,
     })
     .returning()
     .get();
@@ -104,4 +109,65 @@ test("listCategoriesWithCounts includes a category's unwatched+watching count an
   expect(found?.createdAt).toBeInstanceOf(Date);
 
   expect(result[0]?.id).toBe(systemCategory.id);
+});
+
+test("listCategoriesWithCounts' channelCount is 0 for a category with no subscriptions", () => {
+  const category = db
+    .insert(categories)
+    .values({ name: "Lib Channel Count Empty Category" })
+    .returning()
+    .get();
+
+  const result = listCategoriesWithCounts(defaultUser.id);
+
+  const found = result.find((c) => c.id === category.id);
+  expect(found?.channelCount).toBe(0);
+});
+
+test("listCategoriesWithCounts' channelCount is 1 for a category with one subscription", () => {
+  const category = db
+    .insert(categories)
+    .values({ name: "Lib Channel Count Single Category" })
+    .returning()
+    .get();
+  const channel = makeChannel("Lib Channel Count Single Channel");
+  makeSubscription(channel.id, category.id);
+
+  const result = listCategoriesWithCounts(defaultUser.id);
+
+  const found = result.find((c) => c.id === category.id);
+  expect(found?.channelCount).toBe(1);
+});
+
+test("listCategoriesWithCounts' channelCount counts subscriptions across users and includes unsubscribed rows", () => {
+  const category = db
+    .insert(categories)
+    .values({ name: "Lib Channel Count Multi Category" })
+    .returning()
+    .get();
+  const otherUser = db
+    .insert(users)
+    .values({ username: "categories-lib-test-other-user" })
+    .returning()
+    .get();
+
+  const activeChannel = makeChannel("Lib Channel Count Active Channel");
+  makeSubscription(activeChannel.id, category.id);
+
+  const otherUserChannel = makeChannel("Lib Channel Count Other User Channel");
+  makeSubscription(otherUserChannel.id, category.id, {
+    userId: otherUser.id,
+  });
+
+  const unsubscribedChannel = makeChannel(
+    "Lib Channel Count Unsubscribed Channel",
+  );
+  makeSubscription(unsubscribedChannel.id, category.id, {
+    unsubscribedAt: new Date(),
+  });
+
+  const result = listCategoriesWithCounts(defaultUser.id);
+
+  const found = result.find((c) => c.id === category.id);
+  expect(found?.channelCount).toBe(3);
 });
