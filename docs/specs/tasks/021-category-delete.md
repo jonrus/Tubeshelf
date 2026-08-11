@@ -138,7 +138,7 @@ Note: Scope item 6 (the `docs/app_idea.md:129` inline pointer to this spec) is a
       direct `curl`/DB checks above pass, and the user has confirmed the live-browser checks
       above.
 
-- [ ] 6. Flip `docs/specs/021-category-delete.md`'s frontmatter to `status: implemented`, then
+- [x] 6. Flip `docs/specs/021-category-delete.md`'s frontmatter to `status: implemented`, then
       open the PR (summary + test plan filled out, referencing this task file and the manual
       verification results from step 5) — check this box *before* pushing, per `CLAUDE.md`'s
       git workflow ("Finishing a spec" section), so the push carries a fully-checked-off task
