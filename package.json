@@ -10,6 +10,7 @@
     "start": "bun run src/index.ts",
     "css:build": "tailwindcss -i ./src/styles/input.css -o ./public/css/tailwind.css --minify",
     "css:watch": "tailwindcss -i ./src/styles/input.css -o ./public/css/tailwind.css --watch",
+    "postinstall": "test -f node_modules/htmx.org/dist/htmx.min.js && mkdir -p public/js && cp node_modules/htmx.org/dist/htmx.min.js public/js/htmx.min.js || true",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",

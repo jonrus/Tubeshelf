@@ -8,7 +8,7 @@ Generated: 2026-08-12
   `bun.lock` was updated. Done when: `package.json` shows the exact pin and `bun.lock`
   contains a resolved `htmx.org@2.0.4` entry.
 
-- [ ] 2. Add the guarded `postinstall` script to `package.json`'s `"scripts"` block (adjacent
+- [x] 2. Add the guarded `postinstall` script to `package.json`'s `"scripts"` block (adjacent
   to the existing `css:build`/`css:watch` entries), matching the spec's Design section
   exactly:
   ```json
