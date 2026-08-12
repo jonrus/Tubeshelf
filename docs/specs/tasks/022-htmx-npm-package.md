@@ -16,7 +16,7 @@ Generated: 2026-08-12
   ```
   Done when: this exact script is present in `package.json`.
 
-- [ ] 3. Trigger and verify the copy. Via `devcontainer exec --docker-path podman
+- [x] 3. Trigger and verify the copy. Via `devcontainer exec --docker-path podman
   --workspace-folder . bun install`, then check `public/js/htmx.min.js` was created (e.g.
   `devcontainer exec --docker-path podman --workspace-folder . test -f public/js/htmx.min.js
   && echo OK`). Done when: `public/js/htmx.min.js` exists after a normal install. (The
