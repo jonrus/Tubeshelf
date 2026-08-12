@@ -37,7 +37,7 @@ Generated: 2026-08-12
   `<script src="/js/htmx.min.js" />`. Done when: no reference to `unpkg.com` remains in
   `src/views/layout.tsx`.
 
-- [ ] 7. Update `Dockerfile`'s final stage: add a new `COPY --from=build
+- [x] 7. Update `Dockerfile`'s final stage: add a new `COPY --from=build
   /app/public/js/htmx.min.js ./public/js/htmx.min.js` line immediately after the existing
   `COPY --from=build /app/public/css/tailwind.css ./public/css/tailwind.css` line (currently
   line 17). Done when: the line is present in that position.

@@ -15,6 +15,7 @@ COPY drizzle ./drizzle
 COPY public/icons ./public/icons
 COPY public/manifest.json ./public/manifest.json
 COPY --from=build /app/public/css/tailwind.css ./public/css/tailwind.css
+COPY --from=build /app/public/js/htmx.min.js ./public/js/htmx.min.js
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 EXPOSE 3000
