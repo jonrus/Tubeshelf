@@ -32,6 +32,7 @@ await applyRecoveryPasswordFromEnv();
 const app = new Hono();
 
 app.use("/css/*", serveStatic({ root: "./public" }));
+app.use("/js/*", serveStatic({ root: "./public" }));
 app.use("/icons/*", serveStatic({ root: "./public" }));
 app.use("/manifest.json", serveStatic({ path: "./public/manifest.json" }));
 app.route("/", healthRoute);

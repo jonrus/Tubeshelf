@@ -118,7 +118,7 @@ export const Layout: FC<{
         />
         <link rel="manifest" href="/manifest.json" />
         <link rel="stylesheet" href="/css/tailwind.css" />
-        <script src="https://unpkg.com/htmx.org@2.0.4" />
+        <script src="/js/htmx.min.js" />
       </head>
       <body class="bg-bg text-text lg:flex lg:min-h-screen">
         <button
