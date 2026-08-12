@@ -42,7 +42,7 @@ Generated: 2026-08-12
   `COPY --from=build /app/public/css/tailwind.css ./public/css/tailwind.css` line (currently
   line 17). Done when: the line is present in that position.
 
-- [ ] 8. Local Docker build verification — this is also the real verification of the
+- [x] 8. Local Docker build verification — this is also the real verification of the
   `postinstall` guard's no-op path, since the final stage's `RUN bun install
   --frozen-lockfile --production` is a genuinely fresh install where `htmx.org` (a
   devDependency) is never installed. Run `podman build -t tubeshelf:htmx-check .` from the
