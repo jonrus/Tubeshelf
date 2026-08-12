@@ -80,7 +80,7 @@ Generated: 2026-08-12
     works exactly as before — this spec changes delivery only, not behavior, so this is a
     regression check, not new functionality.
 
-- [ ] 12. Update `docs/specs/022-htmx-npm-package.md` frontmatter to `status: implemented`.
+- [x] 12. Update `docs/specs/022-htmx-npm-package.md` frontmatter to `status: implemented`.
 
 - [ ] 13. Open the PR: branch `spec/htmx-npm-package` (already created and holding the spec
   commit), push, and open a GitHub PR with a summary + test plan covering tasks 8-11 above.
