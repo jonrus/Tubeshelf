@@ -51,7 +51,7 @@ Generated: 2026-08-12
   bun install --frozen-lockfile` nor the final stage's `RUN bun install --frozen-lockfile
   --production` fails on the `postinstall` hook. Done when: `podman build` exits 0.
 
-- [ ] 9. Verify `public/js/htmx.min.js` actually made it into the built image. Run `podman
+- [x] 9. Verify `public/js/htmx.min.js` actually made it into the built image. Run `podman
   run --rm tubeshelf:htmx-check test -f /app/public/js/htmx.min.js && echo OK`. Done when:
   it prints `OK`.
 
