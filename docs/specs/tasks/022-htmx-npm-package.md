@@ -32,7 +32,7 @@ Generated: 2026-08-12
   `app.use("/css/*", serveStatic({ root: "./public" }));` line (currently line 34): `app.use("/js/*", serveStatic({ root: "./public" }));`. Done when: the line is present and
   `bunx tsc --noEmit` still passes.
 
-- [ ] 6. Update `src/views/layout.tsx` line 121, replacing
+- [x] 6. Update `src/views/layout.tsx` line 121, replacing
   `<script src="https://unpkg.com/htmx.org@2.0.4" />` with
   `<script src="/js/htmx.min.js" />`. Done when: no reference to `unpkg.com` remains in
   `src/views/layout.tsx`.
