@@ -28,7 +28,7 @@ Generated: 2026-08-12
   `public/css/tailwind.css` entry. Done when: `.gitignore` contains both lines and `git
   status` no longer lists `public/js/htmx.min.js` as untracked.
 
-- [ ] 5. Add the `/js/*` static route in `src/index.ts`, immediately after the existing
+- [x] 5. Add the `/js/*` static route in `src/index.ts`, immediately after the existing
   `app.use("/css/*", serveStatic({ root: "./public" }));` line (currently line 34): `app.use("/js/*", serveStatic({ root: "./public" }));`. Done when: the line is present and
   `bunx tsc --noEmit` still passes.
 
