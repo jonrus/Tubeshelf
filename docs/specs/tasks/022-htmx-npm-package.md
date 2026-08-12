@@ -24,7 +24,7 @@ Generated: 2026-08-12
   verified separately in task 8 via the Dockerfile's actual `--production` install in a
   disposable container, not by mutating this devcontainer's `node_modules` directly.)
 
-- [ ] 4. Add `public/js/htmx.min.js` to `.gitignore`, on its own line near the existing
+- [x] 4. Add `public/js/htmx.min.js` to `.gitignore`, on its own line near the existing
   `public/css/tailwind.css` entry. Done when: `.gitignore` contains both lines and `git
   status` no longer lists `public/js/htmx.min.js` as untracked.
 
