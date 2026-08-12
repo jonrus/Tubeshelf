@@ -2,7 +2,7 @@
 Spec: docs/specs/022-htmx-npm-package.md
 Generated: 2026-08-12
 
-- [ ] 1. Add `htmx.org` as an exact-pinned devDependency. Via `devcontainer exec
+- [x] 1. Add `htmx.org` as an exact-pinned devDependency. Via `devcontainer exec
   --docker-path podman --workspace-folder . bun add -D htmx.org@2.0.4`, then confirm
   `package.json`'s `devDependencies` gained `"htmx.org": "2.0.4"` (exact, no `^`) and
   `bun.lock` was updated. Done when: `package.json` shows the exact pin and `bun.lock`
