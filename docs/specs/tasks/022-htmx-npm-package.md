@@ -55,7 +55,7 @@ Generated: 2026-08-12
   run --rm tubeshelf:htmx-check test -f /app/public/js/htmx.min.js && echo OK`. Done when:
   it prints `OK`.
 
-- [ ] 10. Full verification suite. Via `devcontainer exec --docker-path podman
+- [x] 10. Full verification suite. Via `devcontainer exec --docker-path podman
   --workspace-folder .`, run `bun test`, `bun run lint`, and `bunx tsc --noEmit` — all three
   must pass clean. Done when: all three commands exit 0 with no errors/warnings.
 
