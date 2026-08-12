@@ -82,7 +82,7 @@ Generated: 2026-08-12
 
 - [x] 12. Update `docs/specs/022-htmx-npm-package.md` frontmatter to `status: implemented`.
 
-- [ ] 13. Open the PR: branch `spec/htmx-npm-package` (already created and holding the spec
+- [x] 13. Open the PR: branch `spec/htmx-npm-package` (already created and holding the spec
   commit), push, and open a GitHub PR with a summary + test plan covering tasks 8-11 above.
   Per CLAUDE.md, check this box *before* pushing so the pushed branch and opened PR both
   reflect a fully-checked-off task file.
