@@ -59,7 +59,7 @@ Generated: 2026-08-12
   --workspace-folder .`, run `bun test`, `bun run lint`, and `bunx tsc --noEmit` — all three
   must pass clean. Done when: all three commands exit 0 with no errors/warnings.
 
-- [ ] 11. Manual end-to-end verification.
+- [x] 11. Manual end-to-end verification.
 
   **Claude performs directly** (via `devcontainer exec --docker-path podman
   --workspace-folder . curl ...` against the running dev server, per the port-forwarding
