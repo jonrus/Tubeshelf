@@ -46,16 +46,25 @@ export async function tick(): Promise<void> {
 // twice back-to-back with a slow/pending tick() and assert the second call is a
 // no-op) without needing real 60s timers.
 let ticking = false;
+let inFlightTick: Promise<void> | null = null;
 export async function runGuardedTick(): Promise<void> {
   if (ticking) return; // previous tick still in flight -- skip rather than overlap
   ticking = true;
-  try {
-    await tick();
-  } catch (err) {
-    console.error("ingestion tick failed", err);
-  } finally {
-    ticking = false;
-  }
+  inFlightTick = tick()
+    .catch((err) => {
+      console.error("ingestion tick failed", err);
+    })
+    .finally(() => {
+      ticking = false;
+      inFlightTick = null;
+    });
+  await inFlightTick;
+}
+
+// Lets code outside this module (the shutdown routine) await any tick that's
+// currently in flight, without exposing the internal `ticking`/`inFlightTick` state.
+export function waitForSchedulerIdle(): Promise<void> {
+  return inFlightTick ?? Promise.resolve();
 }
 
 export function startScheduler(): Timer {

@@ -2,7 +2,7 @@
 Spec: docs/specs/023-graceful-shutdown.md
 Generated: 2026-08-14
 
-- [ ] 1. Add in-flight-tick tracking to `src/lib/scheduler.ts`. Add a module-level
+- [x] 1. Add in-flight-tick tracking to `src/lib/scheduler.ts`. Add a module-level
   `let inFlightTick: Promise<void> | null = null;` alongside the existing `let ticking =
   false;` (currently line 48). Restructure `runGuardedTick()` (currently lines 49-59) to
   set `inFlightTick` to the tick's promise before awaiting it and clear it back to `null`
