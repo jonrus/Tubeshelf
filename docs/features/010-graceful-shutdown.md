@@ -1,6 +1,7 @@
 ---
-status: refined
+status: promoted
 created: 2026-08-14
+promoted_to: docs/specs/023-graceful-shutdown.md
 ---
 
 # Graceful Shutdown
@@ -29,6 +30,9 @@ where a deploy restart discards in-flight work, not because of any observed inci
      small export change, e.g. exposing the in-flight tick's promise).
   4. Closes the SQLite connection (`src/db/client.ts`'s `sqlite`, never currently closed).
   5. Exits.
+  (This numbered list describes the steps' *content* only — during spec-writing it was
+  clarified that steps 2 and 3 execute concurrently under one shared timeout budget, not
+  sequentially; see docs/specs/023-graceful-shutdown.md's Design section.)
 - Bound the whole routine with a hard timeout — if graceful drain isn't done in time, log
   it and force-exit rather than hang.
 - Guard against a second `SIGTERM`/`SIGINT` arriving while a shutdown is already in
