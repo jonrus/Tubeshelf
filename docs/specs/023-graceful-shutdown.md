@@ -1,5 +1,5 @@
 ---
-status: draft
+status: in-progress
 created: 2026-08-14
 ---
 
@@ -195,6 +195,13 @@ process.on("SIGINT", () => void handleSignal("SIGINT"));
   with fake `deps` whose `server.stop` returns a controllable pending promise, invoke the
   returned handler twice while the first call is still in flight, and assert `deps.exit`
   was called exactly once.
+- The no-op `.catch()` attached to the raced-away `drain` promise (added to fix a
+  red-team finding — see the retrospective in Open Questions) is itself verified, not just
+  assumed to work: a forced-timeout test where the fake `server.stop()`'s promise is left
+  rejectable, made to reject *after* `runShutdown()` has already resolved with exit code
+  `1`, with a temporary `process.on("unhandledRejection", ...)` listener asserting it never
+  fires. Without this test, a future refactor could accidentally drop the `.catch()` with
+  nothing catching the regression.
 - The 8-second production timeout itself is **not** exercised end-to-end manually — safely
   inducing an 8-second-plus hang in a live server for a manual test isn't practical to do
   reliably, so that path's coverage comes from the unit test's short injected `timeoutMs`
@@ -236,3 +243,11 @@ follow-ups:
 A second, narrower pass scoped only to these four fixes found nothing further — no second
 full pass was run, per the skill's stopping guidance (a pass finding nothing is the
 stopping signal; this narrower check substitutes for it here).
+
+**Task-decomposition pass retrospective (during `/spec-tasks`):** writing the task
+checklist surfaced one further gap — finding 3's fix (the no-op `.catch()` preventing an
+unhandled rejection from the losing race branch) had no corresponding entry in this
+spec's own Testing strategy, so the fix existed only as code with nothing to catch a
+future regression. Added a Testing strategy bullet (above) requiring a test that
+specifically triggers a late rejection after the timeout branch has already won and
+asserts no `unhandledRejection` fires.
