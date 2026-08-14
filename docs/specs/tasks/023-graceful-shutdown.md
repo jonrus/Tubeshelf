@@ -103,7 +103,7 @@ Generated: 2026-08-14
   must pass clean across the whole repo (not just the files touched above). Done when: all
   three commands exit 0 with no errors/warnings.
 
-- [ ] 7. Manual end-to-end verification. Per the spec's resolved decision, this feature has
+- [x] 7. Manual end-to-end verification. Per the spec's resolved decision, this feature has
   no browser-observable behavior, so verification is **entirely Claude-performed** — there
   is no "user performs live in a browser" part for this task, unlike most other specs'
   manual-verification sections.
@@ -132,6 +132,26 @@ Generated: 2026-08-14
 
   Done when: all four signal scenarios above show the expected log sequence and exit
   behavior.
+
+  **Result:** the single-`SIGTERM` and single-`SIGINT` scenarios passed cleanly in the
+  devcontainer — correct log sequence (`"Received <signal>, starting graceful shutdown"`
+  → `"Graceful shutdown complete"`) and exit code `0` in both cases. The double-signal
+  re-entrancy scenario was attempted three ways (immediate back-to-back `kill -TERM`, a
+  second `kill` sent only after confirming the first was received via the log, and a rapid
+  burst of `kill`s right after the first) but could not be reliably reproduced live: with
+  nothing actually in flight to drain, `runShutdown` completes in single-digit
+  milliseconds, so a second real OS `SIGTERM` either gets silently coalesced by the kernel
+  (standard signals aren't queued — one sent before the first is delivered is just
+  dropped) or lands in the narrow window where the runtime is already tearing down after
+  `process.exit(0)`, where default OS signal disposition can win the race and kill the
+  process by signal instead (observed as exit code `143` in two of the three attempts,
+  rather than the app's own exit code). This is a shell/kernel timing artifact of hitting
+  a sub-millisecond in-JS-progress window with unsynchronized real signals, not evidence
+  of the guard misbehaving — every attempt showed only one `"Received SIGTERM..."` log
+  line, never a restarted sequence. Per user decision, this scenario's coverage is accepted
+  as satisfied by task 4's unit test instead, which exercises the identical race
+  deterministically using a controllable, never-resolving promise rather than real signal
+  timing.
 
 - [ ] 8. Update `docs/specs/023-graceful-shutdown.md` frontmatter to `status: implemented`.
 
