@@ -153,7 +153,7 @@ Generated: 2026-08-14
   deterministically using a controllable, never-resolving promise rather than real signal
   timing.
 
-- [ ] 8. Update `docs/specs/023-graceful-shutdown.md` frontmatter to `status: implemented`.
+- [x] 8. Update `docs/specs/023-graceful-shutdown.md` frontmatter to `status: implemented`.
 
 - [ ] 9. Open the PR: branch `spec/graceful-shutdown` (already created and holding the
   feature file and spec commits), push, and open a GitHub PR with a summary + test plan
