@@ -21,7 +21,7 @@ Generated: 2026-08-14
   guard skips a call made while a tick is still pending` and `runGuardedTick runs normally
   again once the pending tick resolves`) still pass unmodified.
 
-- [ ] 2. Add tests for `waitForSchedulerIdle()` to `test/lib/scheduler.test.ts`, importing
+- [x] 2. Add tests for `waitForSchedulerIdle()` to `test/lib/scheduler.test.ts`, importing
   it alongside the existing `dueChannels`/`runGuardedTick` import (currently line 15).
   Reuse this file's existing `parkAllExistingChannels`/`makeChannel`/`subscribe` helpers and
   the `spyOn(globalThis, "fetch")` + manually-resolved-`Promise` pattern already used by the

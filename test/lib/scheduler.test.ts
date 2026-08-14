@@ -12,7 +12,9 @@ const { categories, subscriptions, users, youtubeChannels } = await import(
   "../../src/db/schema"
 );
 const { seed } = await import("../../src/db/seed");
-const { dueChannels, runGuardedTick } = await import("../../src/lib/scheduler");
+const { dueChannels, runGuardedTick, waitForSchedulerIdle } = await import(
+  "../../src/lib/scheduler"
+);
 
 migrate(db, { migrationsFolder: "./drizzle" });
 seed(db);
@@ -213,4 +215,41 @@ test("runGuardedTick runs normally again once the pending tick resolves", async 
   // Assert before restoring -- mockRestore() clears recorded calls.
   expect(fetchSpy2).toHaveBeenCalledTimes(1);
   fetchSpy2.mockRestore();
+});
+
+test("waitForSchedulerIdle resolves immediately when no tick is running", async () => {
+  await waitForSchedulerIdle();
+});
+
+test("waitForSchedulerIdle does not resolve until the in-flight tick finishes", async () => {
+  parkAllExistingChannels();
+  const channel = makeChannel();
+  subscribe(channel.id, true);
+
+  let resolveFetch!: (value: Response) => void;
+  const pendingFetch = new Promise<Response>((resolve) => {
+    resolveFetch = resolve;
+  });
+  const fetchSpy = spyOn(globalThis, "fetch").mockImplementation(
+    (() => pendingFetch) as unknown as typeof fetch,
+  );
+
+  const tickPromise = runGuardedTick();
+
+  let idleResolved = false;
+  const idlePromise = waitForSchedulerIdle().then(() => {
+    idleResolved = true;
+  });
+
+  // Give the idle promise a short window to resolve if it were (incorrectly)
+  // going to do so before the tick actually finishes.
+  await Bun.sleep(10);
+  expect(idleResolved).toBe(false);
+
+  resolveFetch(new Response("", { status: 500 }));
+  await idlePromise;
+  expect(idleResolved).toBe(true);
+
+  await tickPromise; // let the tick fully settle so state doesn't leak into later tests
+  fetchSpy.mockRestore();
 });
