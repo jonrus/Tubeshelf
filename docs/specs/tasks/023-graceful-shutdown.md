@@ -57,7 +57,7 @@ Generated: 2026-08-14
   Done when: `src/lib/shutdown.ts` exists, exports `ShutdownDeps`, `runShutdown`, and
   `createShutdownHandler`, and `bunx tsc --noEmit` passes with no errors from this file.
 
-- [ ] 4. Create `test/lib/shutdown.test.ts` (new file, no DB/migration setup needed since
+- [x] 4. Create `test/lib/shutdown.test.ts` (new file, no DB/migration setup needed since
   `runShutdown`/`createShutdownHandler` take fully injected `deps` and never touch
   `src/db/client.ts`). Cover, using `bun:test`'s `test`/`expect` and manually-controlled
   `Promise`s (same style as `test/lib/scheduler.test.ts`'s pending-fetch pattern, not real
