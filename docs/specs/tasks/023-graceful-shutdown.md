@@ -36,7 +36,7 @@ Generated: 2026-08-14
     and confirm it does settle afterward.
   Done when: both new tests pass and `bun test test/lib/scheduler.test.ts` is green.
 
-- [ ] 3. Create `src/lib/shutdown.ts` implementing `ShutdownDeps`, `runShutdown()`, and
+- [x] 3. Create `src/lib/shutdown.ts` implementing `ShutdownDeps`, `runShutdown()`, and
   `createShutdownHandler()` exactly per the spec's Design section (`docs/specs/
   023-graceful-shutdown.md` lines 61-142), including:
   - The `drain.catch(() => {})` attached immediately after building
