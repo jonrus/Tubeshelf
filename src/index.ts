@@ -1,10 +1,11 @@
 import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
-import { db } from "./db/client";
+import { db, sqlite } from "./db/client";
 import { runMigrations } from "./db/migrate";
 import { seed } from "./db/seed";
 import { applyRecoveryPasswordFromEnv } from "./lib/auth";
-import { startScheduler } from "./lib/scheduler";
+import { startScheduler, waitForSchedulerIdle } from "./lib/scheduler";
+import { createShutdownHandler } from "./lib/shutdown";
 import { authRoute } from "./routes/auth";
 import { categoriesRoute } from "./routes/categories";
 import { channelsRoute } from "./routes/channels";
@@ -42,8 +43,18 @@ app.route("/", channelsRoute);
 app.route("/", queueRoute);
 app.route("/", ignoreRulesRoute);
 
-startScheduler();
+const schedulerTimer = startScheduler();
 
-Bun.serve({ port: 3000, fetch: app.fetch });
+const server = Bun.serve({ port: 3000, fetch: app.fetch });
 
 console.log("Listening on http://localhost:3000");
+
+const handleSignal = createShutdownHandler({
+  server,
+  schedulerTimer,
+  waitForSchedulerIdle,
+  closeDb: () => sqlite.close(),
+  exit: (code) => process.exit(code),
+});
+process.on("SIGTERM", () => void handleSignal("SIGTERM"));
+process.on("SIGINT", () => void handleSignal("SIGINT"));

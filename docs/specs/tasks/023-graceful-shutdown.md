@@ -82,7 +82,7 @@ Generated: 2026-08-14
     `process.off(...)`.
   Done when: all new tests pass and `bun test test/lib/shutdown.test.ts` is green.
 
-- [ ] 5. Wire `src/index.ts` per the spec's `src/index.ts` wiring snippet (`docs/specs/
+- [x] 5. Wire `src/index.ts` per the spec's `src/index.ts` wiring snippet (`docs/specs/
   023-graceful-shutdown.md` lines 165-179): capture `Bun.serve(...)`'s return value into
   `const server = ...` (currently line 47, discarded) and `startScheduler()`'s return value
   into `const schedulerTimer = ...` (currently line 45, discarded); import
