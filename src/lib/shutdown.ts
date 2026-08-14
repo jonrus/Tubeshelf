@@ -26,7 +26,10 @@ export async function runShutdown(
     timeoutHandle = setTimeout(() => resolve("timeout"), timeoutMs);
   });
 
-  const result = await Promise.race([drain.then(() => "drain" as const), timeout]);
+  const result = await Promise.race([
+    drain.then(() => "drain" as const),
+    timeout,
+  ]);
 
   let exitCode: number;
   if (result === "drain") {
@@ -34,7 +37,9 @@ export async function runShutdown(
     console.log("Graceful shutdown complete");
     exitCode = 0;
   } else {
-    console.error(`Graceful shutdown timed out after ${timeoutMs}ms, forcing exit`);
+    console.error(
+      `Graceful shutdown timed out after ${timeoutMs}ms, forcing exit`,
+    );
     exitCode = 1;
   }
 

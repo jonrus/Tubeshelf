@@ -98,7 +98,7 @@ Generated: 2026-08-14
   server starts). Done when: `bunx tsc --noEmit` passes with no errors and `bun run dev`
   (or `bun run start`) still starts the server successfully.
 
-- [ ] 6. Full verification suite. Via `devcontainer exec --docker-path podman
+- [x] 6. Full verification suite. Via `devcontainer exec --docker-path podman
   --workspace-folder .`, run `bun test`, `bun run lint`, and `bunx tsc --noEmit` — all three
   must pass clean across the whole repo (not just the files touched above). Done when: all
   three commands exit 0 with no errors/warnings.
