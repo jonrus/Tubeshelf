@@ -107,7 +107,7 @@ function queueVideos(
   return { rows, nextCursor };
 }
 
-function queueRowById(id: number) {
+function queueRowById(id: number, userId: number) {
   return db
     .select({
       id: videos.id,
@@ -125,7 +125,13 @@ function queueRowById(id: number) {
       eq(subscriptions.youtubeChannelId, youtubeChannels.id),
     )
     .innerJoin(categories, eq(subscriptions.categoryId, categories.id))
-    .where(eq(videos.id, id))
+    .where(
+      and(
+        eq(videos.id, id),
+        eq(subscriptions.userId, userId),
+        isNull(subscriptions.unsubscribedAt),
+      ),
+    )
     .get();
 }
 
@@ -380,7 +386,7 @@ function resolveSort(sort: string | undefined): "newest" | "oldest" {
   return sort === "oldest" ? "oldest" : "newest";
 }
 
-function videoForWatchingPage(videoId: number) {
+function videoForWatchingPage(videoId: number, userId: number) {
   return db
     .select({
       id: videos.id,
@@ -389,7 +395,18 @@ function videoForWatchingPage(videoId: number) {
       status: videos.status,
     })
     .from(videos)
-    .where(eq(videos.id, videoId))
+    .innerJoin(youtubeChannels, eq(videos.channelId, youtubeChannels.id))
+    .innerJoin(
+      subscriptions,
+      eq(subscriptions.youtubeChannelId, youtubeChannels.id),
+    )
+    .where(
+      and(
+        eq(videos.id, videoId),
+        eq(subscriptions.userId, userId),
+        isNull(subscriptions.unsubscribedAt),
+      ),
+    )
     .get();
 }
 
@@ -553,10 +570,10 @@ queueRoute.get("/ignored", (c) => {
 
 queueRoute.get("/watching/:id", (c) => {
   const id = Number(c.req.param("id"));
-  const video = videoForWatchingPage(id);
+  const user = getCurrentUser();
+  const video = videoForWatchingPage(id, user.id);
   if (!video) return c.notFound();
 
-  const user = getCurrentUser();
   const from = c.req.query("from");
   const sort = c.req.query("sort");
   const category = c.req.query("category");
@@ -582,7 +599,8 @@ queueRoute.get("/watching/:id", (c) => {
 
 queueRoute.post("/videos/:id/watching", (c) => {
   const id = Number(c.req.param("id"));
-  const result = setWatching(id);
+  const user = getCurrentUser();
+  const result = setWatching(id, user.id);
   if (!result) return c.notFound();
 
   return c.html(<WatchStatusBadge status={result.status} oob />);
@@ -590,7 +608,8 @@ queueRoute.post("/videos/:id/watching", (c) => {
 
 queueRoute.post("/videos/:id/watched-toggle", (c) => {
   const id = Number(c.req.param("id"));
-  const result = toggleWatchedFromWatchingPage(id);
+  const user = getCurrentUser();
+  const result = toggleWatchedFromWatchingPage(id, user.id);
   if (!result) return c.notFound();
 
   const from = c.req.query("from");
@@ -601,7 +620,8 @@ queueRoute.post("/videos/:id/watched-toggle", (c) => {
 
 queueRoute.post("/videos/:id/toggle", (c) => {
   const id = Number(c.req.param("id"));
-  const result = toggleQueueStatus(id);
+  const user = getCurrentUser();
+  const result = toggleQueueStatus(id, user.id);
   if (!result) return c.notFound();
 
   const view = resolveToggleView(c.req.query("view"));
@@ -617,14 +637,15 @@ queueRoute.post("/videos/:id/toggle", (c) => {
 
   const sort = resolveSort(c.req.query("sort"));
   const category = resolveCategoryFilter(c.req.query("category"));
-  const row = queueRowById(id);
+  const row = queueRowById(id, user.id);
   if (!row) return c.notFound();
   return c.html(queueCard(row, "queue", sort, category));
 });
 
 queueRoute.post("/videos/:id/ignore", (c) => {
   const id = Number(c.req.param("id"));
-  const result = ignoreVideo(id);
+  const user = getCurrentUser();
+  const result = ignoreVideo(id, user.id);
   if (!result) return c.notFound();
 
   c.header("HX-Reswap", "delete");
@@ -633,7 +654,8 @@ queueRoute.post("/videos/:id/ignore", (c) => {
 
 queueRoute.post("/videos/:id/unignore", (c) => {
   const id = Number(c.req.param("id"));
-  const result = unignoreVideo(id);
+  const user = getCurrentUser();
+  const result = unignoreVideo(id, user.id);
   if (!result) return c.notFound();
 
   c.header("HX-Reswap", "delete");

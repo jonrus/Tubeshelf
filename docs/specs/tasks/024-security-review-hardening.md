@@ -57,7 +57,7 @@ Generated: 2026-08-19
       returns the same 401 + generic error rather than any distinct behavior. Done when:
       `bun test` passes with both new cases.
 
-- [ ] 4. Add the subscription-ownership check across both `src/lib/watch-status.ts` and
+- [x] 4. Add the subscription-ownership check across both `src/lib/watch-status.ts` and
       `src/routes/queue.tsx`, plus both files' tests, in one pass — the two layers have to
       land together: Bun doesn't type-check at runtime, so if the `watch-status.ts` function
       signatures changed in an earlier, separate step, `queue.tsx`'s still-unpatched call

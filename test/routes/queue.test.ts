@@ -574,8 +574,19 @@ test("GET /watching/:id 404s for a nonexistent video", async () => {
   expect(res.status).toBe(404);
 });
 
+test("GET /watching/:id 404s for a video whose channel the current user isn't subscribed to", async () => {
+  const channel = makeChannel("Watching Page No Subscription Channel");
+  const video = makeVideo(channel.id, { status: "unwatched" });
+
+  const res = await queueRoute.request(`/watching/${video.id}`, {
+    headers: authHeaders,
+  });
+  expect(res.status).toBe(404);
+});
+
 test("GET /watching/:id shows Mark Watched and the auto-timer element for a non-watched video", async () => {
   const channel = makeChannel("Watching Page Channel");
+  makeSubscription(channel.id);
   const video = makeVideo(channel.id, { status: "unwatched" });
 
   const res = await queueRoute.request(`/watching/${video.id}`, {
@@ -590,6 +601,7 @@ test("GET /watching/:id shows Mark Watched and the auto-timer element for a non-
 
 test("GET /watching/:id shows Mark Unwatched and hides the auto-timer for a watched video", async () => {
   const channel = makeChannel("Watching Page Watched Channel");
+  makeSubscription(channel.id);
   const video = makeVideo(channel.id, {
     status: "watched",
     watchedAt: new Date(),
@@ -606,6 +618,7 @@ test("GET /watching/:id shows Mark Unwatched and hides the auto-timer for a watc
 
 test("GET /watching/:id resolves the return target from from/sort, with fallback for missing/unrecognized from", async () => {
   const channel = makeChannel("Return Target Channel");
+  makeSubscription(channel.id);
   const video = makeVideo(channel.id, { status: "unwatched" });
 
   const continueRes = await queueRoute.request(
@@ -686,6 +699,7 @@ test("GET /watching/:id resolves the return target from from/sort, with fallback
 
 test("POST /videos/:id/watching always sets watching, regardless of prior status", async () => {
   const channel = makeChannel("Set Watching Channel");
+  makeSubscription(channel.id);
 
   const unwatchedVideo = makeVideo(channel.id, { status: "unwatched" });
   const unwatchedRes = await queueRoute.request(
@@ -715,8 +729,21 @@ test("POST /videos/:id/watching 404s for a nonexistent video", async () => {
   expect(res.status).toBe(404);
 });
 
+test("POST /videos/:id/watching 404s for a video whose channel the current user isn't subscribed to", async () => {
+  const channel = makeChannel("Watching No Subscription Channel");
+  const video = makeVideo(channel.id, { status: "unwatched" });
+
+  const res = await queueRoute.request(`/videos/${video.id}/watching`, {
+    method: "POST",
+    headers: authHeaders,
+  });
+  expect(res.status).toBe(404);
+  expect(videoRow(video.id).status).toBe("unwatched");
+});
+
 test("POST /videos/:id/watched-toggle transitions watching to watched (regression case), not unwatched", async () => {
   const channel = makeChannel("Watched Toggle Regression Channel");
+  makeSubscription(channel.id);
   const video = makeVideo(channel.id, { status: "watching" });
 
   const res = await queueRoute.request(
@@ -730,6 +757,7 @@ test("POST /videos/:id/watched-toggle transitions watching to watched (regressio
 
 test("POST /videos/:id/watched-toggle transitions watched to unwatched", async () => {
   const channel = makeChannel("Watched Toggle Unwatch Channel");
+  makeSubscription(channel.id);
   const video = makeVideo(channel.id, {
     status: "watched",
     watchedAt: new Date(),
@@ -746,6 +774,7 @@ test("POST /videos/:id/watched-toggle transitions watched to unwatched", async (
 
 test("POST /videos/:id/watched-toggle redirects to resolveReturnTarget's url for all from values plus the fallback", async () => {
   const channel = makeChannel("Watched Toggle Redirect Channel");
+  makeSubscription(channel.id);
 
   const queueVideo = makeVideo(channel.id, { status: "unwatched" });
   const queueRes = await queueRoute.request(
@@ -798,6 +827,18 @@ test("POST /videos/:id/watched-toggle 404s for a nonexistent video", async () =>
     headers: authHeaders,
   });
   expect(res.status).toBe(404);
+});
+
+test("POST /videos/:id/watched-toggle 404s for a video whose channel the current user isn't subscribed to", async () => {
+  const channel = makeChannel("Watched Toggle No Subscription Channel");
+  const video = makeVideo(channel.id, { status: "unwatched" });
+
+  const res = await queueRoute.request(`/videos/${video.id}/watched-toggle`, {
+    method: "POST",
+    headers: authHeaders,
+  });
+  expect(res.status).toBe(404);
+  expect(videoRow(video.id).status).toBe("unwatched");
 });
 
 test("POST /videos/:id/toggle transitions unwatched to watched and responds with HX-Reswap: delete and an empty body", async () => {
@@ -877,6 +918,18 @@ test("POST /videos/:id/toggle 404s for a nonexistent video", async () => {
   expect(res.status).toBe(404);
 });
 
+test("POST /videos/:id/toggle 404s for a video whose channel the current user isn't subscribed to", async () => {
+  const channel = makeChannel("Toggle No Subscription Channel");
+  const video = makeVideo(channel.id, { status: "unwatched" });
+
+  const res = await queueRoute.request(`/videos/${video.id}/toggle`, {
+    method: "POST",
+    headers: authHeaders,
+  });
+  expect(res.status).toBe(404);
+  expect(videoRow(video.id).status).toBe("unwatched");
+});
+
 test("POST /videos/:id/toggle?view=queue&category=<id> renders the single-card fragment with category preserved in its action links", async () => {
   const channel = makeChannel("Category Filter Toggle Queue Channel");
   makeSubscription(channel.id, { categoryId: category.id });
@@ -900,6 +953,7 @@ test("POST /videos/:id/toggle?view=queue&category=<id> renders the single-card f
 
 test("GET /watching/:id round-trips an adversarial category value as a single encoded param, not an injected second querystring key", async () => {
   const channel = makeChannel("Adversarial Category Channel");
+  makeSubscription(channel.id);
   const video = makeVideo(channel.id, { status: "unwatched" });
   const adversarial = "3&evil=true";
 
@@ -1113,6 +1167,18 @@ test("POST /videos/:id/ignore 404s for a nonexistent video", async () => {
   expect(res.status).toBe(404);
 });
 
+test("POST /videos/:id/ignore 404s for a video whose channel the current user isn't subscribed to", async () => {
+  const channel = makeChannel("Ignore No Subscription Channel");
+  const video = makeVideo(channel.id, { status: "unwatched" });
+
+  const res = await queueRoute.request(`/videos/${video.id}/ignore`, {
+    method: "POST",
+    headers: authHeaders,
+  });
+  expect(res.status).toBe(404);
+  expect(videoRow(video.id).status).toBe("unwatched");
+});
+
 test("GET /ignored lists only ignored videos for active subscriptions, excluding a since-unsubscribed channel's", async () => {
   const channel = makeChannel("Ignored View Channel");
   makeSubscription(channel.id);
@@ -1281,6 +1347,21 @@ test("POST /videos/:id/unignore 404s for a nonexistent video", async () => {
     headers: authHeaders,
   });
   expect(res.status).toBe(404);
+});
+
+test("POST /videos/:id/unignore 404s for a video whose channel the current user isn't subscribed to", async () => {
+  const channel = makeChannel("Unignore No Subscription Channel");
+  const video = makeVideo(channel.id, {
+    status: "ignored",
+    ignoreMethod: "manual",
+  });
+
+  const res = await queueRoute.request(`/videos/${video.id}/unignore`, {
+    method: "POST",
+    headers: authHeaders,
+  });
+  expect(res.status).toBe(404);
+  expect(videoRow(video.id).status).toBe("ignored");
 });
 
 test("End-to-end: a queue row's rendered Ignore button round-trips through /videos/:id/ignore and removes the row from a fresh /queue", async () => {
