@@ -8,7 +8,8 @@ process.env.DB_FILE_NAME = ":memory:";
 
 const { db } = await import("../../src/db/client");
 const { migrate } = await import("drizzle-orm/bun-sqlite/migrator");
-const { videos, youtubeChannels } = await import("../../src/db/schema");
+const { categories, subscriptions, users, videos, youtubeChannels } =
+  await import("../../src/db/schema");
 const {
   setWatching,
   toggleQueueStatus,
@@ -27,6 +28,33 @@ const channel = db
     rssUrl:
       "https://www.youtube.com/feeds/videos.xml?channel_id=UCwatchstatus0001",
   })
+  .returning()
+  .get();
+
+const category = db
+  .insert(categories)
+  .values({ name: "Watch Status Test Category" })
+  .returning()
+  .get();
+
+const user = db
+  .insert(users)
+  .values({ username: "watch-status-owner" })
+  .returning()
+  .get();
+
+db.insert(subscriptions)
+  .values({
+    userId: user.id,
+    youtubeChannelId: channel.id,
+    categoryId: category.id,
+  })
+  .returning()
+  .get();
+
+const otherUser = db
+  .insert(users)
+  .values({ username: "watch-status-other" })
   .returning()
   .get();
 
@@ -58,7 +86,7 @@ function videoRow(id: number) {
 
 test("setWatching transitions unwatched to watching", () => {
   const video = makeVideo("unwatched");
-  const result = setWatching(video.id);
+  const result = setWatching(video.id, user.id);
   expect(result).toEqual({ status: "watching" });
   expect(videoRow(video.id).status).toBe("watching");
   expect(videoRow(video.id).watchedAt).toBeNull();
@@ -66,7 +94,7 @@ test("setWatching transitions unwatched to watching", () => {
 
 test("setWatching transitions watching to watching", () => {
   const video = makeVideo("watching");
-  const result = setWatching(video.id);
+  const result = setWatching(video.id, user.id);
   expect(result).toEqual({ status: "watching" });
   expect(videoRow(video.id).status).toBe("watching");
   expect(videoRow(video.id).watchedAt).toBeNull();
@@ -74,14 +102,14 @@ test("setWatching transitions watching to watching", () => {
 
 test("setWatching transitions watched to watching and clears watchedAt", () => {
   const video = makeVideo("watched", new Date("2026-07-01T00:00:00Z"));
-  const result = setWatching(video.id);
+  const result = setWatching(video.id, user.id);
   expect(result).toEqual({ status: "watching" });
   expect(videoRow(video.id).status).toBe("watching");
   expect(videoRow(video.id).watchedAt).toBeNull();
 });
 
 test("setWatching returns null for a nonexistent video ID", () => {
-  expect(setWatching(999999)).toBeNull();
+  expect(setWatching(999999, user.id)).toBeNull();
 });
 
 test("setWatching clears a stale ignoreMethod", () => {
@@ -90,14 +118,14 @@ test("setWatching clears a stale ignoreMethod", () => {
     .set({ ignoreMethod: "auto" })
     .where(eq(videos.id, video.id))
     .run();
-  setWatching(video.id);
+  setWatching(video.id, user.id);
   expect(videoRow(video.id).ignoreMethod).toBeNull();
 });
 
 test("toggleQueueStatus transitions unwatched to watched and sets watchedAt", () => {
   const video = makeVideo("unwatched");
   const before = new Date();
-  const result = toggleQueueStatus(video.id);
+  const result = toggleQueueStatus(video.id, user.id);
   expect(result).toEqual({ status: "watched" });
   const row = videoRow(video.id);
   expect(row.status).toBe("watched");
@@ -109,7 +137,7 @@ test("toggleQueueStatus transitions unwatched to watched and sets watchedAt", ()
 
 test("toggleQueueStatus transitions watched to unwatched and clears watchedAt", () => {
   const video = makeVideo("watched", new Date("2026-07-01T00:00:00Z"));
-  const result = toggleQueueStatus(video.id);
+  const result = toggleQueueStatus(video.id, user.id);
   expect(result).toEqual({ status: "unwatched" });
   const row = videoRow(video.id);
   expect(row.status).toBe("unwatched");
@@ -118,7 +146,7 @@ test("toggleQueueStatus transitions watched to unwatched and clears watchedAt", 
 
 test("toggleQueueStatus transitions watching to unwatched and leaves watchedAt null", () => {
   const video = makeVideo("watching");
-  const result = toggleQueueStatus(video.id);
+  const result = toggleQueueStatus(video.id, user.id);
   expect(result).toEqual({ status: "unwatched" });
   const row = videoRow(video.id);
   expect(row.status).toBe("unwatched");
@@ -126,7 +154,7 @@ test("toggleQueueStatus transitions watching to unwatched and leaves watchedAt n
 });
 
 test("toggleQueueStatus returns null for a nonexistent video ID", () => {
-  expect(toggleQueueStatus(999999)).toBeNull();
+  expect(toggleQueueStatus(999999, user.id)).toBeNull();
 });
 
 test("toggleQueueStatus clears a stale ignoreMethod", () => {
@@ -135,13 +163,13 @@ test("toggleQueueStatus clears a stale ignoreMethod", () => {
     .set({ ignoreMethod: "auto" })
     .where(eq(videos.id, video.id))
     .run();
-  toggleQueueStatus(video.id);
+  toggleQueueStatus(video.id, user.id);
   expect(videoRow(video.id).ignoreMethod).toBeNull();
 });
 
 test("toggleWatchedFromWatchingPage transitions unwatched to watched and sets watchedAt", () => {
   const video = makeVideo("unwatched");
-  const result = toggleWatchedFromWatchingPage(video.id);
+  const result = toggleWatchedFromWatchingPage(video.id, user.id);
   expect(result).toEqual({ status: "watched" });
   const row = videoRow(video.id);
   expect(row.status).toBe("watched");
@@ -150,7 +178,7 @@ test("toggleWatchedFromWatchingPage transitions unwatched to watched and sets wa
 
 test("toggleWatchedFromWatchingPage transitions watching to watched and sets watchedAt (regression case)", () => {
   const video = makeVideo("watching");
-  const result = toggleWatchedFromWatchingPage(video.id);
+  const result = toggleWatchedFromWatchingPage(video.id, user.id);
   expect(result).toEqual({ status: "watched" });
   const row = videoRow(video.id);
   expect(row.status).toBe("watched");
@@ -159,7 +187,7 @@ test("toggleWatchedFromWatchingPage transitions watching to watched and sets wat
 
 test("toggleWatchedFromWatchingPage transitions watched to unwatched and clears watchedAt", () => {
   const video = makeVideo("watched", new Date("2026-07-01T00:00:00Z"));
-  const result = toggleWatchedFromWatchingPage(video.id);
+  const result = toggleWatchedFromWatchingPage(video.id, user.id);
   expect(result).toEqual({ status: "unwatched" });
   const row = videoRow(video.id);
   expect(row.status).toBe("unwatched");
@@ -167,7 +195,7 @@ test("toggleWatchedFromWatchingPage transitions watched to unwatched and clears 
 });
 
 test("toggleWatchedFromWatchingPage returns null for a nonexistent video ID", () => {
-  expect(toggleWatchedFromWatchingPage(999999)).toBeNull();
+  expect(toggleWatchedFromWatchingPage(999999, user.id)).toBeNull();
 });
 
 test("toggleWatchedFromWatchingPage clears a stale ignoreMethod", () => {
@@ -176,13 +204,13 @@ test("toggleWatchedFromWatchingPage clears a stale ignoreMethod", () => {
     .set({ ignoreMethod: "auto" })
     .where(eq(videos.id, video.id))
     .run();
-  toggleWatchedFromWatchingPage(video.id);
+  toggleWatchedFromWatchingPage(video.id, user.id);
   expect(videoRow(video.id).ignoreMethod).toBeNull();
 });
 
 test("ignoreVideo transitions unwatched to ignored/manual and clears watchedAt", () => {
   const video = makeVideo("unwatched");
-  const result = ignoreVideo(video.id);
+  const result = ignoreVideo(video.id, user.id);
   expect(result).toEqual({ status: "ignored" });
   const row = videoRow(video.id);
   expect(row.status).toBe("ignored");
@@ -192,7 +220,7 @@ test("ignoreVideo transitions unwatched to ignored/manual and clears watchedAt",
 
 test("ignoreVideo transitions watching to ignored/manual", () => {
   const video = makeVideo("watching");
-  const result = ignoreVideo(video.id);
+  const result = ignoreVideo(video.id, user.id);
   expect(result).toEqual({ status: "ignored" });
   const row = videoRow(video.id);
   expect(row.status).toBe("ignored");
@@ -200,7 +228,7 @@ test("ignoreVideo transitions watching to ignored/manual", () => {
 });
 
 test("ignoreVideo returns null for a nonexistent video ID", () => {
-  expect(ignoreVideo(999999)).toBeNull();
+  expect(ignoreVideo(999999, user.id)).toBeNull();
 });
 
 test("unignoreVideo transitions ignored/manual to unwatched with ignoreMethod null", () => {
@@ -209,7 +237,7 @@ test("unignoreVideo transitions ignored/manual to unwatched with ignoreMethod nu
     .set({ ignoreMethod: "manual" })
     .where(eq(videos.id, video.id))
     .run();
-  const result = unignoreVideo(video.id);
+  const result = unignoreVideo(video.id, user.id);
   expect(result).toEqual({ status: "unwatched" });
   const row = videoRow(video.id);
   expect(row.status).toBe("unwatched");
@@ -222,7 +250,7 @@ test("unignoreVideo transitions ignored/auto to unwatched with ignoreMethod null
     .set({ ignoreMethod: "auto" })
     .where(eq(videos.id, video.id))
     .run();
-  const result = unignoreVideo(video.id);
+  const result = unignoreVideo(video.id, user.id);
   expect(result).toEqual({ status: "unwatched" });
   const row = videoRow(video.id);
   expect(row.status).toBe("unwatched");
@@ -231,7 +259,7 @@ test("unignoreVideo transitions ignored/auto to unwatched with ignoreMethod null
 
 test("unignoreVideo transitions a watched video to unwatched without throwing and clears watchedAt", () => {
   const video = makeVideo("watched", new Date("2026-07-01T00:00:00Z"));
-  const result = unignoreVideo(video.id);
+  const result = unignoreVideo(video.id, user.id);
   expect(result).toEqual({ status: "unwatched" });
   const row = videoRow(video.id);
   expect(row.status).toBe("unwatched");
@@ -239,5 +267,35 @@ test("unignoreVideo transitions a watched video to unwatched without throwing an
 });
 
 test("unignoreVideo returns null for a nonexistent video ID", () => {
-  expect(unignoreVideo(999999)).toBeNull();
+  expect(unignoreVideo(999999, user.id)).toBeNull();
+});
+
+test("setWatching returns null (not the mutated result) for a video the caller isn't subscribed to", () => {
+  const video = makeVideo("unwatched");
+  expect(setWatching(video.id, otherUser.id)).toBeNull();
+  expect(videoRow(video.id).status).toBe("unwatched");
+});
+
+test("toggleQueueStatus returns null (not the mutated result) for a video the caller isn't subscribed to", () => {
+  const video = makeVideo("unwatched");
+  expect(toggleQueueStatus(video.id, otherUser.id)).toBeNull();
+  expect(videoRow(video.id).status).toBe("unwatched");
+});
+
+test("toggleWatchedFromWatchingPage returns null (not the mutated result) for a video the caller isn't subscribed to", () => {
+  const video = makeVideo("unwatched");
+  expect(toggleWatchedFromWatchingPage(video.id, otherUser.id)).toBeNull();
+  expect(videoRow(video.id).status).toBe("unwatched");
+});
+
+test("ignoreVideo returns null (not the mutated result) for a video the caller isn't subscribed to", () => {
+  const video = makeVideo("unwatched");
+  expect(ignoreVideo(video.id, otherUser.id)).toBeNull();
+  expect(videoRow(video.id).status).toBe("unwatched");
+});
+
+test("unignoreVideo returns null (not the mutated result) for a video the caller isn't subscribed to", () => {
+  const video = makeVideo("ignored");
+  expect(unignoreVideo(video.id, otherUser.id)).toBeNull();
+  expect(videoRow(video.id).status).toBe("ignored");
 });

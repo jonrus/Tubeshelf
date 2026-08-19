@@ -15,6 +15,13 @@
       "when": 1786389452739,
       "tag": "0001_swift_pete_wisdom",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787174326247,
+      "tag": "0002_crazy_thunderbird",
+      "breakpoints": true
     }
   ]
 }

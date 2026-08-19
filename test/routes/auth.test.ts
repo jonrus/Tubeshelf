@@ -120,6 +120,37 @@ test("a failed login re-renders the form with a 401 and a generic error message"
   expect(html).toContain("Invalid username or password.");
 });
 
+test("a login for a username that doesn't exist returns the same generic 401 as a wrong password for an existing user", async () => {
+  const res = await postLogin({
+    username: "no-such-user",
+    password: "irrelevant-password",
+  });
+  expect(res.status).toBe(401);
+  const html = await res.text();
+  expect(html).toContain("Invalid username or password.");
+});
+
+test("logging in against a user with no password set yet (fresh-install state) returns the same generic 401, not distinct behavior", async () => {
+  db.update(users)
+    .set({ passwordHash: null })
+    .where(eq(users.username, "admin"))
+    .run();
+  try {
+    const res = await postLogin({
+      username: "admin",
+      password: DEFAULT_TEST_PASSWORD,
+    });
+    expect(res.status).toBe(401);
+    const html = await res.text();
+    expect(html).toContain("Invalid username or password.");
+  } finally {
+    db.update(users)
+      .set({ passwordHash: defaultPasswordHash })
+      .where(eq(users.username, "admin"))
+      .run();
+  }
+});
+
 test("5 consecutive failed logins lock the account; further attempts during the window are rejected without checking the password or extending the lock; the lock expires after 15 minutes", async () => {
   for (let i = 0; i < 4; i++) {
     const res = await postLogin({

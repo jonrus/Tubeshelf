@@ -1,12 +1,26 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "../db/client";
-import { videos } from "../db/schema";
+import { subscriptions, videos, youtubeChannels } from "../db/schema";
 
-export function setWatching(videoId: number): { status: "watching" } | null {
+export function setWatching(
+  videoId: number,
+  userId: number,
+): { status: "watching" } | null {
   const current = db
     .select({ status: videos.status })
     .from(videos)
-    .where(eq(videos.id, videoId))
+    .innerJoin(youtubeChannels, eq(videos.channelId, youtubeChannels.id))
+    .innerJoin(
+      subscriptions,
+      eq(subscriptions.youtubeChannelId, youtubeChannels.id),
+    )
+    .where(
+      and(
+        eq(videos.id, videoId),
+        eq(subscriptions.userId, userId),
+        isNull(subscriptions.unsubscribedAt),
+      ),
+    )
     .get();
   if (!current) return null;
 
@@ -32,11 +46,23 @@ export function setWatching(videoId: number): { status: "watching" } | null {
 // only path back from Watching)."
 export function toggleQueueStatus(
   videoId: number,
+  userId: number,
 ): { status: "watched" | "unwatched" } | null {
   const current = db
     .select({ status: videos.status })
     .from(videos)
-    .where(eq(videos.id, videoId))
+    .innerJoin(youtubeChannels, eq(videos.channelId, youtubeChannels.id))
+    .innerJoin(
+      subscriptions,
+      eq(subscriptions.youtubeChannelId, youtubeChannels.id),
+    )
+    .where(
+      and(
+        eq(videos.id, videoId),
+        eq(subscriptions.userId, userId),
+        isNull(subscriptions.unsubscribedAt),
+      ),
+    )
     .get();
   if (!current) return null;
 
@@ -66,11 +92,23 @@ export function toggleQueueStatus(
 // Unwatched," i.e. watched -> unwatched.
 export function toggleWatchedFromWatchingPage(
   videoId: number,
+  userId: number,
 ): { status: "watched" | "unwatched" } | null {
   const current = db
     .select({ status: videos.status })
     .from(videos)
-    .where(eq(videos.id, videoId))
+    .innerJoin(youtubeChannels, eq(videos.channelId, youtubeChannels.id))
+    .innerJoin(
+      subscriptions,
+      eq(subscriptions.youtubeChannelId, youtubeChannels.id),
+    )
+    .where(
+      and(
+        eq(videos.id, videoId),
+        eq(subscriptions.userId, userId),
+        isNull(subscriptions.unsubscribedAt),
+      ),
+    )
     .get();
   if (!current) return null;
 
@@ -88,11 +126,25 @@ export function toggleWatchedFromWatchingPage(
   return { status: nextStatus };
 }
 
-export function ignoreVideo(videoId: number): { status: "ignored" } | null {
+export function ignoreVideo(
+  videoId: number,
+  userId: number,
+): { status: "ignored" } | null {
   const current = db
     .select({ status: videos.status })
     .from(videos)
-    .where(eq(videos.id, videoId))
+    .innerJoin(youtubeChannels, eq(videos.channelId, youtubeChannels.id))
+    .innerJoin(
+      subscriptions,
+      eq(subscriptions.youtubeChannelId, youtubeChannels.id),
+    )
+    .where(
+      and(
+        eq(videos.id, videoId),
+        eq(subscriptions.userId, userId),
+        isNull(subscriptions.unsubscribedAt),
+      ),
+    )
     .get();
   if (!current) return null;
 
@@ -103,11 +155,25 @@ export function ignoreVideo(videoId: number): { status: "ignored" } | null {
   return { status: "ignored" };
 }
 
-export function unignoreVideo(videoId: number): { status: "unwatched" } | null {
+export function unignoreVideo(
+  videoId: number,
+  userId: number,
+): { status: "unwatched" } | null {
   const current = db
     .select({ status: videos.status })
     .from(videos)
-    .where(eq(videos.id, videoId))
+    .innerJoin(youtubeChannels, eq(videos.channelId, youtubeChannels.id))
+    .innerJoin(
+      subscriptions,
+      eq(subscriptions.youtubeChannelId, youtubeChannels.id),
+    )
+    .where(
+      and(
+        eq(videos.id, videoId),
+        eq(subscriptions.userId, userId),
+        isNull(subscriptions.unsubscribedAt),
+      ),
+    )
     .get();
   if (!current) return null;
 
