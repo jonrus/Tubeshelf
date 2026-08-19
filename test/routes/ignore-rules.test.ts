@@ -281,7 +281,6 @@ test("POST /ignore-rules/:id accepts a keyword at exactly the length limit", asy
   const atLimit = "a".repeat(IGNORE_RULE_KEYWORD_MAX_LENGTH);
 
   const res = await postEdit(rule.id, atLimit);
-  const html = await res.text();
 
   expect(res.status).toBe(200);
   const updatedRule = db

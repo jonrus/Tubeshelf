@@ -113,7 +113,7 @@ Generated: 2026-08-19
       ownership-denial cases in both test files, with no test left relying on the
       pre-existing (now-incorrect) unscoped behavior.
 
-- [ ] 5. Run the full verification suite via devcontainer exec — `bun test`, `bun run lint`,
+- [x] 5. Run the full verification suite via devcontainer exec — `bun test`, `bun run lint`,
       and `bunx tsc --noEmit` — fix anything it surfaces (in particular, `noUncheckedIndexedAccess`
       issues are easy to introduce when threading a new parameter through several call
       sites, per this project's spec006 history), then update
