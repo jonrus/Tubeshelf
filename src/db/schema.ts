@@ -12,6 +12,7 @@ import {
 // drizzle-orm@0.45.2 (see SQLiteTableExtraConfigValue[] in sqlite-core/table.d.ts).
 
 export const CATEGORY_NAME_MAX_LENGTH = 100;
+export const IGNORE_RULE_KEYWORD_MAX_LENGTH = 200;
 
 export const users = sqliteTable("users", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -130,13 +131,22 @@ export const videos = sqliteTable(
   ],
 );
 
-export const ignoreRules = sqliteTable("ignore_rules", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  keyword: text("keyword").notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`(unixepoch())`),
-});
+export const ignoreRules = sqliteTable(
+  "ignore_rules",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    keyword: text("keyword").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    check(
+      "keyword_length_check",
+      sql`length(${t.keyword}) <= ${sql.raw(String(IGNORE_RULE_KEYWORD_MAX_LENGTH))}`,
+    ),
+  ],
+);
 
 export const sessions = sqliteTable("sessions", {
   id: integer("id").primaryKey({ autoIncrement: true }),

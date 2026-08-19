@@ -2,7 +2,7 @@
 Spec: docs/specs/024-security-review-hardening.md
 Generated: 2026-08-19
 
-- [ ] 1. Add the ignore-rule keyword length cap to the schema: in `src/db/schema.ts`, add
+- [x] 1. Add the ignore-rule keyword length cap to the schema: in `src/db/schema.ts`, add
       `export const IGNORE_RULE_KEYWORD_MAX_LENGTH = 200;` next to the existing
       `CATEGORY_NAME_MAX_LENGTH = 100`, and add a `check("keyword_length_check",
       sql\`length(${t.keyword}) <= ${sql.raw(String(IGNORE_RULE_KEYWORD_MAX_LENGTH))}\`)` to
