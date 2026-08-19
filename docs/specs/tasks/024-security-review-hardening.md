@@ -120,7 +120,7 @@ Generated: 2026-08-19
       `docs/specs/024-security-review-hardening.md`'s frontmatter to `status: implemented`.
       Done when: all three commands are clean and the frontmatter is updated.
 
-- [ ] 6. Open the PR: fill out a summary (referencing this spec) and a test plan (the
+- [x] 6. Open the PR: fill out a summary (referencing this spec) and a test plan (the
       commands from task 5 plus a one-line description of what each of the three fixes
       closes). Per CLAUDE.md, check off this step *before* pushing — the push should carry a
       task file that's already fully checked off. Confirm with the user whether they're
