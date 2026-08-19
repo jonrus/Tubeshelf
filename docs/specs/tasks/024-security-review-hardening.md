@@ -32,7 +32,7 @@ Generated: 2026-08-19
       `IGNORE_RULE_KEYWORD_MAX_LENGTH` chars is accepted, for both the add and edit
       endpoints. Done when: `bun test` passes with the new cases included.
 
-- [ ] 3. Fix the login-timing side channel in `attemptLogin()` (`src/lib/auth.ts:46`): add a
+- [x] 3. Fix the login-timing side channel in `attemptLogin()` (`src/lib/auth.ts:46`): add a
       module-level dummy password hash computed once at load time (e.g.
       `const DUMMY_PASSWORD_HASH = Bun.password.hashSync(randomBytes(32).toString("hex"),
       { algorithm: "bcrypt" });`, using the same `randomBytes` import already at the top of

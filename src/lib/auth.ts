@@ -17,6 +17,11 @@ const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 const LOCKOUT_THRESHOLD = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 
+const DUMMY_PASSWORD_HASH = Bun.password.hashSync(
+  randomBytes(32).toString("hex"),
+  { algorithm: "bcrypt" },
+);
+
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
@@ -52,7 +57,10 @@ export async function attemptLogin(
     .from(users)
     .where(eq(users.username, username))
     .get();
-  if (!user) return { ok: false };
+  if (!user) {
+    await verifyPassword(password, DUMMY_PASSWORD_HASH);
+    return { ok: false };
+  }
 
   if (user.lockedUntil && user.lockedUntil.getTime() > Date.now()) {
     return { ok: false };
@@ -60,7 +68,7 @@ export async function attemptLogin(
 
   const passwordOk = user.passwordHash
     ? await verifyPassword(password, user.passwordHash)
-    : false;
+    : await verifyPassword(password, DUMMY_PASSWORD_HASH).then(() => false);
 
   if (passwordOk) {
     db.update(users)
