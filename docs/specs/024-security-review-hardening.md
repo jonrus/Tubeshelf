@@ -1,5 +1,5 @@
 ---
-status: draft
+status: in-progress
 created: 2026-08-19
 ---
 
@@ -117,6 +117,16 @@ check ownership. Once the join lands, every existing case in that file will star
 file needs a user + active-subscription fixture added before its existing assertions still
 mean anything.
 
+The same gap exists, inconsistently, in `test/routes/queue.test.ts`: its `/videos/:id/toggle`,
+`/videos/:id/ignore`, and `/videos/:id/unignore` tests already call `makeSubscription(channel.id)`
+before hitting the endpoint, but its `/videos/:id/watching` test (one case, ~line 687), all
+`/videos/:id/watched-toggle` tests (three cases, ~lines 718-793), and all `GET /watching/:id`
+tests (four cases, ~lines 577-685 plus ~901) create a `channel` via `makeChannel(...)` with no
+matching `makeSubscription` call. Once the ownership join lands these will start 404ing
+instead of asserting real behavior. Each needs a `makeSubscription(channel.id)` call added
+alongside its existing `makeChannel(...)` call, matching the pattern the `/toggle`/`/ignore`/
+`/unignore` tests in the same file already use.
+
 ### 2. Constant-time login for unknown usernames
 
 `attemptLogin()` (`src/lib/auth.ts:46`) returns `{ ok: false }` immediately when no user
@@ -186,3 +196,12 @@ signature updates, since its existing cases have no active subscription for the 
 join to match. A second full pass wasn't run — the fixes were narrow and localized enough
 that a fresh full read wasn't warranted, per this project's stopping-signal guidance for
 red-team passes.
+
+**Discovered during `/spec-tasks` decomposition (2026-08-19):** while breaking Design item 1
+into concrete steps, reading `test/routes/queue.test.ts` in full (not just grepped) showed the
+missing-subscription-fixture issue the red-team pass caught in `test/lib/watch-status.test.ts`
+also applies, inconsistently, to several route-level tests in that file (`/watching`,
+`/watched-toggle`, `GET /watching/:id`) — while sibling tests for `/toggle`/`/ignore`/
+`/unignore` in the same file already set up a subscription correctly. Folded into Design
+item 1 above rather than left as a task-file-only note, so a reader of the spec alone still
+gets the full picture of what breaks.
