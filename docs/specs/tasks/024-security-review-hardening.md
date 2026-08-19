@@ -18,7 +18,7 @@ Generated: 2026-08-19
       `drizzle-kit` produces), and `bun test` passes (`test/smoke.test.ts` runs `migrate()`
       against a fresh in-memory DB, so a broken migration fails immediately).
 
-- [ ] 2. Add app-level validation for the new cap in `src/routes/ignore-rules.tsx`: import
+- [x] 2. Add app-level validation for the new cap in `src/routes/ignore-rules.tsx`: import
       `IGNORE_RULE_KEYWORD_MAX_LENGTH` from `../db/schema`, and in both `POST /ignore-rules`
       (~line 29) and `POST /ignore-rules/:id` (~line 50), add a length check before the
       existing empty-keyword check, returning the same shape of inline error

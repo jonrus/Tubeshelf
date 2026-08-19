@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { db } from "../db/client";
-import { ignoreRules } from "../db/schema";
+import { IGNORE_RULE_KEYWORD_MAX_LENGTH, ignoreRules } from "../db/schema";
 import { csrfCheck, requireAuth } from "../lib/auth";
 import { listCategoriesWithCounts } from "../lib/categories";
 import { getCurrentUser } from "../lib/current-user";
@@ -29,6 +29,14 @@ ignoreRulesRoute.get("/ignore-rules", (c) => {
 ignoreRulesRoute.post("/ignore-rules", async (c) => {
   const body = await c.req.parseBody();
   const keyword = typeof body.keyword === "string" ? body.keyword.trim() : "";
+  if (keyword.length > IGNORE_RULE_KEYWORD_MAX_LENGTH) {
+    return c.html(
+      <IgnoreRulesList
+        rules={listIgnoreRules()}
+        error={`Keyword must be ${IGNORE_RULE_KEYWORD_MAX_LENGTH} characters or fewer.`}
+      />,
+    );
+  }
   if (!keyword) {
     return c.html(
       <IgnoreRulesList
@@ -51,6 +59,15 @@ ignoreRulesRoute.post("/ignore-rules/:id", async (c) => {
   const id = Number(c.req.param("id"));
   const body = await c.req.parseBody();
   const keyword = typeof body.keyword === "string" ? body.keyword.trim() : "";
+  if (keyword.length > IGNORE_RULE_KEYWORD_MAX_LENGTH) {
+    return c.html(
+      <IgnoreRulesList
+        rules={listIgnoreRules()}
+        editingId={id}
+        error={`Keyword must be ${IGNORE_RULE_KEYWORD_MAX_LENGTH} characters or fewer.`}
+      />,
+    );
+  }
   if (!keyword) {
     return c.html(
       <IgnoreRulesList

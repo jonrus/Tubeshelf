@@ -9,9 +9,8 @@ process.env.DB_FILE_NAME = ":memory:";
 
 const { db } = await import("../../src/db/client");
 const { migrate } = await import("drizzle-orm/bun-sqlite/migrator");
-const { ignoreRules, videos, youtubeChannels } = await import(
-  "../../src/db/schema"
-);
+const { IGNORE_RULE_KEYWORD_MAX_LENGTH, ignoreRules, videos, youtubeChannels } =
+  await import("../../src/db/schema");
 const { seed } = await import("../../src/db/seed");
 const { ignoreRulesRoute } = await import("../../src/routes/ignore-rules");
 
@@ -151,6 +150,35 @@ test("POST /ignore-rules rejects a whitespace-only keyword with an inline error 
   expect(db.select().from(ignoreRules).all().length).toBe(before);
 });
 
+test("POST /ignore-rules rejects a keyword over the length limit with an inline error and adds no rule", async () => {
+  const before = db.select().from(ignoreRules).all().length;
+  const keyword = "a".repeat(IGNORE_RULE_KEYWORD_MAX_LENGTH + 1);
+
+  const res = await postAdd(keyword);
+  const html = await res.text();
+
+  expect(html).toContain(
+    `Keyword must be ${IGNORE_RULE_KEYWORD_MAX_LENGTH} characters or fewer.`,
+  );
+  expect(db.select().from(ignoreRules).all().length).toBe(before);
+});
+
+test("POST /ignore-rules accepts a keyword at exactly the length limit", async () => {
+  const keyword = "a".repeat(IGNORE_RULE_KEYWORD_MAX_LENGTH);
+
+  const res = await postAdd(keyword);
+  const html = await res.text();
+
+  expect(res.status).toBe(200);
+  expect(html).toContain(keyword);
+  const rule = db
+    .select()
+    .from(ignoreRules)
+    .where(eq(ignoreRules.keyword, keyword))
+    .get();
+  expect(rule).toBeTruthy();
+});
+
 test("POST /ignore-rules adds a rule and triggers reconciliation of newly-matching videos", async () => {
   const video = makeVideo({
     title: "Video about reconcile-add-keyword",
@@ -227,6 +255,41 @@ test("POST /ignore-rules/:id rejects an empty keyword, staying in edit mode with
     .where(eq(ignoreRules.id, rule.id))
     .get();
   expect(unchangedRule?.keyword).toBe("rename-empty-reject-keyword");
+});
+
+test("POST /ignore-rules/:id rejects a keyword over the length limit, staying in edit mode with an error", async () => {
+  const rule = makeRule("rename-too-long-reject-keyword");
+  const tooLong = "a".repeat(IGNORE_RULE_KEYWORD_MAX_LENGTH + 1);
+
+  const res = await postEdit(rule.id, tooLong);
+  const html = await res.text();
+
+  expect(html).toContain(
+    `Keyword must be ${IGNORE_RULE_KEYWORD_MAX_LENGTH} characters or fewer.`,
+  );
+
+  const unchangedRule = db
+    .select()
+    .from(ignoreRules)
+    .where(eq(ignoreRules.id, rule.id))
+    .get();
+  expect(unchangedRule?.keyword).toBe("rename-too-long-reject-keyword");
+});
+
+test("POST /ignore-rules/:id accepts a keyword at exactly the length limit", async () => {
+  const rule = makeRule("rename-at-limit-keyword");
+  const atLimit = "a".repeat(IGNORE_RULE_KEYWORD_MAX_LENGTH);
+
+  const res = await postEdit(rule.id, atLimit);
+  const html = await res.text();
+
+  expect(res.status).toBe(200);
+  const updatedRule = db
+    .select()
+    .from(ignoreRules)
+    .where(eq(ignoreRules.id, rule.id))
+    .get();
+  expect(updatedRule?.keyword).toBe(atLimit);
 });
 
 test("POST /ignore-rules/:id against a nonexistent id 404s", async () => {
