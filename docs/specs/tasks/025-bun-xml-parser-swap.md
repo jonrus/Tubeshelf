@@ -55,7 +55,7 @@ Generated: 2026-08-20
       when: this has been run successfully against a real feed with sane
       output as described, and the scratch file is deleted.
 
-- [ ] 4. Run the full verification suite via devcontainer exec — `bun
+- [x] 4. Run the full verification suite via devcontainer exec — `bun
       test`, `bun run lint`, and `bunx tsc --noEmit` — confirming in
       particular that `test/lib/rss.test.ts`'s existing cases pass
       **unmodified** (per the spec's Scope, no test rewiring is expected).

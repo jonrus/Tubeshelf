@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: implemented
 created: 2026-08-20
 ---
 
@@ -94,6 +94,34 @@ with the `fast-xml-parser` import removed. `Bun.XML` is a global (like
 `Bun.file` or `Bun.serve`), so no import statement is needed once the
 `bun-types` devDependency is updated (see Scope) for the ambient type to be
 visible to `tsc`.
+
+> **Correction (found during task 4's `tsc --noEmit` pass, not caught by this
+> spec's own drafting-session verification):** the call site above type-checks,
+> but the follow-on property reads (`parsed.feed.title`, `parsed.feed.entry`)
+> did not, unmodified. `Bun.XML.parse`'s no-args overload returns
+> `Document = { [rootName: string]: Value }` where `Value = string |
+> Element` — because `Value` includes `string`, and because this repo's
+> `tsconfig.json` sets `noUncheckedIndexedAccess`, `parsed.feed` types as
+> `string | Element | undefined`, and TS rejects `.title`/`.entry` off that
+> union without a narrowing check first. The drafting-session verification
+> (see Open Questions) confirmed the *shapes* `Bun.XML.parse` produces at
+> runtime empirically, but never ran `tsc` against `rss.ts`'s actual
+> post-swap property-access code — only against the call-site swap in
+> isolation — so this was missed until task 4's full verification pass.
+> Fixed with a `typeof feed === "object"` guard before each read:
+> ```ts
+> const parsed = Bun.XML.parse(xml);
+> const feed = parsed.feed;
+> const title = typeof feed === "object" ? feed.title : undefined;
+> if (typeof title !== "string" || title.length === 0) return null;
+> const rawEntries = typeof feed === "object" ? feed.entry : undefined;
+> ```
+> This is a type-level fix only — `typeof feed === "object"` narrows out
+> both the `string` and `undefined` members of the union in exactly the
+> cases the old `parsed?.feed?.title`/`?.entry` optional-chaining already
+> treated as absent, so runtime behavior (including the empty-feed
+> `{ feed: "" }` case documented below) is unchanged from what was already
+> verified.
 
 ### Why this is a safe drop-in for this file specifically
 
@@ -198,7 +226,18 @@ worked around.
 
 ## Open Questions
 
-None. Every factual claim in this spec — the parser-output-shape
+None remaining. One gap surfaced after this spec was written: the
+drafting-session verification confirmed `Bun.XML.parse`'s runtime output
+shapes empirically but never ran `tsc --noEmit` against `rss.ts`'s actual
+post-swap property-access code (only against the call-site swap in
+isolation), so it missed that `parsed.feed.title`/`parsed.feed.entry` don't
+type-check under this repo's `noUncheckedIndexedAccess` without a narrowing
+guard first. Caught by task 4's full verification pass and fixed with a
+`typeof feed === "object"` guard — see the correction note under Design →
+"The swap" for the type-level detail. No runtime/behavioral gap; type-level
+only.
+
+Every other factual claim in this spec — the parser-output-shape
 equivalence, the CDATA/entity handling, and the `@types/bun`/`bun-types`
 dependency fix — was verified empirically against the actual devcontainer
 and the npm registry this session, not assumed from documentation. See the

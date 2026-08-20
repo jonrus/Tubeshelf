@@ -56,10 +56,11 @@ export async function fetchChannelFeed(
 
   const xml = await res.text();
   const parsed = Bun.XML.parse(xml);
-  const title = parsed?.feed?.title;
+  const feed = parsed.feed;
+  const title = typeof feed === "object" ? feed.title : undefined;
   if (typeof title !== "string" || title.length === 0) return null;
 
-  const rawEntries = parsed?.feed?.entry;
+  const rawEntries = typeof feed === "object" ? feed.entry : undefined;
   const entryList: unknown[] = Array.isArray(rawEntries)
     ? rawEntries
     : rawEntries
