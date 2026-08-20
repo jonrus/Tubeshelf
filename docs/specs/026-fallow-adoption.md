@@ -1,5 +1,5 @@
 ---
-status: draft
+status: in-progress
 created: 2026-08-20
 ---
 
@@ -386,6 +386,15 @@ touch only export visibility, not logic, and the duplication extractions
 should preserve existing test coverage as the safety net (if any extraction
 changes behavior, that's a bug in the extraction, not an acceptable
 side effect).
+
+**Gap found while writing this spec's task file, not during drafting:**
+`src/lib/queue-urls.ts` has no test file anywhere in `test/lib/` — the
+"existing test coverage as the safety net" line above doesn't hold for this
+one file's duplication extraction. Its four functions build query-param
+URLs; the extraction needs manual verification of representative inputs
+(no args, category only, cursor only, both) against pre-extraction output
+before/after, not just a clean `tsc`/lint pass, since there's no automated
+check that would catch a behavior change here.
 
 ## Open Questions
 
