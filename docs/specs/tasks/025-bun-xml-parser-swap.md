@@ -2,7 +2,7 @@
 Spec: docs/specs/025-bun-xml-parser-swap.md
 Generated: 2026-08-20
 
-- [ ] 1. Update `package.json`'s dependency lists per the spec's Design →
+- [x] 1. Update `package.json`'s dependency lists per the spec's Design →
       "Dependency and lockfile changes" section: remove
       `"fast-xml-parser": "^5.10.1"` from `dependencies`; in
       `devDependencies`, remove `"@types/bun": "^1.3.14"` and add
