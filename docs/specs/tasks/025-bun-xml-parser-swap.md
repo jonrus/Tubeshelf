@@ -14,7 +14,7 @@ Generated: 2026-08-20
       the same (a single `bun-types@1.4.0` entry, no `fast-xml-parser` or
       `@types/bun` entries), and `bun install` completes with no errors.
 
-- [ ] 2. Swap the parser call in `src/lib/rss.ts`: remove line 1
+- [x] 2. Swap the parser call in `src/lib/rss.ts`: remove line 1
       (`import { XMLParser } from "fast-xml-parser";`) and change line 60
       from `const parsed = new XMLParser().parse(xml);` to
       `const parsed = Bun.XML.parse(xml);`. No other line in this file
