@@ -42,7 +42,7 @@ until task 14 is done.** Every `bun`/`bunx` command below runs via
       matching the file above (confirms the config is actually being picked
       up, not silently ignored).
 
-- [ ] 2. De-export the 7 symbols confirmed safe in the spec's Design →
+- [x] 2. De-export the 7 symbols confirmed safe in the spec's Design →
       Clean-slate fix list → "De-export, not delete." Remove the `export`
       keyword only — no other change to any of these declarations or their
       call sites:

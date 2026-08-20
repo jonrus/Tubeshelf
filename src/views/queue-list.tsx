@@ -12,7 +12,7 @@ import { EmptyState } from "./empty-state";
 
 type VideoStatus = (typeof videos.$inferSelect)["status"];
 
-export type QueueListView = "queue" | "continue-watching" | "watched";
+type QueueListView = "queue" | "continue-watching" | "watched";
 
 export type QueueRow = {
   id: number;
@@ -24,7 +24,7 @@ export type QueueRow = {
   categoryName: string;
 };
 
-export type WatchedRow = {
+type WatchedRow = {
   id: number;
   youtubeVideoId: string;
   title: string;
@@ -33,7 +33,7 @@ export type WatchedRow = {
   categoryName: string;
 };
 
-export type IgnoredRow = {
+type IgnoredRow = {
   id: number;
   youtubeVideoId: string;
   title: string;

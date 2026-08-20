@@ -30,7 +30,7 @@ export function hashPassword(plain: string): Promise<string> {
   return Bun.password.hash(plain, { algorithm: "bcrypt" });
 }
 
-export function verifyPassword(plain: string, hash: string): Promise<boolean> {
+function verifyPassword(plain: string, hash: string): Promise<boolean> {
   return Bun.password.verify(plain, hash);
 }
 
@@ -105,7 +105,7 @@ export function createSession(userId: number): { token: string } {
   return { token };
 }
 
-export function findValidSession(
+function findValidSession(
   token: string,
 ): { userId: number } | undefined {
   const tokenHash = hashToken(token);
@@ -131,7 +131,7 @@ export function deleteSession(token: string): void {
     .run();
 }
 
-export function getTrustedOrigins(): string[] {
+function getTrustedOrigins(): string[] {
   const raw = process.env.TRUSTED_ORIGINS;
   if (!raw) return ["http://localhost:3000"];
   return raw.split(",").map((origin) => origin.trim());
