@@ -272,7 +272,7 @@ until task 14 is done.** Every `bun`/`bunx` command below runs via
       with zero findings, alongside clean `bun test`/`bun run lint`/
       `bunx tsc --noEmit`.
 
-- [ ] 12. Open the PR: fill out a summary (adopting fallow for cross-file
+- [x] 12. Open the PR: fill out a summary (adopting fallow for cross-file
       dead-code/duplication/complexity/CSS-drift analysis, as a new
       blocking CI check — reference the spec) and a test plan (the four
       commands from task 11, plus a one-line note on the `queue-urls.ts`
