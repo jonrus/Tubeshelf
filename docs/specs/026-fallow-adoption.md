@@ -150,8 +150,7 @@ against this repo, not inferred from documentation alone:
 {
   "ignorePatterns": ["docs/features/**/*.html"],
   "ignoreDependencies": ["htmx.org"],
-  "dynamicallyLoaded": ["scripts/generate-icons.ts"],
-  "typeAware": { "enabled": true }
+  "dynamicallyLoaded": ["scripts/generate-icons.ts"]
 }
 ```
 
@@ -177,18 +176,37 @@ findings each one addresses):
   script (`bun scripts/generate-icons.ts`), not wired into any npm script or
   import chain, so fallow correctly can't find a path to it on its own. This
   tells it the file is intentionally reachable-by-hand, not dead.
-- `typeAware.enabled: true`: defaults to `false` purely for speed (per
-  `fallow --help`); at 64 files that tradeoff doesn't matter. **Caveat
-  confirmed during this spec's red-team pass:** enabling it doesn't actually
-  change the `unused-exports`/`unused-types` counts on this specific repo
-  (checked directly — identical either way), so the "reduces false
-  positives" rationale isn't demonstrated by this project's own data, just
-  general tool behavior. It does surface a new "Private type leaks" finding
-  category (12 instances on this repo) that's silent with `typeAware`
-  disabled — this is purely informational, since `private-type-leaks` stays
-  at its default `off` severity and doesn't affect `bun run fallow`'s exit
-  code, but expect that new output section to appear once this is turned on
-  and don't mistake it for a regression.
+- `typeAware`: **left at the tool's own default (`false`/absent from
+  config), not enabled.** An earlier version of this spec turned it on,
+  reasoning it would reduce dead-code false positives on a 64-file repo
+  where the speed tradeoff doesn't matter. That was reverted after task 11's
+  final verification, for two compounding reasons discovered together, not
+  separately:
+  1. **It measurably does nothing for this repo.** This spec's own red-team
+     pass had already confirmed enabling it doesn't change the
+     `unused-exports`/`unused-types` counts at all (checked directly —
+     identical either way). The only thing it adds is a "Private type leaks"
+     finding category (12 instances on this repo) — informational only,
+     since `private-type-leaks` stays at its default `off` severity and
+     doesn't affect `bun run fallow`'s exit code.
+  2. **Enabling it breaks the devcontainer.** Confirmed while executing task
+     8 (see Verification's "Gap found" note below and `CLAUDE.md`'s "Running
+     commands" gotcha list): `typeAware`'s sidecar needs real Node.js, which
+     the `oven/bun:1` devcontainer base image doesn't have, and it hangs
+     forever instead of erroring. The only workaround was running `fallow`
+     directly on the host instead of via `devcontainer exec` — a standing
+     exception to this project's "every command goes through the
+     devcontainer" rule.
+
+  Paying that ongoing devcontainer exception for a feature that doesn't
+  measurably improve this repo's findings isn't a good trade, so `typeAware`
+  is left off instead — this also fully closes the devcontainer-hang gotcha
+  for routine `bun run fallow` use (confirmed: re-running inside the
+  devcontainer with `typeAware` unset completes normally, no hang, no
+  "Private type leaks" section). If the codebase grows enough that
+  type-aware reachability starts actually diverging from the non-type-aware
+  pass, revisiting this is deferred to `docs/app_idea.md`'s Future Roadmap
+  rather than re-decided here.
 
 **Operational note for whoever implements this:** bare `fallow init` has no
 non-interactive/`--yes` flag (per `fallow init --help` — only `--toml`,
@@ -398,15 +416,26 @@ check that would catch a behavior change here.
 
 **Gap found while executing task 8, not during drafting:** any `fallow`
 command that exercises `typeAware` (`bunx fallow health`, plain
-`bunx fallow`/`bun run fallow`) hangs indefinitely inside the devcontainer —
-its Bun-only base image has no real Node.js, and `fallow`'s type-aware
-sidecar needs one. Confirmed *not* a container-state or TTY issue (reproduces
-identically after a full destroy/recreate, and hangs the same way in a real
-interactive terminal). Confirmed *not* a CI risk (`ubuntu-latest` ships real
-Node.js regardless of `oven-sh/setup-bun@v2`). Full writeup and the
-workaround (run on the host directly, not via `devcontainer exec`) now lives
-in `CLAUDE.md`'s "Running commands" gotcha list — tasks 10 and 11 below, both
-of which need a clean `bun run fallow`, must use that workaround.
+`bunx fallow`/`bun run fallow`, with `typeAware.enabled: true` in
+`.fallowrc.json` as originally configured) hangs indefinitely inside the
+devcontainer — its Bun-only base image has no real Node.js, and `fallow`'s
+type-aware sidecar needs one. Confirmed *not* a container-state or TTY issue
+(reproduces identically after a full destroy/recreate, and hangs the same way
+in a real interactive terminal). Confirmed *not* a CI risk (`ubuntu-latest`
+ships real Node.js regardless of `oven-sh/setup-bun@v2`). Tasks 10 and 11
+below ran `bun run fallow` directly on the host (not via `devcontainer exec`)
+to work around this while `typeAware` was still enabled.
+
+**Superseded after task 11, before the PR opened:** per Design's `typeAware`
+subsection above, `typeAware` was subsequently turned off — it wasn't
+measurably improving this repo's findings, and running fallow outside the
+devcontainer indefinitely to keep a feature that provides no measured benefit
+here wasn't a good trade. With `typeAware` off, plain `bun run fallow` no
+longer hits this hang and runs fine inside the devcontainer like every other
+project command (re-verified directly: a fresh `devcontainer exec ... bun run
+fallow` completes normally, exit 0, no hang). `CLAUDE.md`'s gotcha entry was
+narrowed to reflect that this only applies if `typeAware` is ever turned back
+on, rather than describing a standing exception for routine use.
 
 ## Open Questions
 

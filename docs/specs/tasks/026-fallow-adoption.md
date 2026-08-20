@@ -3,7 +3,10 @@ Spec: docs/specs/026-fallow-adoption.md
 Generated: 2026-08-20
 
 Tasks 1–10 are local file changes, committed one per task. Task 11 is final
-verification + flipping the spec's status. Task 12 opens the PR — checked off
+verification + flipping the spec's status. Task 11a is a follow-up amendment
+found in discussion after task 11 completed (dropping `typeAware` from
+`.fallowrc.json` — see its own entry below for why), landed before the PR
+opened. Task 12 opens the PR — checked off
 *before* pushing, per `CLAUDE.md`'s convention for this one step. Task 13 is a
 **manual GitHub UI step that comes after task 12's PR is open**, not before —
 an intentional exception to the usual "PR is the last step" pattern, because
@@ -18,13 +21,16 @@ until task 14 is done.** Every `bun`/`bunx` command below runs via
 `devcontainer exec --docker-path podman --workspace-folder .` per `CLAUDE.md`.
 
 - [x] 1. Add `.fallowrc.json` at the repo root with the exact contents from
-      the spec's Design → `.fallowrc.json` section:
+      the spec's Design → `.fallowrc.json` section (originally included
+      `"typeAware": { "enabled": true }` as a fourth key — **superseded after
+      task 11, see the amendment note below task 11**; the config now
+      omitted here reflects that later revision, not what task 1 originally
+      produced):
       ```json
       {
         "ignorePatterns": ["docs/features/**/*.html"],
         "ignoreDependencies": ["htmx.org"],
-        "dynamicallyLoaded": ["scripts/generate-icons.ts"],
-        "typeAware": { "enabled": true }
+        "dynamicallyLoaded": ["scripts/generate-icons.ts"]
       }
       ```
       Then update `package.json`: add `"fallow": "^3.17.0"` to
@@ -34,13 +40,13 @@ until task 14 is done.** Every `bun`/`bunx` command below runs via
       `bun.lock`. Do **not** run bare `fallow init` — per the spec's
       Operational note, it silently writes a generic config that would
       overwrite this hand-authored one. Done when: `.fallowrc.json` exists
-      with the exact content above; `package.json` has both new entries;
+      with the content above; `package.json` has both new entries;
       `bun.lock` reflects the new `fallow` dependency (including its
       per-platform `optionalDependencies`); `bunx fallow config` runs
       without error and its output shows `ignorePatterns`,
-      `ignoreDependencies`, `dynamicallyLoaded`, and `typeAware.enabled: true`
-      matching the file above (confirms the config is actually being picked
-      up, not silently ignored).
+      `ignoreDependencies`, and `dynamicallyLoaded` matching the file above
+      (confirms the config is actually being picked up, not silently
+      ignored).
 
 - [x] 2. De-export the 7 symbols confirmed safe in the spec's Design →
       Clean-slate fix list → "De-export, not delete." Remove the `export`
@@ -228,6 +234,43 @@ until task 14 is done.** Every `bun`/`bunx` command below runs via
       update `docs/specs/026-fallow-adoption.md`'s frontmatter to
       `status: implemented`. Done when: all four commands are clean and the
       frontmatter is updated.
+
+- [x] 11a. **Amendment, found in follow-up discussion after task 11
+      completed, before the PR opened.** Stepping back objectively: task
+      10/11's host-only `fallow` workaround meant this spec was baking in a
+      permanent exception to "every project command goes through the
+      devcontainer" — worth questioning whether `typeAware` was earning
+      that. Checked what `typeAware.enabled: true` was actually buying this
+      repo: per the spec's own red-team pass, enabling it didn't change
+      `unused-exports`/`unused-types` counts at all, and its only other
+      effect (`private-type-leaks`, 12 instances) is `off`-severity/
+      informational and doesn't affect the exit code. Net: no measurable
+      benefit, for the cost of a standing devcontainer exception. Reverted:
+      - Removed `"typeAware": { "enabled": true }` from `.fallowrc.json`
+        (now 3 keys, not 4).
+      - Updated the spec's Design → `typeAware` subsection and Verification
+        → "Gap found" note to document the revert and its reasoning.
+      - Narrowed `CLAUDE.md`'s `fallow`/devcontainer gotcha entry: it now
+        states the project's config leaves `typeAware` off specifically to
+        avoid this, and the host-workaround only applies if `typeAware` is
+        ever turned back on — not standing guidance for routine
+        `bun run fallow` use.
+      - Added a Future Roadmap bullet to `docs/app_idea.md` for possibly
+        revisiting `typeAware` later (paired with adding Node.js to the
+        devcontainer via the `ghcr.io/devcontainers/features/node:1`
+        feature, so the exception would be closed rather than reopened).
+      - Re-ran all four verification commands from task 11 against the
+        updated config, this time **inside** the devcontainer (no host
+        workaround needed): confirmed `bunx fallow config` and
+        `bun run fallow` both complete normally with no hang, no
+        `typeAware`/`private-type-leaks` output, and the same zero-finding
+        exit-0 result task 11 already established. `bun test`,
+        `bun run lint`, and `bunx tsc --noEmit` re-confirmed clean too.
+      Done when: `.fallowrc.json` has 3 keys (no `typeAware`); the spec,
+      `CLAUDE.md`, and `docs/app_idea.md` edits above are made; and a fresh
+      `devcontainer exec ... bun run fallow` (no host workaround) exits 0
+      with zero findings, alongside clean `bun test`/`bun run lint`/
+      `bunx tsc --noEmit`.
 
 - [ ] 12. Open the PR: fill out a summary (adopting fallow for cross-file
       dead-code/duplication/complexity/CSS-drift analysis, as a new
