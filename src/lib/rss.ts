@@ -1,5 +1,3 @@
-import { XMLParser } from "fast-xml-parser";
-
 const FETCH_TIMEOUT_MS = 5_000;
 const VIDEO_ID_PREFIX = "yt:video:";
 
@@ -57,11 +55,12 @@ export async function fetchChannelFeed(
   if (!res.ok) return null;
 
   const xml = await res.text();
-  const parsed = new XMLParser().parse(xml);
-  const title = parsed?.feed?.title;
+  const parsed = Bun.XML.parse(xml);
+  const feed = parsed.feed;
+  const title = typeof feed === "object" ? feed.title : undefined;
   if (typeof title !== "string" || title.length === 0) return null;
 
-  const rawEntries = parsed?.feed?.entry;
+  const rawEntries = typeof feed === "object" ? feed.entry : undefined;
   const entryList: unknown[] = Array.isArray(rawEntries)
     ? rawEntries
     : rawEntries
