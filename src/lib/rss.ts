@@ -10,33 +10,51 @@ export type FeedEntry = {
 
 export type ChannelFeed = { title: string; entries: FeedEntry[] };
 
-function parseEntry(raw: unknown): FeedEntry | null {
-  if (typeof raw !== "object" || raw === null) return null;
-  const entry = raw as Record<string, unknown>;
-
+function parseVideoId(entry: Record<string, unknown>): string | null {
   const id = entry.id;
   if (typeof id !== "string" || !id.startsWith(VIDEO_ID_PREFIX)) return null;
   const videoId = id.slice(VIDEO_ID_PREFIX.length);
-  if (!videoId) return null;
+  return videoId || null;
+}
 
+function parseTitle(entry: Record<string, unknown>): string | null {
   const title = entry.title;
-  if (typeof title !== "string" || title.length === 0) return null;
+  return typeof title === "string" && title.length > 0 ? title : null;
+}
 
+function parsePublishedAt(entry: Record<string, unknown>): Date | null {
   const published = entry.published;
   if (typeof published !== "string") return null;
   const publishedAt = new Date(published);
-  if (Number.isNaN(publishedAt.getTime())) return null;
+  return Number.isNaN(publishedAt.getTime()) ? null : publishedAt;
+}
 
+function parseDescription(entry: Record<string, unknown>): string | null {
   const mediaGroup = entry["media:group"];
   const description =
     typeof mediaGroup === "object" && mediaGroup !== null
       ? (mediaGroup as Record<string, unknown>)["media:description"]
       : undefined;
+  return typeof description === "string" ? description : null;
+}
+
+function parseEntry(raw: unknown): FeedEntry | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const entry = raw as Record<string, unknown>;
+
+  const videoId = parseVideoId(entry);
+  if (!videoId) return null;
+
+  const title = parseTitle(entry);
+  if (!title) return null;
+
+  const publishedAt = parsePublishedAt(entry);
+  if (!publishedAt) return null;
 
   return {
     videoId,
     title,
-    description: typeof description === "string" ? description : null,
+    description: parseDescription(entry),
     publishedAt,
   };
 }

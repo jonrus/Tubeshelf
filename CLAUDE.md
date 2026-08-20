@@ -53,6 +53,24 @@ workflow, only to a Claude Code session using the CLI directly:
   around this with `script`, a pty wrapper, etc. — that risks leaving an orphaned process
   waiting on a pty nothing is attached to (see the gotcha above). Instead, hand the user the
   exact command to run in their own terminal and wait for them to report the result back.
+- **`fallow`'s type-aware analysis (`typeAware.enabled: true` in `.fallowrc.json`) hangs
+  forever inside the devcontainer** (confirmed 2026-08-20) — any command that triggers it
+  (`bunx fallow health`, plain `bunx fallow`/`bun run fallow`) spawns a `fallow-type-aware`
+  sidecar that shells out to what it expects is real Node.js to run `tsc --api`. The
+  `oven/bun:1` base image has no real Node.js; its `node` on `PATH` is a symlink straight to
+  `bun` (`/usr/local/bun-node-fallback-bin/node -> /usr/local/bin/bun`), and the sidecar
+  calls a Node-internal API (`stdout._handle.fd`) that Bun doesn't implement, throwing
+  inside a context whose rejection never surfaces — the parent just hangs (confirmed
+  reproducing identically after a full container destroy/recreate, and confirmed *not* a
+  TTY issue: it hangs the same way in the user's own interactive terminal, only revealing
+  the real error, `stdout._handle.fd` on `undefined`, once force-killed with Ctrl+C). This
+  is a devcontainer-only gap, not a CI risk: GitHub's `ubuntu-latest` runner ships real
+  Node.js pre-installed regardless of `oven-sh/setup-bun@v2`, so `pr.yml`'s `fallow` job is
+  unaffected. For any local `fallow` command that needs `typeAware`, run it directly on the
+  host instead of via `devcontainer exec` (the host has real Node.js and the repo's
+  `node_modules` is bind-mounted from the container, so `node_modules/.bin/fallow health`
+  works as-is) — this is a deliberate, narrow exception to this section's opening rule that
+  every project command goes through the devcontainer.
 
 ## Development pattern: Spec-Driven Development
 

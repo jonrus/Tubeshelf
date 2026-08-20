@@ -396,6 +396,18 @@ URLs; the extraction needs manual verification of representative inputs
 before/after, not just a clean `tsc`/lint pass, since there's no automated
 check that would catch a behavior change here.
 
+**Gap found while executing task 8, not during drafting:** any `fallow`
+command that exercises `typeAware` (`bunx fallow health`, plain
+`bunx fallow`/`bun run fallow`) hangs indefinitely inside the devcontainer —
+its Bun-only base image has no real Node.js, and `fallow`'s type-aware
+sidecar needs one. Confirmed *not* a container-state or TTY issue (reproduces
+identically after a full destroy/recreate, and hangs the same way in a real
+interactive terminal). Confirmed *not* a CI risk (`ubuntu-latest` ships real
+Node.js regardless of `oven-sh/setup-bun@v2`). Full writeup and the
+workaround (run on the host directly, not via `devcontainer exec`) now lives
+in `CLAUDE.md`'s "Running commands" gotcha list — tasks 10 and 11 below, both
+of which need a clean `bun run fallow`, must use that workaround.
+
 ## Open Questions
 
 None remaining.

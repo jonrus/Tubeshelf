@@ -173,7 +173,7 @@ until task 14 is done.** Every `bun`/`bunx` command below runs via
       confirmation, not busywork to skip. Done when: `bunx fallow dupes`
       reports zero clone groups across the repo.
 
-- [ ] 8. Address the 3 health/complexity findings from the spec's Design →
+- [x] 8. Address the 3 health/complexity findings from the spec's Design →
       Clean-slate fix list: `parseEntry` (`src/lib/rss.ts`), the arrow
       function in `src/routes/categories.tsx` (re-check its exact location
       after task 6's extraction — it may have moved), and `queueVideos`
@@ -206,7 +206,11 @@ until task 14 is done.** Every `bun`/`bunx` command below runs via
       `test`/`typecheck`/`docker-build-check` jobs, matching their exact
       action-version style; the file is otherwise unchanged.
 
-- [ ] 10. Run `bun run fallow` across the whole repo (now that tasks 1–9 are
+- [ ] 10. **Run `bun run fallow` (or `node_modules/.bin/fallow`) directly on
+      the host, not via `devcontainer exec`** — see `CLAUDE.md`'s "Running
+      commands" gotcha list, confirmed while executing task 8: the
+      devcontainer's Bun-only base image hangs forever on `fallow`'s
+      type-aware sidecar. Run across the whole repo (now that tasks 1–9 are
       all in place) and confirm it exits 0 with zero findings. If anything
       unexpected still shows up (a false positive tasks 1–9 didn't
       anticipate, or a finding category not yet covered), fix it the same
@@ -218,7 +222,9 @@ until task 14 is done.** Every `bun`/`bunx` command below runs via
 
 - [ ] 11. Final verification. Run `bun test`, `bun run lint`,
       `bunx tsc --noEmit`, and `bun run fallow` — all four clean across the
-      repo (per `CLAUDE.md`'s now-updated verification-quartet rule). Then
+      repo (per `CLAUDE.md`'s now-updated verification-quartet rule). Per
+      task 10's note, run `bun run fallow` directly on the host, not via
+      `devcontainer exec`. Then
       update `docs/specs/026-fallow-adoption.md`'s frontmatter to
       `status: implemented`. Done when: all four commands are clean and the
       frontmatter is updated.
