@@ -24,7 +24,7 @@ Generated: 2026-08-20
       `fast-xml-parser` anywhere in the repo (`grep -rn "fast-xml-parser"
       src/` returns nothing) and uses `Bun.XML.parse`.
 
-- [ ] 3. Manually verify against one real, live YouTube channel feed, per
+- [x] 3. Manually verify against one real, live YouTube channel feed, per
       the spec's Design → "Manual verification against a real feed"
       section. This is fully Claude-performable (a live HTTP fetch from
       inside the devcontainer, no browser needed) — do not ask the user to
