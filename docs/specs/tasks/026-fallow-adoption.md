@@ -17,7 +17,7 @@ head branches" setting removes the branch post-merge. **Do not merge the PR
 until task 14 is done.** Every `bun`/`bunx` command below runs via
 `devcontainer exec --docker-path podman --workspace-folder .` per `CLAUDE.md`.
 
-- [ ] 1. Add `.fallowrc.json` at the repo root with the exact contents from
+- [x] 1. Add `.fallowrc.json` at the repo root with the exact contents from
       the spec's Design → `.fallowrc.json` section:
       ```json
       {
