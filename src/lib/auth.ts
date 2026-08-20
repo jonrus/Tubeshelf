@@ -105,9 +105,7 @@ export function createSession(userId: number): { token: string } {
   return { token };
 }
 
-function findValidSession(
-  token: string,
-): { userId: number } | undefined {
+function findValidSession(token: string): { userId: number } | undefined {
   const tokenHash = hashToken(token);
   const session = db
     .select()

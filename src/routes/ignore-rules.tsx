@@ -14,6 +14,20 @@ export const ignoreRulesRoute = new Hono();
 
 ignoreRulesRoute.use("*", csrfCheck, requireAuth);
 
+function parseKeyword(body: { keyword?: unknown }): string {
+  return typeof body.keyword === "string" ? body.keyword.trim() : "";
+}
+
+function keywordError(editingId: number | undefined, message: string) {
+  return (
+    <IgnoreRulesList
+      rules={listIgnoreRules()}
+      editingId={editingId}
+      error={message}
+    />
+  );
+}
+
 ignoreRulesRoute.get("/ignore-rules", (c) => {
   const user = getCurrentUser();
   return c.html(
@@ -28,22 +42,17 @@ ignoreRulesRoute.get("/ignore-rules", (c) => {
 
 ignoreRulesRoute.post("/ignore-rules", async (c) => {
   const body = await c.req.parseBody();
-  const keyword = typeof body.keyword === "string" ? body.keyword.trim() : "";
+  const keyword = parseKeyword(body);
   if (keyword.length > IGNORE_RULE_KEYWORD_MAX_LENGTH) {
     return c.html(
-      <IgnoreRulesList
-        rules={listIgnoreRules()}
-        error={`Keyword must be ${IGNORE_RULE_KEYWORD_MAX_LENGTH} characters or fewer.`}
-      />,
+      keywordError(
+        undefined,
+        `Keyword must be ${IGNORE_RULE_KEYWORD_MAX_LENGTH} characters or fewer.`,
+      ),
     );
   }
   if (!keyword) {
-    return c.html(
-      <IgnoreRulesList
-        rules={listIgnoreRules()}
-        error="Keyword is required."
-      />,
-    );
+    return c.html(keywordError(undefined, "Keyword is required."));
   }
   db.insert(ignoreRules).values({ keyword }).run();
   reconcileIgnoreRules();
@@ -58,24 +67,17 @@ ignoreRulesRoute.get("/ignore-rules/:id/edit", (c) => {
 ignoreRulesRoute.post("/ignore-rules/:id", async (c) => {
   const id = Number(c.req.param("id"));
   const body = await c.req.parseBody();
-  const keyword = typeof body.keyword === "string" ? body.keyword.trim() : "";
+  const keyword = parseKeyword(body);
   if (keyword.length > IGNORE_RULE_KEYWORD_MAX_LENGTH) {
     return c.html(
-      <IgnoreRulesList
-        rules={listIgnoreRules()}
-        editingId={id}
-        error={`Keyword must be ${IGNORE_RULE_KEYWORD_MAX_LENGTH} characters or fewer.`}
-      />,
+      keywordError(
+        id,
+        `Keyword must be ${IGNORE_RULE_KEYWORD_MAX_LENGTH} characters or fewer.`,
+      ),
     );
   }
   if (!keyword) {
-    return c.html(
-      <IgnoreRulesList
-        rules={listIgnoreRules()}
-        editingId={id}
-        error="Keyword is required."
-      />,
-    );
+    return c.html(keywordError(id, "Keyword is required."));
   }
   const updated = db
     .update(ignoreRules)

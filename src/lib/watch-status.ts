@@ -2,9 +2,17 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db } from "../db/client";
 import { subscriptions, videos, youtubeChannels } from "../db/schema";
 
-function getCurrentStatus(videoId: number, userId: number) {
+// Shared with queue.tsx's videoForWatchingPage, which needs the exact same
+// ownership-scoped id/youtubeVideoId/title/status lookup as this file's internal
+// status checks below.
+export function ownedVideo(videoId: number, userId: number) {
   return db
-    .select({ status: videos.status })
+    .select({
+      id: videos.id,
+      youtubeVideoId: videos.youtubeVideoId,
+      title: videos.title,
+      status: videos.status,
+    })
     .from(videos)
     .innerJoin(youtubeChannels, eq(videos.channelId, youtubeChannels.id))
     .innerJoin(
@@ -19,6 +27,10 @@ function getCurrentStatus(videoId: number, userId: number) {
       ),
     )
     .get();
+}
+
+function getCurrentStatus(videoId: number, userId: number) {
+  return ownedVideo(videoId, userId);
 }
 
 export function setWatching(

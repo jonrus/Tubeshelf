@@ -1,6 +1,7 @@
-import { and, asc, count, desc, eq, inArray, isNull } from "drizzle-orm";
+import { asc, count, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "../db/client";
 import { categories, subscriptions, videos } from "../db/schema";
+import { countUserVideos } from "./nav-counts";
 
 export type CategoryWithCount = typeof categories.$inferSelect & {
   unwatchedCount: number;
@@ -18,23 +19,12 @@ export function getSystemCategory(): typeof categories.$inferSelect {
 }
 
 function categoryUnwatchedCount(userId: number, categoryId: number): number {
-  const row = db
-    .select({ count: count() })
-    .from(videos)
-    .innerJoin(
-      subscriptions,
-      eq(subscriptions.youtubeChannelId, videos.channelId),
-    )
-    .where(
-      and(
-        eq(subscriptions.userId, userId),
-        eq(subscriptions.categoryId, categoryId),
-        isNull(subscriptions.unsubscribedAt),
-        inArray(videos.status, ["unwatched", "watching"]),
-      ),
-    )
-    .get();
-  return row?.count ?? 0;
+  return countUserVideos(
+    userId,
+    eq(subscriptions.categoryId, categoryId),
+    isNull(subscriptions.unsubscribedAt),
+    inArray(videos.status, ["unwatched", "watching"]),
+  );
 }
 
 function categoryChannelCount(categoryId: number): number {

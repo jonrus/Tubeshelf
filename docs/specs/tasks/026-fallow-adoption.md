@@ -161,7 +161,7 @@ until task 14 is done.** Every `bun`/`bunx` command below runs via
       `test/routes/categories.test.ts`) passes unmodified; `bunx tsc
       --noEmit` is clean.
 
-- [ ] 7. Reconcile any remaining duplication against a fresh full-repo scan.
+- [x] 7. Reconcile any remaining duplication against a fresh full-repo scan.
       Run `bunx fallow dupes` across the whole repo and compare against the
       spec's original 18-group/13.6% baseline. Per the spec's Design note,
       some of the original groups may have been near-identical/overlapping

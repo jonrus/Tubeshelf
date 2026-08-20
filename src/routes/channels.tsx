@@ -1,4 +1,5 @@
 import { and, asc, count, eq, inArray, isNull } from "drizzle-orm";
+import type { Context } from "hono";
 import { Hono } from "hono";
 import { db } from "../db/client";
 import {
@@ -233,13 +234,15 @@ channelsRoute.post("/subscriptions", async (c) => {
   );
 });
 
-channelsRoute.delete("/subscriptions/:id", (c) => {
-  const user = getCurrentUser();
-  const id = Number(c.req.param("id"));
-
+function updateOwnedSubscription(
+  c: Context,
+  user: { id: number },
+  id: number,
+  set: Partial<typeof subscriptions.$inferInsert>,
+) {
   const updated = db
     .update(subscriptions)
-    .set({ unsubscribedAt: new Date() })
+    .set(set)
     .where(
       and(
         eq(subscriptions.id, id),
@@ -257,30 +260,18 @@ channelsRoute.delete("/subscriptions/:id", (c) => {
   return c.html(
     <SubscriptionList subscriptions={listActiveSubscriptions(user.id)} />,
   );
+}
+
+channelsRoute.delete("/subscriptions/:id", (c) => {
+  const user = getCurrentUser();
+  const id = Number(c.req.param("id"));
+  return updateOwnedSubscription(c, user, id, { unsubscribedAt: new Date() });
 });
 
 channelsRoute.post("/subscriptions/:id/dismiss-missed-videos", (c) => {
   const user = getCurrentUser();
   const id = Number(c.req.param("id"));
-
-  const updated = db
-    .update(subscriptions)
-    .set({ missedVideosDismissedAt: new Date() })
-    .where(
-      and(
-        eq(subscriptions.id, id),
-        eq(subscriptions.userId, user.id),
-        isNull(subscriptions.unsubscribedAt),
-      ),
-    )
-    .returning()
-    .get();
-
-  if (!updated) {
-    return c.notFound();
-  }
-
-  return c.html(
-    <SubscriptionList subscriptions={listActiveSubscriptions(user.id)} />,
-  );
+  return updateOwnedSubscription(c, user, id, {
+    missedVideosDismissedAt: new Date(),
+  });
 });
