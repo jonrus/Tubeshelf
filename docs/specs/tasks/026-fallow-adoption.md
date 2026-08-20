@@ -94,7 +94,7 @@ until task 14 is done.** Every `bun`/`bunx` command below runs via
       is clean; `bunx fallow dupes` no longer reports a clone group inside
       this file.
 
-- [ ] 4. Extract `src/lib/queue-urls.ts`'s repeated URL-params-building
+- [x] 4. Extract `src/lib/queue-urls.ts`'s repeated URL-params-building
       logic into a private helper. `buildContinueWatchingHref`,
       `buildWatchedHref`, and `buildIgnoredHref` are currently identical
       except for their base path; `buildQueueHref` is the same shape plus an
