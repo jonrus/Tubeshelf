@@ -158,13 +158,17 @@ See spec008's task file (`docs/specs/tasks/008-mvp-completion-gaps.md`) for a wo
 of the split.
 
 Every spec's final task-file step (and matching manual-verification section, if the spec
-has one) must run all three of `bun test`, `bun run lint`, **and `bunx tsc --noEmit`**
-clean across the repo — not just the first two. `bun test`/`bun run lint` don't do a full
-type-check, so type errors (e.g. ones caused by `tsconfig.json`'s
-`noUncheckedIndexedAccess`) can sit unnoticed for multiple specs' worth of commits until
-someone runs `tsc --noEmit` by hand (confirmed happening in spec006: a `match[1]:
-string | undefined` error introduced by spec005 wasn't caught until spec006's final
-verification pass, several commits later).
+has one) must run all four of `bun test`, `bun run lint`, `bunx tsc --noEmit`, **and
+`bun run fallow`** clean across the repo — not just the first two or three. `bun test`/
+`bun run lint` don't do a full type-check, so type errors (e.g. ones caused by
+`tsconfig.json`'s `noUncheckedIndexedAccess`) can sit unnoticed for multiple specs' worth
+of commits until someone runs `tsc --noEmit` by hand (confirmed happening in spec006: a
+`match[1]: string | undefined` error introduced by spec005 wasn't caught until spec006's
+final verification pass, several commits later). `bun run fallow` (added in
+`docs/specs/026-fallow-adoption.md`) closes the same class of gap one level further out —
+cross-file dead code and duplication that none of the other three touch — and belongs in
+this list for the same reason: catch it locally before push, not only after CI runs
+`main-checks`.
 
 ## Memory vs. version control
 
