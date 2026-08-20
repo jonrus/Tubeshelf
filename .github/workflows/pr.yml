@@ -33,6 +33,14 @@ jobs:
         with: { bun-version: "1" }
       - run: bun install --frozen-lockfile
       - run: bunx tsc --noEmit
+  fallow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: "1" }
+      - run: bun install --frozen-lockfile
+      - run: bun run fallow
   docker-build-check:
     runs-on: ubuntu-latest
     steps:

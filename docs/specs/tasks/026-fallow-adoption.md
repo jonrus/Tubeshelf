@@ -189,7 +189,7 @@ until task 14 is done.** Every `bun`/`bunx` command below runs via
       (either genuinely resolved or explicitly suppressed with reasoning);
       `bun test` and `bunx tsc --noEmit` are both clean.
 
-- [ ] 9. Add the new `fallow` job to `.github/workflows/pr.yml`, exactly as
+- [x] 9. Add the new `fallow` job to `.github/workflows/pr.yml`, exactly as
       specified in the spec's Design section (parallel to the existing four
       jobs):
       ```yaml
