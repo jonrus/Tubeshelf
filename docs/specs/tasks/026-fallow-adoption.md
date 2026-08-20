@@ -145,7 +145,7 @@ until task 14 is done.** Every `bun`/`bunx` command below runs via
       clean; `bunx fallow dupes` no longer reports this pattern as
       duplicated in this file.
 
-- [ ] 6. Address `src/routes/categories.tsx`'s duplication. Run
+- [x] 6. Address `src/routes/categories.tsx`'s duplication. Run
       `bunx fallow dupes` first to get the current exact clone groups (the
       spec's drafting-time line numbers may have shifted) — expect to find
       the repeated "look up category by id" query (`db.select().from(categories).where(eq(categories.id, id)).get()`,
