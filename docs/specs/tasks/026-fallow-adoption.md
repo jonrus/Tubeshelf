@@ -59,7 +59,7 @@ until task 14 is done.** Every `bun`/`bunx` command below runs via
       (confirms nothing outside these three files was actually depending on
       the export).
 
-- [ ] 3. Extract `src/lib/watch-status.ts`'s repeated "current status"
+- [x] 3. Extract `src/lib/watch-status.ts`'s repeated "current status"
       lookup into a private helper. All five exported functions
       (`setWatching`, `toggleQueueStatus`, `toggleWatchedFromWatchingPage`,
       `ignoreVideo`, `unignoreVideo`) currently repeat this identical block
