@@ -220,7 +220,7 @@ until task 14 is done.** Every `bun`/`bunx` command below runs via
       silently work around it. Done when: `bun run fallow` exits 0 with no
       `error`-severity findings anywhere in the repo.
 
-- [ ] 11. Final verification. Run `bun test`, `bun run lint`,
+- [x] 11. Final verification. Run `bun test`, `bun run lint`,
       `bunx tsc --noEmit`, and `bun run fallow` — all four clean across the
       repo (per `CLAUDE.md`'s now-updated verification-quartet rule). Per
       task 10's note, run `bun run fallow` directly on the host, not via
