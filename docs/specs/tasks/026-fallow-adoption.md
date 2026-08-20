@@ -118,7 +118,7 @@ until task 14 is done.** Every `bun`/`bunx` command below runs via
       deleted); `bunx tsc --noEmit` is clean; `bunx fallow dupes` no longer
       reports a clone group inside this file.
 
-- [ ] 5. Extract `src/routes/queue.tsx`'s repeated pagination-finalization
+- [x] 5. Extract `src/routes/queue.tsx`'s repeated pagination-finalization
       logic. `queueVideos`, `continueWatchingVideos`, `watchedVideos`,
       `ignoredVideos` (and any other paginated query function in this file —
       confirm by reading the full file, not just the first ~270 lines)

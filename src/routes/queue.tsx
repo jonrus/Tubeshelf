@@ -36,6 +36,20 @@ function parseCursor(
   return { at, id };
 }
 
+function finalizePage<T extends { id: number }>(
+  fetched: T[],
+  cursorAt: (row: T) => Date | null,
+): { rows: T[]; nextCursor: { at: Date; id: number } | undefined } {
+  const hasMore = fetched.length > PAGE_SIZE;
+  const rows = hasMore ? fetched.slice(0, PAGE_SIZE) : fetched;
+  const lastRow = rows.length > 0 ? rows[rows.length - 1] : undefined;
+  const at = lastRow ? cursorAt(lastRow) : null;
+  const nextCursor =
+    hasMore && lastRow && at !== null ? { at, id: lastRow.id } : undefined;
+
+  return { rows, nextCursor };
+}
+
 function queueVideos(
   userId: number,
   sort: "newest" | "oldest",
@@ -96,15 +110,7 @@ function queueVideos(
     .limit(PAGE_SIZE + 1)
     .all();
 
-  const hasMore = fetched.length > PAGE_SIZE;
-  const rows = hasMore ? fetched.slice(0, PAGE_SIZE) : fetched;
-  const lastRow = rows.length > 0 ? rows[rows.length - 1] : undefined;
-  const nextCursor =
-    hasMore && lastRow && lastRow.publishedAt !== null
-      ? { at: lastRow.publishedAt, id: lastRow.id }
-      : undefined;
-
-  return { rows, nextCursor };
+  return finalizePage(fetched, (row) => row.publishedAt);
 }
 
 function queueRowById(id: number, userId: number) {
@@ -182,15 +188,7 @@ function continueWatchingVideos(
     .limit(PAGE_SIZE + 1)
     .all();
 
-  const hasMore = fetched.length > PAGE_SIZE;
-  const rows = hasMore ? fetched.slice(0, PAGE_SIZE) : fetched;
-  const lastRow = rows.length > 0 ? rows[rows.length - 1] : undefined;
-  const nextCursor =
-    hasMore && lastRow && lastRow.publishedAt !== null
-      ? { at: lastRow.publishedAt, id: lastRow.id }
-      : undefined;
-
-  return { rows, nextCursor };
+  return finalizePage(fetched, (row) => row.publishedAt);
 }
 
 function watchedVideos(
@@ -242,18 +240,10 @@ function watchedVideos(
     .limit(PAGE_SIZE + 1)
     .all();
 
-  const hasMore = fetched.length > PAGE_SIZE;
-  const rows = hasMore ? fetched.slice(0, PAGE_SIZE) : fetched;
-  const lastRow = rows.length > 0 ? rows[rows.length - 1] : undefined;
   // watchedAt is DB-guaranteed non-null here via the watched_at_check constraint
   // (schema.ts) given the fixed status = "watched" filter above, but the column's
-  // schema type is still nullable, so this guard stays for tsc's benefit.
-  const nextCursor =
-    hasMore && lastRow && lastRow.watchedAt !== null
-      ? { at: lastRow.watchedAt, id: lastRow.id }
-      : undefined;
-
-  return { rows, nextCursor };
+  // schema type is still nullable, so finalizePage's null guard stays for tsc's benefit.
+  return finalizePage(fetched, (row) => row.watchedAt);
 }
 
 function ignoredVideos(
@@ -300,13 +290,7 @@ function ignoredVideos(
     .limit(PAGE_SIZE + 1)
     .all();
 
-  const hasMore = fetched.length > PAGE_SIZE;
-  const rows = hasMore ? fetched.slice(0, PAGE_SIZE) : fetched;
-  const lastRow = rows.length > 0 ? rows[rows.length - 1] : undefined;
-  const nextCursor =
-    hasMore && lastRow ? { at: lastRow.createdAt, id: lastRow.id } : undefined;
-
-  return { rows, nextCursor };
+  return finalizePage(fetched, (row) => row.createdAt);
 }
 
 function resolveCategoryFilter(raw: string | undefined): number | undefined {
