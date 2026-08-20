@@ -206,7 +206,7 @@ until task 14 is done.** Every `bun`/`bunx` command below runs via
       `test`/`typecheck`/`docker-build-check` jobs, matching their exact
       action-version style; the file is otherwise unchanged.
 
-- [ ] 10. **Run `bun run fallow` (or `node_modules/.bin/fallow`) directly on
+- [x] 10. **Run `bun run fallow` (or `node_modules/.bin/fallow`) directly on
       the host, not via `devcontainer exec`** — see `CLAUDE.md`'s "Running
       commands" gotcha list, confirmed while executing task 8: the
       devcontainer's Bun-only base image hangs forever on `fallow`'s
