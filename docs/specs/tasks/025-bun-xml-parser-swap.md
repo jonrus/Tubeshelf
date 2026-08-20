@@ -68,7 +68,7 @@ Generated: 2026-08-20
       to `status: implemented`. Done when: all three commands are clean
       and the frontmatter is updated.
 
-- [ ] 5. Open the PR: fill out a summary (referencing this spec — the
+- [x] 5. Open the PR: fill out a summary (referencing this spec — the
       fast-xml-parser → Bun.XML.parse swap, the `@types/bun` →
       `bun-types` devDependency fix, and why both are safe, per the spec's
       Design section) and a test plan (the three commands from task 4,
