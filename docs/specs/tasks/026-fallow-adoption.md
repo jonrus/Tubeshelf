@@ -289,7 +289,7 @@ until task 14 is done.** Every `bun`/`bunx` command below runs via
       filled-out description, and this checkbox is checked in the commit
       that either accompanies or precedes the push.
 
-- [ ] 13. **Manual (user, GitHub UI) — only once task 12's PR is open and
+- [x] 13. **Manual (user, GitHub UI) — only once task 12's PR is open and
       its `fallow` check has reported at least one run.** Add `fallow` to
       `main-checks`' required status checks:
       `Settings → Rules → Rulesets → main-checks` → under "Require status
@@ -306,7 +306,7 @@ until task 14 is done.** Every `bun`/`bunx` command below runs via
       `fallow` present in `rules[].parameters.required_status_checks`
       alongside the existing four.
 
-- [ ] 14. Land task 13's checkbox on the open PR. **Exact order, same
+- [x] 14. Land task 13's checkbox on the open PR. **Exact order, same
       check-off-before-pushing convention as task 12 — do the edit and
       commit first, push second:**
       1. In this task file, check off **both** box 13 and box 14 (this box)
