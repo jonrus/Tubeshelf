@@ -246,7 +246,7 @@ export function queueCard(
       {row.status === "watching" ? (
         <span class="mx-3 text-sm text-accent">▶ Watching</span>
       ) : null}
-      <div class="mt-auto flex gap-2 p-3 pt-2">
+      <div class="mt-auto flex justify-between p-3 pt-2">
         <button
           type="button"
           hx-post={toggleHref(row.id, view, sort, category)}

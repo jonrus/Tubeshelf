@@ -15,7 +15,7 @@ Generated: 2026-08-21
   `public/css/tailwind.css` contains a `button:not(:disabled)` selector paired with
   `cursor:pointer` in its minified output, and `bun run lint` is clean.
 
-- [ ] 2. Spread the video-card button pair to opposite edges (spec Design §2). In
+- [x] 2. Spread the video-card button pair to opposite edges (spec Design §2). In
   `src/views/queue-list.tsx`, `queueCard`'s button-row `<div>` — currently `class="mt-auto
   flex gap-2 p-3 pt-2"` — changes to `class="mt-auto flex justify-between p-3 pt-2"` (drop
   `gap-2`, add `justify-between`). No other markup in `queueCard` changes; `watchedCard` and
