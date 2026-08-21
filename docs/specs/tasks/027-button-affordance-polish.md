@@ -25,7 +25,7 @@ Generated: 2026-08-21
   test/` returning no hits — so `bun test` isn't expected to catch a mistake here; rely on
   lint/tsc plus the manual verification in the final task).
 
-- [ ] 3. Final verification, spec status, and PR.
+- [x] 3. Final verification, spec status, and PR.
 
   **Claude performs directly** (via `devcontainer exec --docker-path podman
   --workspace-folder .`):
