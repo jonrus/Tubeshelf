@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, gt, inArray, isNull, lt, or } from "drizzle-orm";
+import type { Context } from "hono";
 import { Hono } from "hono";
 import { db } from "../db/client";
 import {
@@ -14,6 +15,7 @@ import { getNavCounts } from "../lib/nav-counts";
 import { buildQueueHref } from "../lib/queue-urls";
 import {
   ignoreVideo,
+  ownedVideo,
   setWatching,
   toggleQueueStatus,
   toggleWatchedFromWatchingPage,
@@ -36,13 +38,24 @@ function parseCursor(
   return { at, id };
 }
 
-function queueVideos(
-  userId: number,
-  sort: "newest" | "oldest",
-  categoryId: number | undefined,
-  cursor: { at: Date; id: number } | undefined,
-) {
-  const fetched = db
+function finalizePage<T extends { id: number }>(
+  fetched: T[],
+  cursorAt: (row: T) => Date | null,
+): { rows: T[]; nextCursor: { at: Date; id: number } | undefined } {
+  const hasMore = fetched.length > PAGE_SIZE;
+  const rows = hasMore ? fetched.slice(0, PAGE_SIZE) : fetched;
+  const lastRow = rows.length > 0 ? rows[rows.length - 1] : undefined;
+  const at = lastRow ? cursorAt(lastRow) : null;
+  const nextCursor =
+    hasMore && lastRow && at !== null ? { at, id: lastRow.id } : undefined;
+
+  return { rows, nextCursor };
+}
+
+// Shared select/join base for queueVideos, queueRowById, and continueWatchingVideos --
+// all three list/look up the same queue-card fields, differing only in `where`.
+function queueRowsBaseQuery() {
+  return db
     .select({
       id: videos.id,
       youtubeVideoId: videos.youtubeVideoId,
@@ -58,7 +71,16 @@ function queueVideos(
       subscriptions,
       eq(subscriptions.youtubeChannelId, youtubeChannels.id),
     )
-    .innerJoin(categories, eq(subscriptions.categoryId, categories.id))
+    .innerJoin(categories, eq(subscriptions.categoryId, categories.id));
+}
+
+function queueVideos(
+  userId: number,
+  sort: "newest" | "oldest",
+  categoryId: number | undefined,
+  cursor: { at: Date; id: number } | undefined,
+) {
+  const fetched = queueRowsBaseQuery()
     .where(
       and(
         eq(subscriptions.userId, userId),
@@ -96,35 +118,11 @@ function queueVideos(
     .limit(PAGE_SIZE + 1)
     .all();
 
-  const hasMore = fetched.length > PAGE_SIZE;
-  const rows = hasMore ? fetched.slice(0, PAGE_SIZE) : fetched;
-  const lastRow = rows.length > 0 ? rows[rows.length - 1] : undefined;
-  const nextCursor =
-    hasMore && lastRow && lastRow.publishedAt !== null
-      ? { at: lastRow.publishedAt, id: lastRow.id }
-      : undefined;
-
-  return { rows, nextCursor };
+  return finalizePage(fetched, (row) => row.publishedAt);
 }
 
 function queueRowById(id: number, userId: number) {
-  return db
-    .select({
-      id: videos.id,
-      youtubeVideoId: videos.youtubeVideoId,
-      title: videos.title,
-      publishedAt: videos.publishedAt,
-      status: videos.status,
-      channelName: youtubeChannels.name,
-      categoryName: categories.name,
-    })
-    .from(videos)
-    .innerJoin(youtubeChannels, eq(videos.channelId, youtubeChannels.id))
-    .innerJoin(
-      subscriptions,
-      eq(subscriptions.youtubeChannelId, youtubeChannels.id),
-    )
-    .innerJoin(categories, eq(subscriptions.categoryId, categories.id))
+  return queueRowsBaseQuery()
     .where(
       and(
         eq(videos.id, id),
@@ -140,23 +138,7 @@ function continueWatchingVideos(
   categoryId: number | undefined,
   cursor: { at: Date; id: number } | undefined,
 ) {
-  const fetched = db
-    .select({
-      id: videos.id,
-      youtubeVideoId: videos.youtubeVideoId,
-      title: videos.title,
-      publishedAt: videos.publishedAt,
-      status: videos.status,
-      channelName: youtubeChannels.name,
-      categoryName: categories.name,
-    })
-    .from(videos)
-    .innerJoin(youtubeChannels, eq(videos.channelId, youtubeChannels.id))
-    .innerJoin(
-      subscriptions,
-      eq(subscriptions.youtubeChannelId, youtubeChannels.id),
-    )
-    .innerJoin(categories, eq(subscriptions.categoryId, categories.id))
+  const fetched = queueRowsBaseQuery()
     .where(
       and(
         eq(subscriptions.userId, userId),
@@ -182,15 +164,7 @@ function continueWatchingVideos(
     .limit(PAGE_SIZE + 1)
     .all();
 
-  const hasMore = fetched.length > PAGE_SIZE;
-  const rows = hasMore ? fetched.slice(0, PAGE_SIZE) : fetched;
-  const lastRow = rows.length > 0 ? rows[rows.length - 1] : undefined;
-  const nextCursor =
-    hasMore && lastRow && lastRow.publishedAt !== null
-      ? { at: lastRow.publishedAt, id: lastRow.id }
-      : undefined;
-
-  return { rows, nextCursor };
+  return finalizePage(fetched, (row) => row.publishedAt);
 }
 
 function watchedVideos(
@@ -242,18 +216,10 @@ function watchedVideos(
     .limit(PAGE_SIZE + 1)
     .all();
 
-  const hasMore = fetched.length > PAGE_SIZE;
-  const rows = hasMore ? fetched.slice(0, PAGE_SIZE) : fetched;
-  const lastRow = rows.length > 0 ? rows[rows.length - 1] : undefined;
   // watchedAt is DB-guaranteed non-null here via the watched_at_check constraint
   // (schema.ts) given the fixed status = "watched" filter above, but the column's
-  // schema type is still nullable, so this guard stays for tsc's benefit.
-  const nextCursor =
-    hasMore && lastRow && lastRow.watchedAt !== null
-      ? { at: lastRow.watchedAt, id: lastRow.id }
-      : undefined;
-
-  return { rows, nextCursor };
+  // schema type is still nullable, so finalizePage's null guard stays for tsc's benefit.
+  return finalizePage(fetched, (row) => row.watchedAt);
 }
 
 function ignoredVideos(
@@ -300,13 +266,7 @@ function ignoredVideos(
     .limit(PAGE_SIZE + 1)
     .all();
 
-  const hasMore = fetched.length > PAGE_SIZE;
-  const rows = hasMore ? fetched.slice(0, PAGE_SIZE) : fetched;
-  const lastRow = rows.length > 0 ? rows[rows.length - 1] : undefined;
-  const nextCursor =
-    hasMore && lastRow ? { at: lastRow.createdAt, id: lastRow.id } : undefined;
-
-  return { rows, nextCursor };
+  return finalizePage(fetched, (row) => row.createdAt);
 }
 
 function resolveCategoryFilter(raw: string | undefined): number | undefined {
@@ -319,6 +279,16 @@ function resolveCategoryFilter(raw: string | undefined): number | undefined {
     .where(eq(categories.id, id))
     .get();
   return exists ? id : undefined;
+}
+
+// Shared by the /continue-watching, /watched, and /ignored handlers (and the sort-
+// aware /queue handler, which reads `category`/`cursor` off the same result and adds
+// `sort` separately) -- all four parse category/cursor query params identically.
+function parseQueryFilters(c: Context) {
+  return {
+    category: resolveCategoryFilter(c.req.query("category")),
+    cursor: parseCursor(c.req.query("cursor"), c.req.query("cursorId")),
+  };
 }
 
 function resolveToggleView(
@@ -387,27 +357,7 @@ function resolveSort(sort: string | undefined): "newest" | "oldest" {
 }
 
 function videoForWatchingPage(videoId: number, userId: number) {
-  return db
-    .select({
-      id: videos.id,
-      youtubeVideoId: videos.youtubeVideoId,
-      title: videos.title,
-      status: videos.status,
-    })
-    .from(videos)
-    .innerJoin(youtubeChannels, eq(videos.channelId, youtubeChannels.id))
-    .innerJoin(
-      subscriptions,
-      eq(subscriptions.youtubeChannelId, youtubeChannels.id),
-    )
-    .where(
-      and(
-        eq(videos.id, videoId),
-        eq(subscriptions.userId, userId),
-        isNull(subscriptions.unsubscribedAt),
-      ),
-    )
-    .get();
+  return ownedVideo(videoId, userId);
 }
 
 export const queueRoute = new Hono();
@@ -419,8 +369,7 @@ queueRoute.get("/", (c) => c.redirect("/queue", 302));
 queueRoute.get("/queue", (c) => {
   const user = getCurrentUser();
   const sort = resolveSort(c.req.query("sort"));
-  const category = resolveCategoryFilter(c.req.query("category"));
-  const cursor = parseCursor(c.req.query("cursor"), c.req.query("cursorId"));
+  const { category, cursor } = parseQueryFilters(c);
   const { rows, nextCursor } = queueVideos(user.id, sort, category, cursor);
 
   if (cursor !== undefined) {
@@ -461,8 +410,7 @@ queueRoute.get("/queue", (c) => {
 
 queueRoute.get("/continue-watching", (c) => {
   const user = getCurrentUser();
-  const category = resolveCategoryFilter(c.req.query("category"));
-  const cursor = parseCursor(c.req.query("cursor"), c.req.query("cursorId"));
+  const { category, cursor } = parseQueryFilters(c);
   const { rows, nextCursor } = continueWatchingVideos(
     user.id,
     category,
@@ -500,8 +448,7 @@ queueRoute.get("/continue-watching", (c) => {
 
 queueRoute.get("/watched", (c) => {
   const user = getCurrentUser();
-  const category = resolveCategoryFilter(c.req.query("category"));
-  const cursor = parseCursor(c.req.query("cursor"), c.req.query("cursorId"));
+  const { category, cursor } = parseQueryFilters(c);
   const { rows, nextCursor } = watchedVideos(user.id, category, cursor);
 
   if (cursor !== undefined) {
@@ -535,8 +482,7 @@ queueRoute.get("/watched", (c) => {
 
 queueRoute.get("/ignored", (c) => {
   const user = getCurrentUser();
-  const category = resolveCategoryFilter(c.req.query("category"));
-  const cursor = parseCursor(c.req.query("cursor"), c.req.query("cursorId"));
+  const { category, cursor } = parseQueryFilters(c);
   const { rows, nextCursor } = ignoredVideos(user.id, category, cursor);
 
   if (cursor !== undefined) {

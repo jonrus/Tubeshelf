@@ -1,0 +1,5 @@
+{
+  "ignorePatterns": ["docs/features/**/*.html"],
+  "ignoreDependencies": ["htmx.org"],
+  "dynamicallyLoaded": ["scripts/generate-icons.ts"]
+}

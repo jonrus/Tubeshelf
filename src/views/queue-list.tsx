@@ -1,4 +1,5 @@
 import type { FC } from "hono/jsx";
+import type { JSX } from "hono/jsx/jsx-runtime";
 import type { videos } from "../db/schema";
 import {
   buildContinueWatchingHref,
@@ -12,7 +13,7 @@ import { EmptyState } from "./empty-state";
 
 type VideoStatus = (typeof videos.$inferSelect)["status"];
 
-export type QueueListView = "queue" | "continue-watching" | "watched";
+type QueueListView = "queue" | "continue-watching" | "watched";
 
 export type QueueRow = {
   id: number;
@@ -24,7 +25,7 @@ export type QueueRow = {
   categoryName: string;
 };
 
-export type WatchedRow = {
+type WatchedRow = {
   id: number;
   youtubeVideoId: string;
   title: string;
@@ -33,7 +34,7 @@ export type WatchedRow = {
   categoryName: string;
 };
 
-export type IgnoredRow = {
+type IgnoredRow = {
   id: number;
   youtubeVideoId: string;
   title: string;
@@ -134,45 +135,22 @@ const LoadMoreSentinel: FC<{ href: string }> = ({ href }) => (
   </div>
 );
 
-function watchedCard(row: WatchedRow, category: number | undefined) {
+// Shared thumbnail + title/channel/category markup across watchedCard, ignoredCard,
+// and queueCard -- `badge` is the trailing per-view span (watched-at / ignore-method /
+// published-at), `extra` an optional element rendered after the meta line inside the
+// same `p-3` wrapper (only ignoredCard's un-ignore button uses it).
+function videoCardBody(
+  row: {
+    title: string;
+    youtubeVideoId: string;
+    channelName: string;
+    categoryName: string;
+  },
+  badge: JSX.Element | null,
+  extra?: JSX.Element | null,
+) {
   return (
-    <div key={row.id} id={`video-${row.id}`} class={CARD_CLASS}>
-      <a
-        href={watchingHref(row.id, "watched", undefined, category)}
-        class="watch-link block"
-        data-youtube-url={youtubeWatchUrl(row.youtubeVideoId)}
-      >
-        <div class={THUMBNAIL_WRAPPER_CLASS}>
-          <img
-            src={youtubeThumbnailUrl(row.youtubeVideoId)}
-            alt={row.title}
-            loading="lazy"
-            onerror="this.style.visibility='hidden'"
-            class={THUMBNAIL_IMG_CLASS}
-          />
-        </div>
-        <div class="p-3">
-          <p class="font-medium text-text">{row.title}</p>
-          <div class="mt-1 flex flex-wrap items-center gap-1.5 text-sm">
-            <span class="text-text">{row.channelName}</span>
-            <span class="rounded-full bg-surface-raised px-2 py-0.5 text-xs text-text-muted">
-              {row.categoryName}
-            </span>
-            {row.watchedAt ? (
-              <span class="text-text-muted">
-                watched {formatRelativeTime(row.watchedAt)}
-              </span>
-            ) : null}
-          </div>
-        </div>
-      </a>
-    </div>
-  );
-}
-
-function ignoredCard(row: IgnoredRow, category: number | undefined) {
-  return (
-    <div key={row.id} id={`video-${row.id}`} class={CARD_CLASS}>
+    <>
       <div class={THUMBNAIL_WRAPPER_CLASS}>
         <img
           src={youtubeThumbnailUrl(row.youtubeVideoId)}
@@ -189,12 +167,45 @@ function ignoredCard(row: IgnoredRow, category: number | undefined) {
           <span class="rounded-full bg-surface-raised px-2 py-0.5 text-xs text-text-muted">
             {row.categoryName}
           </span>
-          {row.ignoreMethod ? (
-            <span class="rounded-full bg-surface-raised px-2 py-0.5 text-xs text-text-muted">
-              {row.ignoreMethod}
-            </span>
-          ) : null}
+          {badge}
         </div>
+        {extra}
+      </div>
+    </>
+  );
+}
+
+function watchedCard(row: WatchedRow, category: number | undefined) {
+  return (
+    <div key={row.id} id={`video-${row.id}`} class={CARD_CLASS}>
+      <a
+        href={watchingHref(row.id, "watched", undefined, category)}
+        class="watch-link block"
+        data-youtube-url={youtubeWatchUrl(row.youtubeVideoId)}
+      >
+        {videoCardBody(
+          row,
+          row.watchedAt ? (
+            <span class="text-text-muted">
+              watched {formatRelativeTime(row.watchedAt)}
+            </span>
+          ) : null,
+        )}
+      </a>
+    </div>
+  );
+}
+
+function ignoredCard(row: IgnoredRow, category: number | undefined) {
+  return (
+    <div key={row.id} id={`video-${row.id}`} class={CARD_CLASS}>
+      {videoCardBody(
+        row,
+        row.ignoreMethod ? (
+          <span class="rounded-full bg-surface-raised px-2 py-0.5 text-xs text-text-muted">
+            {row.ignoreMethod}
+          </span>
+        ) : null,
         <button
           type="button"
           hx-post={unignoreHref(row.id, category)}
@@ -204,8 +215,8 @@ function ignoredCard(row: IgnoredRow, category: number | undefined) {
           class="mt-2 rounded border border-border px-3 py-1 text-sm hover:bg-surface-raised"
         >
           Un-ignore
-        </button>
-      </div>
+        </button>,
+      )}
     </div>
   );
 }
@@ -223,29 +234,14 @@ export function queueCard(
         class="watch-link block"
         data-youtube-url={youtubeWatchUrl(row.youtubeVideoId)}
       >
-        <div class={THUMBNAIL_WRAPPER_CLASS}>
-          <img
-            src={youtubeThumbnailUrl(row.youtubeVideoId)}
-            alt={row.title}
-            loading="lazy"
-            onerror="this.style.visibility='hidden'"
-            class={THUMBNAIL_IMG_CLASS}
-          />
-        </div>
-        <div class="p-3">
-          <p class="font-medium text-text">{row.title}</p>
-          <div class="mt-1 flex flex-wrap items-center gap-1.5 text-sm">
-            <span class="text-text">{row.channelName}</span>
-            <span class="rounded-full bg-surface-raised px-2 py-0.5 text-xs text-text-muted">
-              {row.categoryName}
+        {videoCardBody(
+          row,
+          row.publishedAt ? (
+            <span class="text-text-muted">
+              {formatRelativeTime(row.publishedAt)}
             </span>
-            {row.publishedAt ? (
-              <span class="text-text-muted">
-                {formatRelativeTime(row.publishedAt)}
-              </span>
-            ) : null}
-          </div>
-        </div>
+          ) : null,
+        )}
       </a>
       {row.status === "watching" ? (
         <span class="mx-3 text-sm text-accent">▶ Watching</span>

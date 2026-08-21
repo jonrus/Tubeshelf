@@ -53,6 +53,27 @@ workflow, only to a Claude Code session using the CLI directly:
   around this with `script`, a pty wrapper, etc. — that risks leaving an orphaned process
   waiting on a pty nothing is attached to (see the gotcha above). Instead, hand the user the
   exact command to run in their own terminal and wait for them to report the result back.
+- **`fallow`'s type-aware analysis (`typeAware.enabled: true` in `.fallowrc.json`) hangs
+  forever inside the devcontainer** (confirmed 2026-08-20) — any command that triggers it
+  spawns a `fallow-type-aware` sidecar that shells out to what it expects is real Node.js
+  to run `tsc --api`. The `oven/bun:1` base image has no real Node.js; its `node` on `PATH`
+  is a symlink straight to `bun`
+  (`/usr/local/bun-node-fallback-bin/node -> /usr/local/bin/bun`), and the sidecar calls a
+  Node-internal API (`stdout._handle.fd`) that Bun doesn't implement, throwing inside a
+  context whose rejection never surfaces — the parent just hangs (confirmed reproducing
+  identically after a full container destroy/recreate, and confirmed *not* a TTY issue: it
+  hangs the same way in the user's own interactive terminal, only revealing the real error,
+  `stdout._handle.fd` on `undefined`, once force-killed with Ctrl+C). **This project's
+  `.fallowrc.json` deliberately leaves `typeAware` off** (per
+  `docs/specs/026-fallow-adoption.md`'s Design → `typeAware` subsection: enabling it didn't
+  measurably improve this repo's findings, so paying an ongoing devcontainer exception for
+  it wasn't worth it) — so plain `bun run fallow`/`bunx fallow` don't hit this hang and run
+  fine inside the devcontainer like any other project command; no exception needed for
+  routine use. If `typeAware` is ever turned back on for some reason, run that command
+  directly on the host instead of via `devcontainer exec` (the host has real Node.js and the
+  repo's `node_modules` is bind-mounted from the container, so `node_modules/.bin/fallow`
+  works as-is); this is also not a CI risk either way, since GitHub's `ubuntu-latest` runner
+  ships real Node.js regardless of `oven-sh/setup-bun@v2`.
 
 ## Development pattern: Spec-Driven Development
 
@@ -133,8 +154,8 @@ here as a project-specific pin, the same way the devcontainer paths above are):
   happens, see above — carries a task file that's already fully checked off, so the pushed
   branch and the opened PR both reflect a complete state with nothing left uncommitted
   afterward.
-- **CI and merge.** `pr.yml`'s four required checks (`lint`, `test`, `typecheck`,
-  `docker-build-check`) must be green. Merging is always manual — the user reviews and
+- **CI and merge.** `pr.yml`'s five required checks (`lint`, `test`, `typecheck`,
+  `docker-build-check`, `fallow`) must be green. Merging is always manual — the user reviews and
   clicks merge in the GitHub UI; Claude never runs `gh pr merge` or otherwise merges a PR
   itself.
 
@@ -158,13 +179,17 @@ See spec008's task file (`docs/specs/tasks/008-mvp-completion-gaps.md`) for a wo
 of the split.
 
 Every spec's final task-file step (and matching manual-verification section, if the spec
-has one) must run all three of `bun test`, `bun run lint`, **and `bunx tsc --noEmit`**
-clean across the repo — not just the first two. `bun test`/`bun run lint` don't do a full
-type-check, so type errors (e.g. ones caused by `tsconfig.json`'s
-`noUncheckedIndexedAccess`) can sit unnoticed for multiple specs' worth of commits until
-someone runs `tsc --noEmit` by hand (confirmed happening in spec006: a `match[1]:
-string | undefined` error introduced by spec005 wasn't caught until spec006's final
-verification pass, several commits later).
+has one) must run all four of `bun test`, `bun run lint`, `bunx tsc --noEmit`, **and
+`bun run fallow`** clean across the repo — not just the first two or three. `bun test`/
+`bun run lint` don't do a full type-check, so type errors (e.g. ones caused by
+`tsconfig.json`'s `noUncheckedIndexedAccess`) can sit unnoticed for multiple specs' worth
+of commits until someone runs `tsc --noEmit` by hand (confirmed happening in spec006: a
+`match[1]: string | undefined` error introduced by spec005 wasn't caught until spec006's
+final verification pass, several commits later). `bun run fallow` (added in
+`docs/specs/026-fallow-adoption.md`) closes the same class of gap one level further out —
+cross-file dead code and duplication that none of the other three touch — and belongs in
+this list for the same reason: catch it locally before push, not only after CI runs
+`main-checks`.
 
 ## Memory vs. version control
 

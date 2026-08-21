@@ -35,7 +35,7 @@ export function dueChannels(
     .all();
 }
 
-export async function tick(): Promise<void> {
+async function tick(): Promise<void> {
   for (const channel of dueChannels(new Date())) {
     await ingestChannel(channel); // never throws -- see ingestChannel's try/catch
   }

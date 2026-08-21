@@ -2,12 +2,17 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db } from "../db/client";
 import { subscriptions, videos, youtubeChannels } from "../db/schema";
 
-export function setWatching(
-  videoId: number,
-  userId: number,
-): { status: "watching" } | null {
-  const current = db
-    .select({ status: videos.status })
+// Shared with queue.tsx's videoForWatchingPage, which needs the exact same
+// ownership-scoped id/youtubeVideoId/title/status lookup as this file's internal
+// status checks below.
+export function ownedVideo(videoId: number, userId: number) {
+  return db
+    .select({
+      id: videos.id,
+      youtubeVideoId: videos.youtubeVideoId,
+      title: videos.title,
+      status: videos.status,
+    })
     .from(videos)
     .innerJoin(youtubeChannels, eq(videos.channelId, youtubeChannels.id))
     .innerJoin(
@@ -22,6 +27,17 @@ export function setWatching(
       ),
     )
     .get();
+}
+
+function getCurrentStatus(videoId: number, userId: number) {
+  return ownedVideo(videoId, userId);
+}
+
+export function setWatching(
+  videoId: number,
+  userId: number,
+): { status: "watching" } | null {
+  const current = getCurrentStatus(videoId, userId);
   if (!current) return null;
 
   db.update(videos)
@@ -48,22 +64,7 @@ export function toggleQueueStatus(
   videoId: number,
   userId: number,
 ): { status: "watched" | "unwatched" } | null {
-  const current = db
-    .select({ status: videos.status })
-    .from(videos)
-    .innerJoin(youtubeChannels, eq(videos.channelId, youtubeChannels.id))
-    .innerJoin(
-      subscriptions,
-      eq(subscriptions.youtubeChannelId, youtubeChannels.id),
-    )
-    .where(
-      and(
-        eq(videos.id, videoId),
-        eq(subscriptions.userId, userId),
-        isNull(subscriptions.unsubscribedAt),
-      ),
-    )
-    .get();
+  const current = getCurrentStatus(videoId, userId);
   if (!current) return null;
 
   // unwatched -> watched
@@ -94,22 +95,7 @@ export function toggleWatchedFromWatchingPage(
   videoId: number,
   userId: number,
 ): { status: "watched" | "unwatched" } | null {
-  const current = db
-    .select({ status: videos.status })
-    .from(videos)
-    .innerJoin(youtubeChannels, eq(videos.channelId, youtubeChannels.id))
-    .innerJoin(
-      subscriptions,
-      eq(subscriptions.youtubeChannelId, youtubeChannels.id),
-    )
-    .where(
-      and(
-        eq(videos.id, videoId),
-        eq(subscriptions.userId, userId),
-        isNull(subscriptions.unsubscribedAt),
-      ),
-    )
-    .get();
+  const current = getCurrentStatus(videoId, userId);
   if (!current) return null;
 
   const nextStatus = current.status === "watched" ? "unwatched" : "watched";
@@ -130,22 +116,7 @@ export function ignoreVideo(
   videoId: number,
   userId: number,
 ): { status: "ignored" } | null {
-  const current = db
-    .select({ status: videos.status })
-    .from(videos)
-    .innerJoin(youtubeChannels, eq(videos.channelId, youtubeChannels.id))
-    .innerJoin(
-      subscriptions,
-      eq(subscriptions.youtubeChannelId, youtubeChannels.id),
-    )
-    .where(
-      and(
-        eq(videos.id, videoId),
-        eq(subscriptions.userId, userId),
-        isNull(subscriptions.unsubscribedAt),
-      ),
-    )
-    .get();
+  const current = getCurrentStatus(videoId, userId);
   if (!current) return null;
 
   db.update(videos)
@@ -159,22 +130,7 @@ export function unignoreVideo(
   videoId: number,
   userId: number,
 ): { status: "unwatched" } | null {
-  const current = db
-    .select({ status: videos.status })
-    .from(videos)
-    .innerJoin(youtubeChannels, eq(videos.channelId, youtubeChannels.id))
-    .innerJoin(
-      subscriptions,
-      eq(subscriptions.youtubeChannelId, youtubeChannels.id),
-    )
-    .where(
-      and(
-        eq(videos.id, videoId),
-        eq(subscriptions.userId, userId),
-        isNull(subscriptions.unsubscribedAt),
-      ),
-    )
-    .get();
+  const current = getCurrentStatus(videoId, userId);
   if (!current) return null;
 
   db.update(videos)
