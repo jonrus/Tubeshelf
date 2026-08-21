@@ -154,8 +154,8 @@ here as a project-specific pin, the same way the devcontainer paths above are):
   happens, see above — carries a task file that's already fully checked off, so the pushed
   branch and the opened PR both reflect a complete state with nothing left uncommitted
   afterward.
-- **CI and merge.** `pr.yml`'s four required checks (`lint`, `test`, `typecheck`,
-  `docker-build-check`) must be green. Merging is always manual — the user reviews and
+- **CI and merge.** `pr.yml`'s five required checks (`lint`, `test`, `typecheck`,
+  `docker-build-check`, `fallow`) must be green. Merging is always manual — the user reviews and
   clicks merge in the GitHub UI; Claude never runs `gh pr merge` or otherwise merges a PR
   itself.
 
