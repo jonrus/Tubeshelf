@@ -26,3 +26,7 @@
   background-color: var(--color-border);
   border-radius: 9999px;
 }
+
+button:not(:disabled) {
+  cursor: pointer;
+}

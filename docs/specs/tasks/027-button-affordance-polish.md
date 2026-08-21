@@ -2,7 +2,7 @@
 Spec: docs/specs/027-button-affordance-polish.md
 Generated: 2026-08-21
 
-- [ ] 1. Add the global pointer-cursor rule (spec Design §1). In `src/styles/input.css`,
+- [x] 1. Add the global pointer-cursor rule (spec Design §1). In `src/styles/input.css`,
   after the existing `#sidebar`/`::-webkit-scrollbar` rules (the file's last content), add:
   ```css
   button:not(:disabled) {
