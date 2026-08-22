@@ -272,7 +272,7 @@ Generated: 2026-08-22
   Done when: all six checks above show the expected output, and the test DB is left
   clean (no leftover manually-inserted row).
 
-- [ ] 14. Update `docs/specs/028-structured-logging.md` frontmatter to
+- [x] 14. Update `docs/specs/028-structured-logging.md` frontmatter to
   `status: implemented`.
 
 - [ ] 15. Open the PR: branch `spec/structured-logging` (already created and holding the
