@@ -109,7 +109,7 @@ function safeReschedule(channelId: number, now: Date): void {
       .where(eq(youtubeChannels.id, channelId))
       .run();
   } catch (err) {
-    logger.error("failed to reschedule channel after ingestion error", {
+    logger.error("Failed to reschedule channel after ingestion error", {
       channelId,
       err,
     });
@@ -137,7 +137,7 @@ export async function ingestChannel(
     applyFeedToChannel(channel.id, feed);
     return { ok: true };
   } catch (err) {
-    logger.error("ingestion failed", { channelId: channel.id, err });
+    logger.error("Ingestion failed", { channelId: channel.id, err });
     safeReschedule(channel.id, now);
     return { ok: false };
   }

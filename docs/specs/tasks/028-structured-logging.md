@@ -91,11 +91,11 @@ Generated: 2026-08-22
       entries.push(entry);
     } else {
       malformedCount++;
-      logger.debug("malformed feed entry", { channel: title, url: rssUrl, raw });
+      logger.debug("Malformed feed entry", { channel: title, url: rssUrl, raw });
     }
   }
   if (malformedCount > 0) {
-    logger.warn("skipped malformed feed entries", {
+    logger.warn("Skipped malformed feed entries", {
       channel: title,
       url: rssUrl,
       count: malformedCount,
@@ -126,17 +126,17 @@ Generated: 2026-08-22
 - [x] 5. Convert `src/lib/ingest.ts`'s two `console.error` call sites. Add
   `import { logger } from "./logger";` at the top. Replace line 111's
   `` console.error(`failed to reschedule channel ${channelId} after ingestion error`, err); ``
-  with `logger.error("failed to reschedule channel after ingestion error", { channelId, err });`.
+  with `logger.error("Failed to reschedule channel after ingestion error", { channelId, err });`.
   Replace line 139's
   `` console.error(`ingestion failed for channel ${channel.id}`, err); `` with
-  `logger.error("ingestion failed", { channelId: channel.id, err });`. Done when:
+  `logger.error("Ingestion failed", { channelId: channel.id, err });`. Done when:
   `src/lib/ingest.ts` contains no `console.*` calls, `bunx tsc --noEmit` passes, and the
   existing `test/lib/ingest.test.ts` suite still passes unmodified.
 
 - [x] 6. Convert `src/lib/scheduler.ts`'s one `console.error` call site (line 55, inside
   `runGuardedTick`'s `.catch()`). Add `import { logger } from "./logger";` at the top.
   Replace `` console.error("ingestion tick failed", err); `` with
-  `logger.error("ingestion tick failed", { err });`. Done when: `src/lib/scheduler.ts`
+  `logger.error("Ingestion tick failed", { err });`. Done when: `src/lib/scheduler.ts`
   contains no `console.*` calls, `bunx tsc --noEmit` passes, and the existing
   `test/lib/scheduler.test.ts` suite still passes unmodified.
 
@@ -175,15 +175,15 @@ Generated: 2026-08-22
 - [ ] 9. Convert `src/index.ts`'s five `console.*` call sites. Add
   `import { logger } from "./lib/logger";` alongside the existing imports. Replace:
   - Line 19: `console.error("Database migration failed:", err);` →
-    `logger.error("database migration failed", { err });`
+    `logger.error("Database migration failed", { err });`
   - Lines 20-25 (the operator-guidance paragraph): replace `console.error(...)` with
     `logger.error(...)`, keeping the message text **verbatim, unchanged** — per the spec,
     this is actionable human guidance, not routine noise, and is exempt from the
     "keep it short" goal.
-  - Line 28: `console.log("Migrations complete.");` → `logger.info("migrations complete");`
-  - Line 30: `console.log("Seed complete.");` → `logger.info("seed complete");`
+  - Line 28: `console.log("Migrations complete.");` → `logger.info("Migrations complete");`
+  - Line 30: `console.log("Seed complete.");` → `logger.info("Seed complete");`
   - Line 50: `console.log("Listening on http://localhost:3000");` →
-    `` logger.info("listening", { url: "http://localhost:3000" }); ``
+    `` logger.info("Listening", { url: "http://localhost:3000" }); ``
   Done when: `src/index.ts` contains no `console.*` calls and `bunx tsc --noEmit` passes.
   (No test imports `src/index.ts` directly — confirmed via repo search — so no test file
   to check here; covered instead by task 13's manual end-to-end verification.)

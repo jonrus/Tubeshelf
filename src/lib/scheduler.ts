@@ -53,7 +53,7 @@ export async function runGuardedTick(): Promise<void> {
   ticking = true;
   inFlightTick = tick()
     .catch((err) => {
-      logger.error("ingestion tick failed", { err });
+      logger.error("Ingestion tick failed", { err });
     })
     .finally(() => {
       ticking = false;

@@ -119,7 +119,7 @@ test("logs a single warn with a count when multiple entries are malformed", asyn
   await fetchChannelFeed(RSS_URL);
 
   expect(warnSpy).toHaveBeenCalledTimes(1);
-  expect(warnSpy).toHaveBeenCalledWith("skipped malformed feed entries", {
+  expect(warnSpy).toHaveBeenCalledWith("Skipped malformed feed entries", {
     channel: "Test Channel",
     url: RSS_URL,
     count: 2,

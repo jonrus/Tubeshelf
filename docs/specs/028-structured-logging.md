@@ -71,6 +71,10 @@ detail that keeps a future JSON renderer cheap: the same call site produces good
 either format, because the message and its structured context are already separated at the
 call site, not just at render time.
 
+Message casing: every `message` string starts with a capital letter, matching the casing of
+the `console.*` strings being replaced (see the Call sites converted table) — a deliberate,
+consistent convention across every call site this spec touches, not a per-file choice.
+
 ### Levels and `LOG_LEVEL`
 
 Order: `debug` < `info` < `warn` < `error`. `LOG_LEVEL` (default `info`) sets the minimum
@@ -192,20 +196,20 @@ unrelated error for as long as it's set) is accepted, not overlooked.
 
 | File | Current | New |
 | :--- | :--- | :--- |
-| `src/lib/rss.ts:94` | `console.error("skipping malformed feed entry", raw)` — per entry, raw XML | Malformed entries are counted during the parse loop; if `count > 0`, a single `logger.warn("skipped malformed feed entries", { channel: title, url: rssUrl, count })` after the loop — once per fetch, no raw payload by default. (The raw entry may still be worth exposing at `debug` level for deep troubleshooting — see Open Questions.) |
-| `src/lib/ingest.ts:111` | `console.error("failed to reschedule channel ${channelId}...", err)` | `logger.error("failed to reschedule channel after ingestion error", { channelId, err })` |
-| `src/lib/ingest.ts:139` | `console.error("ingestion failed for channel ${channel.id}", err)` | `logger.error("ingestion failed", { channelId: channel.id, err })` |
-| `src/lib/scheduler.ts:55` | `console.error("ingestion tick failed", err)` | `logger.error("ingestion tick failed", { err })` |
-| `src/lib/shutdown.ts:14` | `console.log("Received ${signal}, starting graceful shutdown")` | `logger.info("received signal, starting graceful shutdown", { signal })` |
-| `src/lib/shutdown.ts:37` | `console.log("Graceful shutdown complete")` | `logger.info("graceful shutdown complete")` |
-| `src/lib/shutdown.ts:40` | `console.error("Graceful shutdown timed out after ${timeoutMs}ms, forcing exit")` | `logger.error("graceful shutdown timed out, forcing exit", { timeoutMs })` |
-| `src/lib/shutdown.ts:60` | `console.log("Received ${signal} again, shutdown already in progress")` | `logger.info("received signal again, shutdown already in progress", { signal })` |
+| `src/lib/rss.ts:94` | `console.error("skipping malformed feed entry", raw)` — per entry, raw XML | Malformed entries are counted during the parse loop; if `count > 0`, a single `logger.warn("Skipped malformed feed entries", { channel: title, url: rssUrl, count })` after the loop — once per fetch, no raw payload by default. (The raw entry may still be worth exposing at `debug` level for deep troubleshooting — see Open Questions.) |
+| `src/lib/ingest.ts:111` | `console.error("failed to reschedule channel ${channelId}...", err)` | `logger.error("Failed to reschedule channel after ingestion error", { channelId, err })` |
+| `src/lib/ingest.ts:139` | `console.error("ingestion failed for channel ${channel.id}", err)` | `logger.error("Ingestion failed", { channelId: channel.id, err })` |
+| `src/lib/scheduler.ts:55` | `console.error("ingestion tick failed", err)` | `logger.error("Ingestion tick failed", { err })` |
+| `src/lib/shutdown.ts:14` | `console.log("Received ${signal}, starting graceful shutdown")` | `logger.info("Received signal, starting graceful shutdown", { signal })` |
+| `src/lib/shutdown.ts:37` | `console.log("Graceful shutdown complete")` | `logger.info("Graceful shutdown complete")` |
+| `src/lib/shutdown.ts:40` | `console.error("Graceful shutdown timed out after ${timeoutMs}ms, forcing exit")` | `logger.error("Graceful shutdown timed out, forcing exit", { timeoutMs })` |
+| `src/lib/shutdown.ts:60` | `console.log("Received ${signal} again, shutdown already in progress")` | `logger.info("Received signal again, shutdown already in progress", { signal })` |
 | `src/lib/auth.ts:46` | `console.warn("AUTH_RECOVERY_PASSWORD was applied...")` | `logger.warn("AUTH_RECOVERY_PASSWORD was applied to the default user's password. Unset this environment variable after use.")` — message text unchanged, just routed through the logger |
-| `src/index.ts:19` | `console.error("Database migration failed:", err)` | `logger.error("database migration failed", { err })` |
+| `src/index.ts:19` | `console.error("Database migration failed:", err)` | `logger.error("Database migration failed", { err })` |
 | `src/index.ts:20-25` | `console.error("The database may be partially migrated...")` | `logger.error("<same operator-guidance text, unchanged>")` — kept verbatim; this is actionable instructions for a human handling an outage, not routine noise, so it's exempt from the "keep it short" goal |
-| `src/index.ts:28` | `console.log("Migrations complete.")` | `logger.info("migrations complete")` |
-| `src/index.ts:30` | `console.log("Seed complete.")` | `logger.info("seed complete")` |
-| `src/index.ts:50` | `console.log("Listening on http://localhost:3000")` | `logger.info("listening", { url: "http://localhost:3000" })` |
+| `src/index.ts:28` | `console.log("Migrations complete.")` | `logger.info("Migrations complete")` |
+| `src/index.ts:30` | `console.log("Seed complete.")` | `logger.info("Seed complete")` |
+| `src/index.ts:50` | `console.log("Listening on http://localhost:3000")` | `logger.info("Listening", { url: "http://localhost:3000" })` |
 
 ### Documentation updates
 
