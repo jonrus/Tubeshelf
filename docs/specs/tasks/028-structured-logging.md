@@ -140,16 +140,16 @@ Generated: 2026-08-22
   contains no `console.*` calls, `bunx tsc --noEmit` passes, and the existing
   `test/lib/scheduler.test.ts` suite still passes unmodified.
 
-- [ ] 7. Convert `src/lib/shutdown.ts`'s four `console.*` call sites. Add
+- [x] 7. Convert `src/lib/shutdown.ts`'s four `console.*` call sites. Add
   `import { logger } from "./logger";` at the top. Replace:
   - Line 14: `` console.log(`Received ${signal}, starting graceful shutdown`); `` →
-    `logger.info("received signal, starting graceful shutdown", { signal });`
+    `logger.info("Received signal, starting graceful shutdown", { signal });`
   - Line 37: `console.log("Graceful shutdown complete");` →
-    `logger.info("graceful shutdown complete");`
+    `logger.info("Graceful shutdown complete");`
   - Lines 40-42: `` console.error(`Graceful shutdown timed out after ${timeoutMs}ms, forcing exit`); ``
-    → `logger.error("graceful shutdown timed out, forcing exit", { timeoutMs });`
+    → `logger.error("Graceful shutdown timed out, forcing exit", { timeoutMs });`
   - Line 60: `` console.log(`Received ${signal} again, shutdown already in progress`); ``
-    → `logger.info("received signal again, shutdown already in progress", { signal });`
+    → `logger.info("Received signal again, shutdown already in progress", { signal });`
   Done when: `src/lib/shutdown.ts` contains no `console.*` calls, `bunx tsc --noEmit`
   passes, and the existing `test/lib/shutdown.test.ts` suite still passes unmodified.
 

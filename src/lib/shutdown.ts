@@ -1,3 +1,5 @@
+import { logger } from "./logger";
+
 export type ShutdownDeps = {
   server: { stop(): Promise<void> };
   schedulerTimer: Timer;
@@ -11,7 +13,7 @@ export async function runShutdown(
   signal: string,
   deps: ShutdownDeps,
 ): Promise<number> {
-  console.log(`Received ${signal}, starting graceful shutdown`);
+  logger.info("Received signal, starting graceful shutdown", { signal });
 
   clearInterval(deps.schedulerTimer); // no new scheduler ticks start after this point
 
@@ -34,12 +36,10 @@ export async function runShutdown(
   let exitCode: number;
   if (result === "drain") {
     clearTimeout(timeoutHandle); // avoid a dangling timer, esp. with short test timeouts
-    console.log("Graceful shutdown complete");
+    logger.info("Graceful shutdown complete");
     exitCode = 0;
   } else {
-    console.error(
-      `Graceful shutdown timed out after ${timeoutMs}ms, forcing exit`,
-    );
+    logger.error("Graceful shutdown timed out, forcing exit", { timeoutMs });
     exitCode = 1;
   }
 
@@ -57,7 +57,9 @@ export function createShutdownHandler(
   let shuttingDown = false;
   return async (signal: string) => {
     if (shuttingDown) {
-      console.log(`Received ${signal} again, shutdown already in progress`);
+      logger.info("Received signal again, shutdown already in progress", {
+        signal,
+      });
       return;
     }
     shuttingDown = true;
