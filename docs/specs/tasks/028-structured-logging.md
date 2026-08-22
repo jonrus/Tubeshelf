@@ -109,7 +109,7 @@ Generated: 2026-08-22
   the existing `test/lib/rss.test.ts` suite still passes unmodified (it doesn't assert on
   log output today).
 
-- [ ] 4. Add a new test to `test/lib/rss.test.ts` verifying task 3's behavior. Reuse this
+- [x] 4. Add a new test to `test/lib/rss.test.ts` verifying task 3's behavior. Reuse this
   file's existing `spyOn(globalThis, "fetch").mockResolvedValue(new Response(xml, {
   status: 200 }))` pattern (see the `"skips a malformed entry without failing the whole
   fetch"` test, lines 59-88) and its malformed-entry fixture shape (an `<entry>` with an
