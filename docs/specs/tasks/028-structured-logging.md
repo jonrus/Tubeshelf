@@ -46,7 +46,7 @@ Generated: 2026-08-22
   `bunx tsc --noEmit` (via `devcontainer exec --docker-path podman --workspace-folder .`)
   passes with no errors from this file.
 
-- [ ] 2. Create `test/lib/logger.test.ts` (new file, no DB setup needed — `logger.ts` has
+- [x] 2. Create `test/lib/logger.test.ts` (new file, no DB setup needed — `logger.ts` has
   no DB dependency). Use `bun:test`'s `test`/`expect`/`spyOn`, and
   `beforeEach`/`afterEach` to save/restore `process.env.LOG_LEVEL` and
   `process.env.LOG_FORMAT` (delete them in `afterEach` so tests don't leak env state into
