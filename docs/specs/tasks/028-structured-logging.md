@@ -2,7 +2,7 @@
 Spec: docs/specs/028-structured-logging.md
 Generated: 2026-08-22
 
-- [ ] 1. Create `src/lib/logger.ts` implementing the module per the spec's Design section.
+- [x] 1. Create `src/lib/logger.ts` implementing the module per the spec's Design section.
   Export a single `logger` object (not standalone functions — this makes it directly
   spyable in tests via `spyOn(logger, "warn")` etc., needed by task 4):
   ```ts
