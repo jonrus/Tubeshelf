@@ -36,6 +36,21 @@ quick reference:
 | `PUID` | User ID the app process runs as inside the container. Defaults to `1000` if unset. |
 | `PGID` | Group ID the app process runs as inside the container. Defaults to `1000` if unset. |
 | `UMASK` | Permission mask applied to files created under `/data`. Defaults to `022` if unset. |
+| `LOG_LEVEL` | Minimum log level that prints — `debug`, `info`, `warn`, or `error`. Defaults to `info` if unset. Set to `debug` for verbose troubleshooting detail (includes full error stack traces and raw malformed-feed-entry payloads, both hidden above this level). |
+| `LOG_FORMAT` | Log line format — `text` (human-readable) or `json` (one JSON object per line, for log aggregators). Defaults to `text` if unset. |
+| `TZ` | IANA timezone name (e.g. `America/Chicago`) applied to log timestamps and to the app's own date displays (e.g. the absolute date shown for videos/watches older than 4 weeks). Defaults to UTC if unset. |
+
+### Timezone and log format
+
+`TZ` defaults to UTC if unset. It affects log timestamps and the absolute month/day date
+shown for videos/watches that are 4+ weeks old, but it does **not** affect the relative
+"Xh/Xd/Xw ago" text most queue items show — that text is computed purely from an
+epoch-millisecond difference and is timezone-independent by construction, so most of the UI
+won't visibly change even if you set `TZ`.
+
+`LOG_FORMAT=json` is available if you're feeding logs into an aggregator (Loki, CloudWatch,
+etc.) that expects one JSON object per line. `LOG_LEVEL=debug` turns on verbose
+troubleshooting detail, including full error stack traces that are hidden by default.
 
 ## 3. Initial login
 

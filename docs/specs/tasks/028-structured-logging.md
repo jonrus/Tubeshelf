@@ -209,7 +209,7 @@ Generated: 2026-08-22
   Done when: `.env.example` contains this block and `grep -c '^# [A-Z_]*:' .env.example`
   returns `9` (6 existing + 3 new).
 
-- [ ] 11. Update `docs/DEPLOYMENT.md`: add three rows (`LOG_LEVEL`, `LOG_FORMAT`, `TZ`,
+- [x] 11. Update `docs/DEPLOYMENT.md`: add three rows (`LOG_LEVEL`, `LOG_FORMAT`, `TZ`,
   matching `.env.example`'s wording) to the §2 Configuration table. Add a new short
   subsection after §2 (e.g. "### Timezone and log format") covering: `TZ` defaults to UTC
   if unset; it affects log timestamps and the absolute month/day date shown for
