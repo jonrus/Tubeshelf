@@ -5,6 +5,7 @@ import { getCookie, setCookie } from "hono/cookie";
 import { csrf } from "hono/csrf";
 import { db } from "../db/client";
 import { sessions, users } from "../db/schema";
+import { logger } from "./logger";
 
 declare module "hono" {
   interface ContextVariableMap {
@@ -43,7 +44,7 @@ export async function applyRecoveryPasswordFromEnv(): Promise<void> {
     .set({ passwordHash })
     .where(eq(users.username, "admin"))
     .run();
-  console.warn(
+  logger.warn(
     "AUTH_RECOVERY_PASSWORD was applied to the default user's password. Unset this environment variable after use.",
   );
 }

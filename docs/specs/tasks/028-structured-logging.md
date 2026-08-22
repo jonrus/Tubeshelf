@@ -153,7 +153,7 @@ Generated: 2026-08-22
   Done when: `src/lib/shutdown.ts` contains no `console.*` calls, `bunx tsc --noEmit`
   passes, and the existing `test/lib/shutdown.test.ts` suite still passes unmodified.
 
-- [ ] 8. Convert `src/lib/auth.ts`'s one `console.warn` call site (lines 46-48, in
+- [x] 8. Convert `src/lib/auth.ts`'s one `console.warn` call site (lines 46-48, in
   `applyRecoveryPasswordFromEnv`). Add `import { logger } from "./logger";` at the top.
   Replace:
   ```ts
