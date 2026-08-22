@@ -188,7 +188,7 @@ Generated: 2026-08-22
   (No test imports `src/index.ts` directly — confirmed via repo search — so no test file
   to check here; covered instead by task 13's manual end-to-end verification.)
 
-- [ ] 10. Add `LOG_LEVEL`, `LOG_FORMAT`, and `TZ` to `.env.example`, following the
+- [x] 10. Add `LOG_LEVEL`, `LOG_FORMAT`, and `TZ` to `.env.example`, following the
   existing entries' style (short comment block, default noted, commented-out example
   line). Append after the existing `UMASK` block:
   ```
