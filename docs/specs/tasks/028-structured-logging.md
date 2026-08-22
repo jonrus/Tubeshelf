@@ -223,7 +223,7 @@ Generated: 2026-08-22
   when: `docs/DEPLOYMENT.md`'s Configuration table has 8 rows (5 existing + 3 new) and
   the new subsection exists.
 
-- [ ] 12. Run the full verification suite via `devcontainer exec --docker-path podman
+- [x] 12. Run the full verification suite via `devcontainer exec --docker-path podman
   --workspace-folder .`: `bun test`, `bun run lint`, `bunx tsc --noEmit`, and
   `bun run fallow` — all four must pass clean across the whole repo, not just the files
   touched above (per CLAUDE.md's final-verification requirement). Done when: all four

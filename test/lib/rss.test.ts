@@ -1,6 +1,6 @@
 import { afterEach, expect, spyOn, test } from "bun:test";
-import { fetchChannelFeed } from "../../src/lib/rss";
 import { logger } from "../../src/lib/logger";
+import { fetchChannelFeed } from "../../src/lib/rss";
 
 const RSS_URL =
   "https://www.youtube.com/feeds/videos.xml?channel_id=UCX6OQ3DkcsbYNE6H8uQQuVA";

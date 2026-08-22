@@ -95,7 +95,11 @@ export async function fetchChannelFeed(
       entries.push(entry);
     } else {
       malformedCount++;
-      logger.debug("Malformed feed entry", { channel: title, url: rssUrl, raw });
+      logger.debug("Malformed feed entry", {
+        channel: title,
+        url: rssUrl,
+        raw,
+      });
     }
   }
   if (malformedCount > 0) {
