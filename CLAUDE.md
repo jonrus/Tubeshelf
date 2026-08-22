@@ -169,7 +169,10 @@ does which step) has caused rework before.
   (per the port-forwarding gotcha above) or a direct SQLite read/write against the dev DB
   file. This covers server-rendered HTML content, response status/error text, and DB state
   — i.e. everything except how it actually looks/feels live in a browser. Claude runs these
-  itself; no user action needed.
+  itself; no user action needed. For any route behind `requireAuth`, get a session cookie
+  jar first via `scripts/dev-login.sh` (see below) rather than re-deriving the login form
+  fields and CSRF `Origin` requirement from `src/lib/auth.ts`/`src/routes/auth.tsx` each
+  time.
 - **User performs live in a browser** — anything `curl` genuinely can't observe: real HTMX
   partial-swap behavior (no full-page reload), visual layout/rendering, and the actual
   click-through experience. Claude gives the exact URL and click/type target for each step
@@ -177,6 +180,25 @@ does which step) has caused rework before.
 
 See spec008's task file (`docs/specs/tasks/008-mvp-completion-gaps.md`) for a worked example
 of the split.
+
+`scripts/dev-login.sh` (not copied into the Docker build image — the Dockerfile's final
+stage only `COPY`s an explicit allowlist of paths, `scripts/` isn't one of them) logs into
+a running dev instance and writes a cookie jar to `/tmp/tubeshelf-dev-cookies.txt` by
+default, using the `admin`/`AUTH_RECOVERY_PASSWORD` (`dev-password-change-me`, set in
+`.devcontainer/devcontainer.json`'s `containerEnv`) credentials already available inside
+the devcontainer with no extra setup. Confirmed working (spec028 task 13's manual
+verification): `devcontainer exec --docker-path podman --workspace-folder .
+scripts/dev-login.sh` then `curl -b /tmp/tubeshelf-dev-cookies.txt
+http://localhost:3000/queue`.
+
+When a manual-verification step needs a throwaway DB row (e.g. inserting a video with a
+specific `published_at` to test date rendering), write the `bun:sqlite` query to a script
+file first (e.g. via a `cat > /tmp/foo.mjs <<'EOF' ... EOF` heredoc through `devcontainer
+exec`) rather than passing it inline as a `bun -e "..."` string — quoting a SQL string
+through Bash tool → `sh -c` → `bun -e` nests three layers of shell/JS escaping deep enough
+that a `WHERE` clause silently mangled and the query matched nothing, with no error thrown
+(confirmed during spec028 task 13). A file sidesteps that entirely. Delete the file and any
+inserted rows once the check is done, same as any other manual-verification cleanup.
 
 Every spec's final task-file step (and matching manual-verification section, if the spec
 has one) must run all four of `bun test`, `bun run lint`, `bunx tsc --noEmit`, **and
