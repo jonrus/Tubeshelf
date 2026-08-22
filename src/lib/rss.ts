@@ -1,3 +1,5 @@
+import { logger } from "./logger";
+
 const FETCH_TIMEOUT_MS = 5_000;
 const VIDEO_ID_PREFIX = "yt:video:";
 
@@ -86,13 +88,26 @@ export async function fetchChannelFeed(
       : [];
 
   const entries: FeedEntry[] = [];
+  let malformedCount = 0;
   for (const raw of entryList) {
     const entry = parseEntry(raw);
     if (entry) {
       entries.push(entry);
     } else {
-      console.error("skipping malformed feed entry", raw);
+      malformedCount++;
+      logger.debug("Malformed feed entry", {
+        channel: title,
+        url: rssUrl,
+        raw,
+      });
     }
+  }
+  if (malformedCount > 0) {
+    logger.warn("Skipped malformed feed entries", {
+      channel: title,
+      url: rssUrl,
+      count: malformedCount,
+    });
   }
 
   return { title, entries };

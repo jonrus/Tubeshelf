@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "../db/client";
 import { videos, youtubeChannels } from "../db/schema";
 import { listIgnoreRules, matchesAnyRule } from "./ignore-rules";
+import { logger } from "./logger";
 import { type ChannelFeed, fetchChannelFeed } from "./rss";
 
 type YoutubeChannelRow = typeof youtubeChannels.$inferSelect;
@@ -108,10 +109,10 @@ function safeReschedule(channelId: number, now: Date): void {
       .where(eq(youtubeChannels.id, channelId))
       .run();
   } catch (err) {
-    console.error(
-      `failed to reschedule channel ${channelId} after ingestion error`,
+    logger.error("Failed to reschedule channel after ingestion error", {
+      channelId,
       err,
-    );
+    });
   }
 }
 
@@ -136,7 +137,7 @@ export async function ingestChannel(
     applyFeedToChannel(channel.id, feed);
     return { ok: true };
   } catch (err) {
-    console.error(`ingestion failed for channel ${channel.id}`, err);
+    logger.error("Ingestion failed", { channelId: channel.id, err });
     safeReschedule(channel.id, now);
     return { ok: false };
   }

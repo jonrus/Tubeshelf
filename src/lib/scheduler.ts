@@ -2,6 +2,7 @@ import { and, asc, inArray, isNull, lte, or } from "drizzle-orm";
 import { db } from "../db/client";
 import { subscriptions, youtubeChannels } from "../db/schema";
 import { ingestChannel } from "./ingest";
+import { logger } from "./logger";
 
 const TICK_INTERVAL_MS = 60 * 1000; // 1 minute
 const BATCH_SIZE = 5; // cap per tick so a post-downtime backlog drains gradually
@@ -52,7 +53,7 @@ export async function runGuardedTick(): Promise<void> {
   ticking = true;
   inFlightTick = tick()
     .catch((err) => {
-      console.error("ingestion tick failed", err);
+      logger.error("Ingestion tick failed", { err });
     })
     .finally(() => {
       ticking = false;

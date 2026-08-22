@@ -1,4 +1,5 @@
 import { afterEach, expect, spyOn, test } from "bun:test";
+import { logger } from "../../src/lib/logger";
 import { fetchChannelFeed } from "../../src/lib/rss";
 
 const RSS_URL =
@@ -28,9 +29,12 @@ const FEED_XML = `<?xml version="1.0" encoding="UTF-8"?>
 </feed>`;
 
 let fetchSpy: ReturnType<typeof spyOn>;
+let warnSpy: ReturnType<typeof spyOn> | undefined;
 
 afterEach(() => {
   fetchSpy.mockRestore();
+  warnSpy?.mockRestore();
+  warnSpy = undefined;
 });
 
 test("parses title and entries from Atom XML on success", async () => {
@@ -85,6 +89,41 @@ test("skips a malformed entry without failing the whole fetch", async () => {
       publishedAt: new Date("2026-07-01T12:00:00+00:00"),
     },
   ]);
+});
+
+test("logs a single warn with a count when multiple entries are malformed", async () => {
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:media="http://search.yahoo.com/mrss/" xmlns="http://www.w3.org/2005/Atom">
+  <title>Test Channel</title>
+  <entry>
+    <id>yt:video:abc123</id>
+    <title>First Video</title>
+    <published>2026-07-01T12:00:00+00:00</published>
+  </entry>
+  <entry>
+    <id>not-a-video-id</id>
+    <title>Malformed Entry</title>
+    <published>2026-07-05T00:00:00+00:00</published>
+  </entry>
+  <entry>
+    <id>also-not-a-video-id</id>
+    <title>Another Malformed Entry</title>
+    <published>2026-07-06T00:00:00+00:00</published>
+  </entry>
+</feed>`;
+  fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response(xml, { status: 200 }),
+  );
+  warnSpy = spyOn(logger, "warn");
+
+  await fetchChannelFeed(RSS_URL);
+
+  expect(warnSpy).toHaveBeenCalledTimes(1);
+  expect(warnSpy).toHaveBeenCalledWith("Skipped malformed feed entries", {
+    channel: "Test Channel",
+    url: RSS_URL,
+    count: 2,
+  });
 });
 
 test("returns null on network error", async () => {
