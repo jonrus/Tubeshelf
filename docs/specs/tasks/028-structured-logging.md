@@ -229,7 +229,7 @@ Generated: 2026-08-22
   touched above (per CLAUDE.md's final-verification requirement). Done when: all four
   commands exit 0 with no errors/warnings.
 
-- [ ] 13. Manual end-to-end verification. Per CLAUDE.md's split convention: this spec has
+- [x] 13. Manual end-to-end verification. Per CLAUDE.md's split convention: this spec has
   **no HTMX partial-swap or visual-layout changes** (it's a backend logging/env-var
   change, and the one UI-adjacent effect — the ≥4-week-old absolute-date fallback — is
   server-rendered HTML, fully observable via `curl`), so verification is **entirely
