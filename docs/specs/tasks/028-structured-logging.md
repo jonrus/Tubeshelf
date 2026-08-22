@@ -78,7 +78,7 @@ Generated: 2026-08-22
   Done when: `bun test test/lib/logger.test.ts` passes (via `devcontainer exec
   --docker-path podman --workspace-folder .`).
 
-- [ ] 3. Convert `src/lib/rss.ts`'s malformed-entry handling (currently line 94:
+- [x] 3. Convert `src/lib/rss.ts`'s malformed-entry handling (currently line 94:
   `console.error("skipping malformed feed entry", raw);`, inside the `for (const raw of
   entryList)` loop at lines 89-96). Add `import { logger } from "./logger";` at the top.
   Replace the loop body's `else` branch and add post-loop handling:
