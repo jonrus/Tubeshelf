@@ -133,7 +133,7 @@ Generated: 2026-08-22
   `src/lib/ingest.ts` contains no `console.*` calls, `bunx tsc --noEmit` passes, and the
   existing `test/lib/ingest.test.ts` suite still passes unmodified.
 
-- [ ] 6. Convert `src/lib/scheduler.ts`'s one `console.error` call site (line 55, inside
+- [x] 6. Convert `src/lib/scheduler.ts`'s one `console.error` call site (line 55, inside
   `runGuardedTick`'s `.catch()`). Add `import { logger } from "./logger";` at the top.
   Replace `` console.error("ingestion tick failed", err); `` with
   `logger.error("ingestion tick failed", { err });`. Done when: `src/lib/scheduler.ts`
