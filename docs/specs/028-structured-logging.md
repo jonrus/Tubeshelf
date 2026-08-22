@@ -1,5 +1,5 @@
 ---
-status: draft
+status: in-progress
 created: 2026-08-22
 ---
 
@@ -234,12 +234,10 @@ existing test assertions.
 
 ## Open Questions
 
-None currently blocking. One deliberately deferred design detail, noted for whoever writes
-the task breakdown: whether `rss.ts`'s malformed-entry warning should include the raw
-entry at `debug` level (for deep troubleshooting of a specific bad feed) or omit it
-entirely even at `debug`. Leaning toward including it at `debug` only, consistent with the
-Error-stack precedent elsewhere in this spec, but left for `/spec-tasks` to pin down rather
-than blocking spec approval on it.
+None. Resolved during `/spec-tasks` (see `docs/specs/tasks/028-structured-logging.md` task
+3): `rss.ts`'s malformed-entry raw payload is logged per-entry at `debug` level (silent by
+default), while the count-based summary line is always visible at `warn` — consistent with
+the Error-stack precedent elsewhere in this spec.
 
 **Red-team retrospective:** one independent review pass was run (subagent with no memory of
 the drafting conversation, cross-checking every claim against the actual current code). It
