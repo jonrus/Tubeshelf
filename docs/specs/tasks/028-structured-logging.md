@@ -275,7 +275,7 @@ Generated: 2026-08-22
 - [x] 14. Update `docs/specs/028-structured-logging.md` frontmatter to
   `status: implemented`.
 
-- [ ] 15. Open the PR: branch `spec/structured-logging` (already created and holding the
+- [x] 15. Open the PR: branch `spec/structured-logging` (already created and holding the
   spec commit), push, and open a GitHub PR with a summary + test plan covering tasks
   12-13 above. Per CLAUDE.md, check this box *before* pushing so the pushed branch and
   opened PR both reflect a fully-checked-off task file.
