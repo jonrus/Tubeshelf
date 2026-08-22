@@ -123,7 +123,7 @@ Generated: 2026-08-22
   doesn't leak into other tests in this file. Done when: this new test and the full
   existing `test/lib/rss.test.ts` suite both pass.
 
-- [ ] 5. Convert `src/lib/ingest.ts`'s two `console.error` call sites. Add
+- [x] 5. Convert `src/lib/ingest.ts`'s two `console.error` call sites. Add
   `import { logger } from "./logger";` at the top. Replace line 111's
   `` console.error(`failed to reschedule channel ${channelId} after ingestion error`, err); ``
   with `logger.error("failed to reschedule channel after ingestion error", { channelId, err });`.
