@@ -4,6 +4,7 @@ import { db, sqlite } from "./db/client";
 import { runMigrations } from "./db/migrate";
 import { seed } from "./db/seed";
 import { applyRecoveryPasswordFromEnv } from "./lib/auth";
+import { logger } from "./lib/logger";
 import { startScheduler, waitForSchedulerIdle } from "./lib/scheduler";
 import { createShutdownHandler } from "./lib/shutdown";
 import { authRoute } from "./routes/auth";
@@ -16,8 +17,8 @@ import { queueRoute } from "./routes/queue";
 try {
   runMigrations();
 } catch (err) {
-  console.error("Database migration failed:", err);
-  console.error(
+  logger.error("Database migration failed", { err });
+  logger.error(
     "The database may be partially migrated: each migration file runs in its own " +
       "transaction, so an earlier file's changes are not automatically undone by a " +
       "later file's failure. Restore your previous container image and/or your most " +
@@ -25,9 +26,9 @@ try {
   );
   process.exit(1);
 }
-console.log("Migrations complete.");
+logger.info("Migrations complete");
 seed(db);
-console.log("Seed complete.");
+logger.info("Seed complete");
 await applyRecoveryPasswordFromEnv();
 
 const app = new Hono();
@@ -47,7 +48,7 @@ const schedulerTimer = startScheduler();
 
 const server = Bun.serve({ port: 3000, fetch: app.fetch });
 
-console.log("Listening on http://localhost:3000");
+logger.info("Listening", { url: "http://localhost:3000" });
 
 const handleSignal = createShutdownHandler({
   server,

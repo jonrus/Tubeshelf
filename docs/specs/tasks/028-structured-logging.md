@@ -172,7 +172,7 @@ Generated: 2026-08-22
   `applyRecoveryPasswordFromEnv` — confirmed via repo search — so no test file to check
   here.)
 
-- [ ] 9. Convert `src/index.ts`'s five `console.*` call sites. Add
+- [x] 9. Convert `src/index.ts`'s five `console.*` call sites. Add
   `import { logger } from "./lib/logger";` alongside the existing imports. Replace:
   - Line 19: `console.error("Database migration failed:", err);` →
     `logger.error("Database migration failed", { err });`
