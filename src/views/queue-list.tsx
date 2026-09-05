@@ -21,6 +21,7 @@ export type QueueRow = {
   title: string;
   publishedAt: Date | null;
   status: VideoStatus;
+  durationSeconds: number | null;
   channelName: string;
   categoryName: string;
 };
@@ -30,6 +31,7 @@ type WatchedRow = {
   youtubeVideoId: string;
   title: string;
   watchedAt: Date | null;
+  durationSeconds: number | null;
   channelName: string;
   categoryName: string;
 };
@@ -38,6 +40,7 @@ type IgnoredRow = {
   id: number;
   youtubeVideoId: string;
   title: string;
+  durationSeconds: number | null;
   channelName: string;
   categoryName: string;
   ignoreMethod: "manual" | "auto" | null;

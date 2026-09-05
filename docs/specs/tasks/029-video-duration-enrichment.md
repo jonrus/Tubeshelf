@@ -135,7 +135,7 @@ Generated: 2026-09-05
   stubbed "transient" response, confirms a second call *does* make another `fetch` call
   (no latch). Done when: `bun test test/lib/duration-enrichment.test.ts` passes.
 
-- [ ] 8. Thread `durationSeconds` through the read paths that feed views:
+- [x] 8. Thread `durationSeconds` through the read paths that feed views:
   - `src/routes/queue.tsx`: add `durationSeconds: videos.durationSeconds` to
     `queueRowsBaseQuery()`'s `.select({...})` (covers Queue + Continue Watching + the
     `queueRowById` lookup), to `watchedVideos()`'s explicit select, and to

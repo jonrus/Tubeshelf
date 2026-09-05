@@ -62,6 +62,7 @@ function queueRowsBaseQuery() {
       title: videos.title,
       publishedAt: videos.publishedAt,
       status: videos.status,
+      durationSeconds: videos.durationSeconds,
       channelName: youtubeChannels.name,
       categoryName: categories.name,
     })
@@ -178,6 +179,7 @@ function watchedVideos(
       youtubeVideoId: videos.youtubeVideoId,
       title: videos.title,
       watchedAt: videos.watchedAt,
+      durationSeconds: videos.durationSeconds,
       channelName: youtubeChannels.name,
       categoryName: categories.name,
     })
@@ -232,6 +234,7 @@ function ignoredVideos(
       id: videos.id,
       youtubeVideoId: videos.youtubeVideoId,
       title: videos.title,
+      durationSeconds: videos.durationSeconds,
       channelName: youtubeChannels.name,
       categoryName: categories.name,
       ignoreMethod: videos.ignoreMethod,
@@ -531,6 +534,7 @@ queueRoute.get("/watching/:id", (c) => {
       youtubeVideoId={video.youtubeVideoId}
       title={video.title}
       status={video.status}
+      durationSeconds={video.durationSeconds}
       from={from}
       sort={sort}
       category={category}

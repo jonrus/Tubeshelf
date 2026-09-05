@@ -52,6 +52,7 @@ export type WatchingPageProps = {
   youtubeVideoId: string;
   title: string;
   status: VideoStatus;
+  durationSeconds: number | null;
   from: string | undefined;
   sort: string | undefined;
   category: string | undefined;
