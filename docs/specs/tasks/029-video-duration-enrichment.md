@@ -180,7 +180,7 @@ Generated: 2026-09-05
     entirely — the app behaves exactly as without it. |`.
   Done when: both files contain the new content; no code changes in this step.
 
-- [ ] 11. Run the full verification suite via `devcontainer exec --docker-path podman
+- [x] 11. Run the full verification suite via `devcontainer exec --docker-path podman
   --workspace-folder .`: `bun test`, `bun run lint`, `bunx tsc --noEmit`, and `bun run
   fallow` — all four must pass clean across the whole repo. Done when: all four commands
   exit 0 with no errors/warnings.
