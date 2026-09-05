@@ -45,7 +45,7 @@ Generated: 2026-09-05
   unrecognized reason/generic 400 → `"transient"`. Done when: `bun test
   test/lib/youtube-api.test.ts` passes.
 
-- [ ] 4. Extend `src/lib/youtube-api.ts` with the actual API call:
+- [x] 4. Extend `src/lib/youtube-api.ts` with the actual API call:
   `fetchVideoDurations(videoIds: string[], apiKey: string): Promise<{ durations:
   Map<string, number>; failure: { class: "transient" | "bad-key"; reason: string } |
   null }>`. Builds `GET https://www.googleapis.com/youtube/v3/videos?part=contentDetails
