@@ -3,3 +3,5 @@ data/*.db*
 public/css/tailwind.css
 public/js/htmx.min.js
 .env
+.env.local
+.env.*.local

@@ -12,6 +12,7 @@ export function ownedVideo(videoId: number, userId: number) {
       youtubeVideoId: videos.youtubeVideoId,
       title: videos.title,
       status: videos.status,
+      durationSeconds: videos.durationSeconds,
     })
     .from(videos)
     .innerJoin(youtubeChannels, eq(videos.channelId, youtubeChannels.id))

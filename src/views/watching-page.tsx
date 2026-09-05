@@ -1,6 +1,7 @@
 import type { FC } from "hono/jsx";
 import type { videos } from "../db/schema";
 import type { CategoryWithCount } from "../lib/categories";
+import { formatDuration } from "../lib/duration";
 import type { NavCounts } from "../lib/nav-counts";
 import { youtubeThumbnailUrl } from "../lib/youtube";
 import { Layout, type SidebarView } from "./layout";
@@ -52,6 +53,7 @@ export type WatchingPageProps = {
   youtubeVideoId: string;
   title: string;
   status: VideoStatus;
+  durationSeconds: number | null;
   from: string | undefined;
   sort: string | undefined;
   category: string | undefined;
@@ -86,6 +88,9 @@ export const WatchingPage: FC<WatchingPageProps> = (props) => {
       <p class="mt-3">
         Status: <WatchStatusBadge status={props.status} />
       </p>
+      {props.durationSeconds !== null ? (
+        <p>Duration: {formatDuration(props.durationSeconds)}</p>
+      ) : null}
       {showAutoTimer ? (
         <div
           hx-trigger="load delay:10s"

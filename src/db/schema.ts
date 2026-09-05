@@ -108,6 +108,7 @@ export const videos = sqliteTable(
       .default("unwatched"),
     ignoreMethod: text("ignore_method", { enum: ["manual", "auto"] }),
     watchedAt: integer("watched_at", { mode: "timestamp" }), // null unless status === "watched"
+    durationSeconds: integer("duration_seconds"), // nullable; null = not yet enriched or no key configured
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`),
@@ -124,6 +125,10 @@ export const videos = sqliteTable(
     check(
       "watched_at_check",
       sql`(${t.status} = 'watched') = (${t.watchedAt} is not null)`,
+    ),
+    check(
+      "duration_seconds_check",
+      sql`${t.durationSeconds} is null or ${t.durationSeconds} >= 0`,
     ),
     index("videos_status_published_idx").on(t.status, t.publishedAt, t.id),
     index("videos_status_watched_idx").on(t.status, t.watchedAt, t.id),

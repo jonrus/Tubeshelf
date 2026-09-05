@@ -1,6 +1,7 @@
 import type { FC } from "hono/jsx";
 import type { JSX } from "hono/jsx/jsx-runtime";
 import type { videos } from "../db/schema";
+import { formatDuration } from "../lib/duration";
 import {
   buildContinueWatchingHref,
   buildIgnoredHref,
@@ -21,6 +22,7 @@ export type QueueRow = {
   title: string;
   publishedAt: Date | null;
   status: VideoStatus;
+  durationSeconds: number | null;
   channelName: string;
   categoryName: string;
 };
@@ -30,6 +32,7 @@ type WatchedRow = {
   youtubeVideoId: string;
   title: string;
   watchedAt: Date | null;
+  durationSeconds: number | null;
   channelName: string;
   categoryName: string;
 };
@@ -38,6 +41,7 @@ type IgnoredRow = {
   id: number;
   youtubeVideoId: string;
   title: string;
+  durationSeconds: number | null;
   channelName: string;
   categoryName: string;
   ignoreMethod: "manual" | "auto" | null;
@@ -145,6 +149,7 @@ function videoCardBody(
     youtubeVideoId: string;
     channelName: string;
     categoryName: string;
+    durationSeconds: number | null;
   },
   badge: JSX.Element | null,
   extra?: JSX.Element | null,
@@ -167,6 +172,11 @@ function videoCardBody(
           <span class="rounded-full bg-surface-raised px-2 py-0.5 text-xs text-text-muted">
             {row.categoryName}
           </span>
+          {row.durationSeconds !== null && row.durationSeconds !== undefined ? (
+            <span class="text-text-muted">
+              {formatDuration(row.durationSeconds)}
+            </span>
+          ) : null}
           {badge}
         </div>
         {extra}
