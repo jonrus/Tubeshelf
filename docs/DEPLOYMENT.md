@@ -39,6 +39,7 @@ quick reference:
 | `LOG_LEVEL` | Minimum log level that prints — `debug`, `info`, `warn`, or `error`. Defaults to `info` if unset. Set to `debug` for verbose troubleshooting detail (includes full error stack traces and raw malformed-feed-entry payloads, both hidden above this level). |
 | `LOG_FORMAT` | Log line format — `text` (human-readable) or `json` (one JSON object per line, for log aggregators). Defaults to `text` if unset. |
 | `TZ` | IANA timezone name (e.g. `America/Chicago`) applied to log timestamps and to the app's own date displays (e.g. the absolute date shown for videos/watches older than 4 weeks). Defaults to UTC if unset. |
+| `YOUTUBE_API_KEY` | Optional. If set, enables background enrichment of video duration via the YouTube Data API v3 (`videos.list`, duration only). Leaving it unset disables the feature entirely — the app behaves exactly as without it. |
 
 ### Timezone and log format
 

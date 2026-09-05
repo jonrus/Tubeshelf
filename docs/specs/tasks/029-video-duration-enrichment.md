@@ -169,7 +169,7 @@ Generated: 2026-09-05
   Done when: `bunx tsc --noEmit`, `bun run lint`, and `bun run fallow` all pass clean,
   and a manual check (task 12) confirms it renders.
 
-- [ ] 10. Document `YOUTUBE_API_KEY`:
+- [x] 10. Document `YOUTUBE_API_KEY`:
   - `.env.example`: add a commented-out block following the existing style (see
     `AUTH_RECOVERY_PASSWORD`'s block for the pattern), explaining it's optional, enables
     video-duration enrichment via the YouTube Data API v3, and that leaving it unset
