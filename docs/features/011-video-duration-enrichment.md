@@ -1,6 +1,7 @@
 ---
-status: refined
+status: promoted
 created: 2026-09-05
+promoted_to: docs/specs/029-video-duration-enrichment.md
 ---
 
 # Video Duration Enrichment
@@ -123,6 +124,11 @@ None remaining — see Resolved Decisions.
   never got a duration yet" with the same query. Running it after ingestion (same tick,
   sequenced) rather than on its own timer means freshly-ingested videos are eligible for
   the very next sweep pass, not up to an extra cycle behind.
+  **Superseded during spec writing — see docs/specs/029-video-duration-enrichment.md's
+  Design section for the corrected decision.** "Hourly ingestion tick" turned out to be
+  imprecise once checked against the actual scheduler code: `tick()` itself runs every 1
+  minute; "hourly" is a per-channel jittered property, not a single event to sequence
+  after. The spec hooks the sweep onto the per-minute `tick()` instead.
 - **Sweep processes eligible videos newest-first** (`ORDER BY publishedAt DESC` or
   equivalent), batched 50 IDs per `videos.list` call, working backwards through however many
   batches are needed to exhaust the eligible set each run. *Why:* user's explicit call —
@@ -131,6 +137,11 @@ None remaining — see Resolved Decisions.
   historical backlog is fully caught up, newest-first and oldest-first behave identically
   (nothing left to prioritize over), so this is a pure improvement with no downside once
   steady-state is reached.
+  **Superseded during spec writing — see docs/specs/029-video-duration-enrichment.md's
+  Design section.** "However many batches needed to exhaust the set each run" assumed
+  hourly ticks; corrected to one batch (≤50 videos) per (now per-minute) tick, matching
+  `scheduler.ts`'s own `BATCH_SIZE` gradual-drain precedent. The newest-first ordering
+  itself is unchanged.
 - **Sweep target is `status IN (unwatched, watching)`, not `unwatched` alone.** *Why:*
   neither status represents a finalized video, and Continue Watching (which lists
   `watching`-status videos) benefits from duration the same way Queue does.
@@ -139,6 +150,12 @@ None remaining — see Resolved Decisions.
   are retried on the next sweep.** *Why:* avoids an obviously-bad key producing an identical
   warn-level log every single hour indefinitely, while not over-engineering handling for
   failures that are likely to self-resolve.
+  **Refined during spec writing — see docs/specs/029-video-duration-enrichment.md's Error
+  handling section.** A blanket "any 401/403" turned out to conflate a genuinely bad key
+  with `quotaExceeded` (also HTTP 403, but transient/expected to clear daily) — the spec
+  narrows latching to a small allowlist of key/access-specific error reasons, with
+  everything else (429, rate-limit reasons, generic 400, unrecognized reasons) defaulting
+  to transient.
 - **Duration renders as YouTube-style `M:SS` under an hour, `H:MM:SS` at/above an hour** (no
   leading zero on the leftmost unit — e.g. `5:33`, `1:02:15`). *Why:* matches the format
   users already recognize from YouTube itself.
