@@ -286,7 +286,7 @@ Generated: 2026-09-05
   confirms task 12's migration fix), in a plausible 24–32 min range for the subscribed
   channel, formatting `M:SS` as expected.
 
-- [ ] 14. Update `docs/specs/029-video-duration-enrichment.md` frontmatter to
+- [x] 14. Update `docs/specs/029-video-duration-enrichment.md` frontmatter to
   `status: implemented`.
 
 - [ ] 15. Open the PR: branch `spec/video-duration-enrichment` (already created and
