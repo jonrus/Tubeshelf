@@ -33,9 +33,7 @@ test("classifies 403 forbidden as a bad key", () => {
 });
 
 test("classifies 403 accessNotConfigured as a bad key", () => {
-  expect(classifyYoutubeApiError(403, "accessNotConfigured")).toBe(
-    "bad-key",
-  );
+  expect(classifyYoutubeApiError(403, "accessNotConfigured")).toBe("bad-key");
 });
 
 test("classifies 403 quotaExceeded as transient", () => {
@@ -43,9 +41,7 @@ test("classifies 403 quotaExceeded as transient", () => {
 });
 
 test("classifies 403 rateLimitExceeded as transient", () => {
-  expect(classifyYoutubeApiError(403, "rateLimitExceeded")).toBe(
-    "transient",
-  );
+  expect(classifyYoutubeApiError(403, "rateLimitExceeded")).toBe("transient");
 });
 
 test("classifies 403 userRateLimitExceeded as transient", () => {

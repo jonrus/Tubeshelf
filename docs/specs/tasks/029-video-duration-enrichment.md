@@ -154,7 +154,7 @@ Generated: 2026-09-05
   convenient, but they're written as separate checklist items since they touch different
   files).
 
-- [ ] 9. Render duration:
+- [x] 9. Render duration:
   - `src/views/queue-list.tsx`: import `formatDuration` from `../lib/duration`. In
     `videoCardBody()`, render `row.durationSeconds !== null &&
     row.durationSeconds !== undefined ? <span class="text-text-muted">{formatDuration(row.durationSeconds)}</span>
