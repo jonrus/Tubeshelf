@@ -119,7 +119,7 @@ Generated: 2026-09-05
   updating because it now indirectly exercises `runDurationEnrichmentSweep`'s no-key
   no-op path, update it minimally to keep passing rather than skip it).
 
-- [ ] 7. Add `test/lib/duration-enrichment.test.ts`, modeled on `test/lib/scheduler.test.ts`'s
+- [x] 7. Add `test/lib/duration-enrichment.test.ts`, modeled on `test/lib/scheduler.test.ts`'s
   setup (in-memory DB, migrate, seed, helper functions to create channels/subscriptions/
   videos). Stub `fetch` (e.g. `spyOn(globalThis, "fetch")`) rather than hitting the
   network. Cover: eligibility query returns empty when nothing qualifies; excludes
