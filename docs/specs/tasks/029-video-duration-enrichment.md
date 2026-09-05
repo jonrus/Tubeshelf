@@ -63,7 +63,7 @@ Generated: 2026-09-05
   required — task 7's tests cover this via a stubbed `fetch`, added there instead of
   here to keep this step focused on the implementation.
 
-- [ ] 5. Create `src/lib/duration-enrichment.ts`:
+- [x] 5. Create `src/lib/duration-enrichment.ts`:
   - Read `process.env.YOUTUBE_API_KEY` once at module load into a cached `const`. If
     unset, log `logger.info("Duration enrichment disabled: YOUTUBE_API_KEY not set")`
     once at module load and export a `runDurationEnrichmentSweep` that's an immediate
