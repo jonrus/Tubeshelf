@@ -113,9 +113,23 @@ check(
   sql`${t.durationSeconds} is null or ${t.durationSeconds} >= 0`,
 ),
 ```
-A plain additive nullable column — no FK retarget, so `drizzle-kit generate` should produce
-the simple `ALTER TABLE ... ADD COLUMN` case (not the interactive rename-disambiguation
-prompt spec003 flagged for FK-changing migrations).
+A plain additive nullable column — no FK retarget, ~~so `drizzle-kit generate` should
+produce the simple `ALTER TABLE ... ADD COLUMN` case (not the interactive
+rename-disambiguation prompt spec003 flagged for FK-changing migrations).~~
+
+**Corrected during task 12 (see the task file's task 12).** The `ALTER TABLE ... ADD
+COLUMN` prediction was wrong: SQLite can't add the new `duration_seconds_check` CHECK
+constraint via `ALTER TABLE`, so `drizzle-kit generate` emitted a full table rebuild
+(`__new_videos` + `INSERT ... SELECT ... FROM videos` + rename). That generated
+`INSERT ... SELECT` listed `"duration_seconds"` in its `SELECT` from the *old* `videos`
+table, which has no such column yet — SQLite silently reads an unknown double-quoted
+identifier as a string literal, so every pre-existing row got the text `'duration_seconds'`
+written into the new column instead of NULL (and the CHECK didn't catch it, since
+`'duration_seconds' >= 0` is true in SQLite). Fixed by hand-editing
+`drizzle/0003_violet_invaders.sql` to drop `"duration_seconds"` from both the column list
+and the `SELECT` list of that `INSERT ... SELECT` (a brand-new column has nothing to carry
+over; the copied rows take the column default, NULL). No interactive
+rename-disambiguation prompt was involved — that part of the prediction held.
 
 Query index: the eligibility query (`duration_seconds IS NULL AND status IN (...) ORDER BY
 published_at DESC LIMIT 50`, joined against active subscriptions) is a candidate for a
@@ -351,3 +365,12 @@ None remaining. Retrospective on the drafting process:
   intended `formatDuration()`) — reworded to name the helper explicitly. No further issues
   found; per this skill's guidance, this stands as the stopping point rather than another
   full pass.
+- During task 13's manual verification (implementation), the Schema section's `ALTER TABLE
+  ... ADD COLUMN` prediction was found wrong and corrected — see the strike-through and
+  note in Design → Schema. Short version: the new CHECK constraint forced `drizzle-kit
+  generate` into a full table rebuild, whose generated `INSERT ... SELECT` referenced the
+  not-yet-existing `duration_seconds` column and (via SQLite's string-literal fallback for
+  unknown quoted identifiers) wrote the text `'duration_seconds'` into every pre-existing
+  video row instead of NULL. Fixed by hand-editing `drizzle/0003_violet_invaders.sql` to
+  drop that column from the copy statement; dev DB rebuilt clean; added as task 12 in the
+  task file.

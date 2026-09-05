@@ -18,7 +18,7 @@ CREATE TABLE `__new_videos` (
 	CONSTRAINT "duration_seconds_check" CHECK("__new_videos"."duration_seconds" is null or "__new_videos"."duration_seconds" >= 0)
 );
 --> statement-breakpoint
-INSERT INTO `__new_videos`("id", "channel_id", "youtube_video_id", "title", "description", "published_at", "status", "ignore_method", "watched_at", "duration_seconds", "created_at") SELECT "id", "channel_id", "youtube_video_id", "title", "description", "published_at", "status", "ignore_method", "watched_at", "duration_seconds", "created_at" FROM `videos`;--> statement-breakpoint
+INSERT INTO `__new_videos`("id", "channel_id", "youtube_video_id", "title", "description", "published_at", "status", "ignore_method", "watched_at", "created_at") SELECT "id", "channel_id", "youtube_video_id", "title", "description", "published_at", "status", "ignore_method", "watched_at", "created_at" FROM `videos`;--> statement-breakpoint
 DROP TABLE `videos`;--> statement-breakpoint
 ALTER TABLE `__new_videos` RENAME TO `videos`;--> statement-breakpoint
 PRAGMA foreign_keys=ON;--> statement-breakpoint

@@ -167,7 +167,7 @@ Generated: 2026-09-05
     line (e.g. `{props.durationSeconds !== null ? <p>Duration:
     {formatDuration(props.durationSeconds)}</p> : null}`).
   Done when: `bunx tsc --noEmit`, `bun run lint`, and `bun run fallow` all pass clean,
-  and a manual check (task 12) confirms it renders.
+  and a manual check (task 13) confirms it renders.
 
 - [x] 10. Document `YOUTUBE_API_KEY`:
   - `.env.example`: add a commented-out block following the existing style (see
@@ -185,7 +185,42 @@ Generated: 2026-09-05
   fallow` — all four must pass clean across the whole repo. Done when: all four commands
   exit 0 with no errors/warnings.
 
-- [ ] 12. Manual end-to-end verification. Split per CLAUDE.md's convention:
+- [x] 12. Fix the broken `duration_seconds` migration (`drizzle/0003_violet_invaders.sql`)
+  and rebuild the dev DB. **Discovered during task 12's (now task 13's) manual
+  verification:** the migration drizzle-kit generated for task 1 is not the simple `ALTER
+  TABLE videos ADD COLUMN` the spec's Schema section predicted — the new
+  `duration_seconds_check` CHECK constraint can't be added via `ALTER TABLE` on SQLite, so
+  drizzle-kit emitted a full table rebuild. Its copy step,
+  `INSERT INTO __new_videos(..., "duration_seconds", ...) SELECT ..., "duration_seconds",
+  ... FROM videos`, references a `duration_seconds` column that does not yet exist on the
+  source `videos` table; SQLite silently reinterprets the unknown double-quoted identifier
+  as the **string literal** `'duration_seconds'` and writes that text into every
+  pre-existing row instead of NULL. Confirmed: all 77 dev-DB video rows had
+  `duration_seconds = 'duration_seconds'` (`typeof` = text; the CHECK passes because
+  `'duration_seconds' >= 0` is true in SQLite), `0` rows NULL. Impact: corrupts every
+  existing video on any real upgrade (the user's ~67-channel prod DB included), makes the
+  enrichment eligibility query (`isNull(durationSeconds)`) match nothing, and renders
+  `NaN:NaN` on every card via `formatDuration`. Task 11's suite missed it because `bun
+  test` uses a fresh in-memory DB with no pre-existing video rows. `0003` has never run
+  anywhere except the local dev DB (branch unmerged), so fix the root cause rather than
+  layering a corrective migration on top:
+  - Hand-edit `drizzle/0003_violet_invaders.sql`: remove `"duration_seconds"` from **both**
+    the column list and the `SELECT` list of the `INSERT INTO __new_videos ... SELECT ...
+    FROM videos` statement. A brand-new column has nothing to carry over; omitting it lets
+    the copied rows take the column's default (NULL).
+  - Rebuild the dev DB: `rm data/tubeshelf.db*`, then start the app once (via `devcontainer
+    exec`) so `runMigrations()` + `seed()` recreate it clean; stop it.
+  - Verify: `bunx drizzle-kit generate` reports no pending schema diff (schema.ts still
+    matches the corrected migration), a fresh DB has every `videos.duration_seconds` NULL,
+    and `bun test` / `bun run lint` / `bunx tsc --noEmit` / `bun run fallow` all still pass
+    clean.
+  - Update the spec's Design → Schema section: strike the "should produce the simple
+    `ALTER TABLE ... ADD COLUMN` case" prediction and note the CHECK constraint forces a
+    table rebuild whose generated `INSERT ... SELECT` needed the phantom-column fix above.
+  Done when: the migration is corrected, the dev DB is rebuilt clean (all durations NULL),
+  the four verification commands pass, and the spec note is added.
+
+- [ ] 13. Manual end-to-end verification. Split per CLAUDE.md's convention:
 
   **Claude performs directly**, via `devcontainer exec --docker-path podman
   --workspace-folder .`:
@@ -217,10 +252,10 @@ Generated: 2026-09-05
   correct-looking duration matching what YouTube itself shows for the same video, and
   that clicking through to the Watching page also shows it there.
 
-- [ ] 13. Update `docs/specs/029-video-duration-enrichment.md` frontmatter to
+- [ ] 14. Update `docs/specs/029-video-duration-enrichment.md` frontmatter to
   `status: implemented`.
 
-- [ ] 14. Open the PR: branch `spec/video-duration-enrichment` (already created and
+- [ ] 15. Open the PR: branch `spec/video-duration-enrichment` (already created and
   holding the spec/feature-file commits), push, and open a GitHub PR with a summary +
-  test plan covering tasks 11-12 above. Per CLAUDE.md, check this box *before* pushing
+  test plan covering tasks 11-13 above. Per CLAUDE.md, check this box *before* pushing
   so the pushed branch and opened PR both reflect a fully-checked-off task file.
