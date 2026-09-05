@@ -220,7 +220,7 @@ Generated: 2026-09-05
   Done when: the migration is corrected, the dev DB is rebuilt clean (all durations NULL),
   the four verification commands pass, and the spec note is added.
 
-- [ ] 13. Manual end-to-end verification. Split per CLAUDE.md's convention:
+- [x] 13. Manual end-to-end verification. Split per CLAUDE.md's convention:
 
   **Claude performs directly**, via `devcontainer exec --docker-path podman
   --workspace-folder .`:
@@ -245,12 +245,46 @@ Generated: 2026-09-05
   Done when: all three checks above show the expected output/logs and the dev DB is left
   clean (no leftover manually-inserted rows).
 
-  **User performs live in a browser** (real YouTube Data API key required — get one from
-  Google Cloud Console, YouTube Data API v3 enabled): set a real `YOUTUBE_API_KEY`,
-  restart the app, wait a few minutes for a scheduler tick to run against real eligible
-  videos, then visit `/queue` and `/continue-watching` and confirm real videos show a
-  correct-looking duration matching what YouTube itself shows for the same video, and
-  that clicking through to the Watching page also shows it there.
+  **Verified 2026-09-05** (Claude-performed portion), via `devcontainer exec`:
+  - No-key baseline: `bun run start` with `YOUTUBE_API_KEY` unset logged
+    `[INFO] Duration enrichment disabled: YOUTUBE_API_KEY not set` at module load; `curl
+    /queue` (dev-login cookie jar) returned 200 with a `duration_seconds IS NULL` video
+    card rendering its normal meta line (channel · category · relative time) and no
+    `M:SS` token anywhere in the page. No error, no layout change.
+  - Render path: setting that video's `duration_seconds = 754` directly and re-`curl`ing
+    `/queue` produced `<span class="text-text-muted">12:34</span>` in the meta line,
+    positioned right after the category badge and before the `just now` published-time
+    span — the placement task 9 specified. Row reset to NULL, then all manually-inserted
+    channel/subscription/video rows deleted; dev DB back to seed-only state.
+  - Bad-key latch: the third check's literal wording ("intentionally invalid value" →
+    "'bad key'-class warn ... latch holding") predates the spec's Error-handling
+    refinement that **only HTTP 403 + an allowlisted key/access `reason` latches** — a
+    merely malformed key gets HTTP 400 `reason=badRequest` from the real API, which the
+    spec deliberately classifies **transient** (400 can be a self-inflicted request bug;
+    latching there would misdirect debugging). Confirmed both halves against the real dev
+    DB by driving `runDurationEnrichmentSweep()` directly (no live scheduler tick hook
+    exists):
+    - Real invalid key → real API HTTP 400 `badRequest` → `[WARN] Duration enrichment
+      sweep failed, will retry next tick reason=badRequest count=2` on **every** call, no
+      latch (transient, as designed).
+    - `fetch` stubbed to HTTP 403 `{errors:[{reason:"accessNotConfigured"}]}` → exactly
+      one `[WARN] Duration enrichment disabled: bad API key reason=accessNotConfigured`,
+      then `latched` holds: calls 2 and 3 made zero further `fetch` calls (returned
+      before the eligibility query, per spec).
+
+  **User performs live in a browser — CONFIRMED 2026-09-05** (real YouTube Data API key
+  required — get one from Google Cloud Console, YouTube Data API v3 enabled): set a real
+  `YOUTUBE_API_KEY`, restart the app, wait a few minutes for a scheduler tick to run
+  against real eligible videos, then visit `/queue` and `/continue-watching` and confirm
+  real videos show a correct-looking duration matching what YouTube itself shows for the
+  same video, and that clicking through to the Watching page also shows it there.
+
+  Outcome: user set a real key in `.env.local` (see the `.gitignore` addition on this
+  branch) and confirmed durations render correctly in the frontend across the views.
+  Cross-checked against the dev DB afterward: all 15 enriched `videos.duration_seconds`
+  values were positive integers (`typeof` `number`, no phantom-column string corruption —
+  confirms task 12's migration fix), in a plausible 24–32 min range for the subscribed
+  channel, formatting `M:SS` as expected.
 
 - [ ] 14. Update `docs/specs/029-video-duration-enrichment.md` frontmatter to
   `status: implemented`.
