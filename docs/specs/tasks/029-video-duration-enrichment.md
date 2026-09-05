@@ -289,7 +289,7 @@ Generated: 2026-09-05
 - [x] 14. Update `docs/specs/029-video-duration-enrichment.md` frontmatter to
   `status: implemented`.
 
-- [ ] 15. Open the PR: branch `spec/video-duration-enrichment` (already created and
+- [x] 15. Open the PR: branch `spec/video-duration-enrichment` (already created and
   holding the spec/feature-file commits), push, and open a GitHub PR with a summary +
   test plan covering tasks 11-13 above. Per CLAUDE.md, check this box *before* pushing
   so the pushed branch and opened PR both reflect a fully-checked-off task file.
