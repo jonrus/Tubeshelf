@@ -2,7 +2,7 @@
 Spec: docs/specs/029-video-duration-enrichment.md
 Generated: 2026-09-05
 
-- [ ] 1. Add a nullable `durationSeconds` column to `videos` in `src/db/schema.ts`
+- [x] 1. Add a nullable `durationSeconds` column to `videos` in `src/db/schema.ts`
   (`integer("duration_seconds")`, no `.notNull()`), plus a check constraint named
   `duration_seconds_check` whose SQL condition is `<durationSeconds column> is null or
   <durationSeconds column> >= 0` (written with the `sql` tagged template and
