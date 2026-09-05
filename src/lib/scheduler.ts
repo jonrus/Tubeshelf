@@ -1,6 +1,7 @@
 import { and, asc, inArray, isNull, lte, or } from "drizzle-orm";
 import { db } from "../db/client";
 import { subscriptions, youtubeChannels } from "../db/schema";
+import { runDurationEnrichmentSweep } from "./duration-enrichment";
 import { ingestChannel } from "./ingest";
 import { logger } from "./logger";
 
@@ -39,6 +40,14 @@ export function dueChannels(
 async function tick(): Promise<void> {
   for (const channel of dueChannels(new Date())) {
     await ingestChannel(channel); // never throws -- see ingestChannel's try/catch
+  }
+
+  // Separate try/catch from the ingest loop above so an enrichment failure is
+  // never conflated with (or logged as) an ingestion failure.
+  try {
+    await runDurationEnrichmentSweep();
+  } catch (err) {
+    logger.error("Duration enrichment sweep failed", { err });
   }
 }
 

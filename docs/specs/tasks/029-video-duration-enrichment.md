@@ -106,7 +106,7 @@ Generated: 2026-09-05
   `EXPLAIN QUERY PLAN` check has been run and its outcome (index added or skipped)
   is reflected in the commit; task 7 adds `runDurationEnrichmentSweep`'s tests.
 
-- [ ] 6. Wire the sweep into `src/lib/scheduler.ts`'s `tick()`: after the existing
+- [x] 6. Wire the sweep into `src/lib/scheduler.ts`'s `tick()`: after the existing
   `for (const channel of dueChannels(...))` loop, add a separate `try { await
   runDurationEnrichmentSweep(); } catch (err) { logger.error("Duration enrichment sweep
   failed", { err }); }` block — a distinct log message and distinct try/catch from the
