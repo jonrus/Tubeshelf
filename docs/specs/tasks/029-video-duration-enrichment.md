@@ -24,7 +24,7 @@ Generated: 2026-09-05
   (`3600` → `1:00:00`), multi-hour (`3735` → `1:02:15`). Done when: `bun test
   test/lib/duration.test.ts` passes.
 
-- [ ] 3. Create `src/lib/youtube-api.ts` with two pure, network-free pieces first (so
+- [x] 3. Create `src/lib/youtube-api.ts` with two pure, network-free pieces first (so
   they're independently testable before the fetch wrapper is added in task 4):
   - `parseIso8601Duration(iso: string): number | null` — parses the `PnYnMnDTnHnMnS`
     subset YouTube actually emits (hours/minutes/seconds components under `T`, plus the
