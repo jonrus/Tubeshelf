@@ -15,7 +15,7 @@ Generated: 2026-09-05
   and `bun test` still passes (existing tests construct rows without `durationSeconds`,
   which is fine since the column is nullable with no default required).
 
-- [ ] 2. Add `formatDuration(seconds: number): string` to a new `src/lib/duration.ts`
+- [x] 2. Add `formatDuration(seconds: number): string` to a new `src/lib/duration.ts`
   (sibling to `src/lib/relative-time.ts`, not merged into it — different input shape).
   YouTube-style: `M:SS` under 3600 seconds (e.g. `333` → `5:33`), `H:MM:SS` at/above 3600
   (e.g. `3735` → `1:02:15`), minutes/seconds zero-padded to 2 digits except the leftmost
