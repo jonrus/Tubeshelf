@@ -19,7 +19,7 @@ task 12 only verifies them. Don't touch Round A surfaces (`requireAuth`, CSP, th
   `bun test test/lib/categories.test.ts test/routes/categories.test.ts`, `bun run lint`,
   and `bunx tsc --noEmit` are clean.
 
-- [ ] 2. Add `videos.auto_ignore_exempt` column + migration `0005` — in `src/db/schema.ts` add
+- [x] 2. Add `videos.auto_ignore_exempt` column + migration `0005` — in `src/db/schema.ts` add
   `autoIgnoreExempt: integer("auto_ignore_exempt", { mode: "boolean" }).notNull().default(false)`
   to `videos` (same shape as `categories.isSystem`). `drizzle-kit generate` may need a real
   TTY: try `bun run db:generate` via devcontainer, and if it prompts/hangs do NOT work around

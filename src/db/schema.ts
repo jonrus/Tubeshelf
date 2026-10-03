@@ -107,6 +107,9 @@ export const videos = sqliteTable(
       .notNull()
       .default("unwatched"),
     ignoreMethod: text("ignore_method", { enum: ["manual", "auto"] }),
+    autoIgnoreExempt: integer("auto_ignore_exempt", { mode: "boolean" })
+      .notNull()
+      .default(false), // set by unignoreVideo; reconcileIgnoreRules skips exempt videos
     watchedAt: integer("watched_at", { mode: "timestamp" }), // null unless status === "watched"
     durationSeconds: integer("duration_seconds"), // nullable; null = not yet enriched or no key configured
     durationRecheckAt: integer("duration_recheck_at", { mode: "timestamp" }), // nullable; don't re-request duration before this
