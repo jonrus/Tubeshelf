@@ -170,7 +170,7 @@ No schema change anywhere in this spec.
   the same value leaves them. Clean up throwaway rows/files; kill dev server via `/proc`
   scan. — done when: each check's result is reported.
 
-- [ ] 14. Manual verification (user-performed in a browser) — give exact URLs and what to
+- [x] 14. Manual verification (user-performed in a browser) — give exact URLs and what to
   look for, with the DevTools console open: login, logout and "Mark Watched & Return" form
   POSTs work; watch-link opens a new tab and middle-click works; sidebar toggle at mobile
   width; a broken thumbnail is hidden (incl. after endless-scroll load); endless scroll
