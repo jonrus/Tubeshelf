@@ -9,10 +9,17 @@ process.env.DB_FILE_NAME = ":memory:";
 
 const { db } = await import("../../src/db/client");
 const { migrate } = await import("drizzle-orm/bun-sqlite/migrator");
-const { IGNORE_RULE_KEYWORD_MAX_LENGTH, ignoreRules, videos, youtubeChannels } =
-  await import("../../src/db/schema");
+const {
+  IGNORE_RULE_KEYWORD_MAX_LENGTH,
+  ignoreRules,
+  subscriptions,
+  users,
+  videos,
+  youtubeChannels,
+} = await import("../../src/db/schema");
 const { seed } = await import("../../src/db/seed");
 const { ignoreRulesRoute } = await import("../../src/routes/ignore-rules");
+const { queueRoute } = await import("../../src/routes/queue");
 
 migrate(db, { migrationsFolder: "./drizzle" });
 seed(db);
@@ -326,4 +333,46 @@ test("DELETE /ignore-rules/:id removes a rule and triggers reconciliation", asyn
 test("DELETE /ignore-rules/:id against a nonexistent id 404s", async () => {
   const res = await deleteRule(999999);
   expect(res.status).toBe(404);
+});
+
+test("an un-ignored video stays unwatched when a still-matching rule is later added or edited", async () => {
+  const adminUser = db
+    .select()
+    .from(users)
+    .where(eq(users.username, "admin"))
+    .get();
+  if (!adminUser) throw new Error("seed did not create the default user");
+  // unignoreVideo only acts on videos the user is subscribed to (ownedVideo).
+  const { categories } = await import("../../src/db/schema");
+  const category = db
+    .insert(categories)
+    .values({ name: "Unignore Round Trip Category" })
+    .returning()
+    .get();
+  db.insert(subscriptions)
+    .values({
+      userId: adminUser.id,
+      youtubeChannelId: channel.id,
+      categoryId: category.id,
+    })
+    .run();
+
+  const video = makeVideo({ title: "Video about roundtrip-keyword" });
+  const rule = makeRule("roundtrip-keyword");
+  await postEdit(rule.id, "roundtrip-keyword");
+  expect(videoRow(video.id).status).toBe("ignored");
+  expect(videoRow(video.id).ignoreMethod).toBe("auto");
+
+  const unignoreRes = await queueRoute.request(`/videos/${video.id}/unignore`, {
+    method: "POST",
+    headers: authHeaders,
+  });
+  expect(unignoreRes.status).toBe(200);
+  expect(videoRow(video.id).status).toBe("unwatched");
+
+  await postAdd("about roundtrip");
+  await postEdit(rule.id, "roundtrip-keyword");
+
+  expect(videoRow(video.id).status).toBe("unwatched");
+  expect(videoRow(video.id).ignoreMethod).toBeNull();
 });

@@ -69,6 +69,21 @@ function extractSessionCookie(res: Response): string {
   return `session=${sessionValue}`;
 }
 
+test("GET /login renders autocomplete hints and required on both inputs", async () => {
+  const res = await authRoute.request("/login");
+  expect(res.status).toBe(200);
+  const html = await res.text();
+
+  const usernameInput = html.match(/<input[^>]*name="username"[^>]*>/)?.[0];
+  const passwordInput = html.match(/<input[^>]*name="password"[^>]*>/)?.[0];
+  expect(usernameInput).toBeDefined();
+  expect(passwordInput).toBeDefined();
+  expect(usernameInput).toContain('autocomplete="username"');
+  expect(usernameInput).toMatch(/\brequired\b/);
+  expect(passwordInput).toContain('autocomplete="current-password"');
+  expect(passwordInput).toMatch(/\brequired\b/);
+});
+
 test("a successful login redirects to a validated `from`, falling back to /queue when from is absent or fails the open-redirect guard", async () => {
   const validFromRes = await postLogin({
     username: "admin",

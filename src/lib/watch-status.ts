@@ -135,7 +135,12 @@ export function unignoreVideo(
   if (!current) return null;
 
   db.update(videos)
-    .set({ status: "unwatched", ignoreMethod: null, watchedAt: null })
+    .set({
+      status: "unwatched",
+      ignoreMethod: null,
+      watchedAt: null,
+      autoIgnoreExempt: true,
+    })
     .where(eq(videos.id, videoId))
     .run();
   return { status: "unwatched" };

@@ -74,7 +74,9 @@ Confirmed during scoping:
   in either direction (per `app_idea.md`'s existing MVP item 6 description). `watched`
   videos are also never touched — reconciliation only ever considers
   `unwatched`/`watching` as candidates to newly-ignore, matching `app_idea.md`'s literal
-  wording ("every Unwatched/Watching video that newly matches").
+  wording ("every Unwatched/Watching video that newly matches"). (Refined in
+  `docs/specs/031-behavior-correctness-ops-polish.md`: `watching` videos are no longer
+  candidates, and a video the user un-ignores is exempt from future auto-ignore.)
 - Nav links for "Ignored" and "Ignore Rules" added to `Layout`.
 
 **Out (deferred):**

@@ -1,0 +1,1 @@
+ALTER TABLE `videos` ADD `auto_ignore_exempt` integer DEFAULT false NOT NULL;

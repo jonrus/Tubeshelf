@@ -242,6 +242,7 @@ test("unignoreVideo transitions ignored/manual to unwatched with ignoreMethod nu
   const row = videoRow(video.id);
   expect(row.status).toBe("unwatched");
   expect(row.ignoreMethod).toBeNull();
+  expect(row.autoIgnoreExempt).toBe(true);
 });
 
 test("unignoreVideo transitions ignored/auto to unwatched with ignoreMethod null", () => {
@@ -255,6 +256,7 @@ test("unignoreVideo transitions ignored/auto to unwatched with ignoreMethod null
   const row = videoRow(video.id);
   expect(row.status).toBe("unwatched");
   expect(row.ignoreMethod).toBeNull();
+  expect(row.autoIgnoreExempt).toBe(true);
 });
 
 test("unignoreVideo transitions a watched video to unwatched without throwing and clears watchedAt", () => {
@@ -264,6 +266,25 @@ test("unignoreVideo transitions a watched video to unwatched without throwing an
   const row = videoRow(video.id);
   expect(row.status).toBe("unwatched");
   expect(row.watchedAt).toBeNull();
+});
+
+test("other transition functions leave autoIgnoreExempt unchanged", () => {
+  for (const exempt of [false, true]) {
+    const video = makeVideo("unwatched");
+    db.update(videos)
+      .set({ autoIgnoreExempt: exempt })
+      .where(eq(videos.id, video.id))
+      .run();
+    setWatching(video.id, user.id);
+    expect(videoRow(video.id).autoIgnoreExempt).toBe(exempt);
+    toggleWatchedFromWatchingPage(video.id, user.id);
+    expect(videoRow(video.id).autoIgnoreExempt).toBe(exempt);
+    toggleWatchedFromWatchingPage(video.id, user.id);
+    toggleQueueStatus(video.id, user.id);
+    expect(videoRow(video.id).autoIgnoreExempt).toBe(exempt);
+    ignoreVideo(video.id, user.id);
+    expect(videoRow(video.id).autoIgnoreExempt).toBe(exempt);
+  }
 });
 
 test("unignoreVideo returns null for a nonexistent video ID", () => {

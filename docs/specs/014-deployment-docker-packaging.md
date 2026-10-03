@@ -377,7 +377,9 @@ Sections, per the feature file's resolved scope:
    `.env.example`).
 3. **Initial login** — `AUTH_RECOVERY_PASSWORD` is currently the only way to set a
    password; walk through setting it, logging in, then unsetting it (real signup/password
-   reset is v2.0, per `docs/app_idea.md`'s Future Roadmap).
+   reset is v2.0, per `docs/app_idea.md`'s Future Roadmap). (Refined in
+   `docs/specs/031-behavior-correctness-ops-polish.md`: with no recovery password set, a
+   random one is generated and logged once on first boot.)
 4. **Bind-mount permissions** — the container runs as the non-root `bun` user; `chown` the
    host `./data` directory to match before first run. (`PUID`/`PGID` support is noted as
    deferred, with a pointer to the Future Roadmap entry.)

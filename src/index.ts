@@ -4,7 +4,7 @@ import { HTTPException } from "hono/http-exception";
 import { db, sqlite } from "./db/client";
 import { runMigrations } from "./db/migrate";
 import { seed } from "./db/seed";
-import { applyRecoveryPasswordFromEnv } from "./lib/auth";
+import { applyRecoveryPasswordFromEnv, ensureAdminPassword } from "./lib/auth";
 import { logger } from "./lib/logger";
 import { startScheduler, waitForSchedulerIdle } from "./lib/scheduler";
 import { createShutdownHandler } from "./lib/shutdown";
@@ -31,6 +31,7 @@ logger.info("Migrations complete");
 seed(db);
 logger.info("Seed complete");
 await applyRecoveryPasswordFromEnv();
+await ensureAdminPassword();
 
 const app = new Hono();
 

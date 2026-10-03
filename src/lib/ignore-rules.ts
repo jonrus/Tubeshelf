@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { db } from "../db/client";
 import { ignoreRules, videos } from "../db/schema";
 
@@ -22,11 +22,10 @@ export function matchesAnyRule(
 
 // Called after every IgnoreRule add/edit/delete. Re-runs the current rule set against
 // every ignored+auto video (un-ignoring the ones that no longer match) and every
-// unwatched/watching video (auto-ignoring the ones that newly match). Manual ignores
-// and watched videos are excluded from both queries below, by construction -- neither
-// is a candidate the reconciliation pass ever considers, matching app_idea.md's MVP
-// item 6 ("auto-ignored video that no longer matches... Unwatched/Watching video that
-// newly matches... Manually-ignored videos are never touched").
+// unwatched, non-exempt video (auto-ignoring the ones that newly match). Manual ignores,
+// watching/watched videos, and videos the user explicitly un-ignored
+// (videos.auto_ignore_exempt) are excluded from both queries by construction -- none is a
+// candidate the reconciliation pass ever considers (docs/specs/031-behavior-correctness-ops-polish.md).
 export function reconcileIgnoreRules(): void {
   const rules = listIgnoreRules();
 
@@ -62,7 +61,9 @@ export function reconcileIgnoreRules(): void {
         description: videos.description,
       })
       .from(videos)
-      .where(inArray(videos.status, ["unwatched", "watching"]))
+      .where(
+        and(eq(videos.status, "unwatched"), eq(videos.autoIgnoreExempt, false)),
+      )
       .all();
     for (const video of candidates) {
       if (matchesAnyRule(video, rules)) {

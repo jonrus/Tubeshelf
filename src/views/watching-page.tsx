@@ -65,7 +65,8 @@ export type WatchingPageProps = {
 };
 
 export const WatchingPage: FC<WatchingPageProps> = (props) => {
-  const showAutoTimer = props.status !== "watched";
+  const showAutoTimer =
+    props.status !== "watched" && props.status !== "ignored";
   const togglePrefix =
     props.status === "watched" ? "Mark Unwatched" : "Mark Watched";
 

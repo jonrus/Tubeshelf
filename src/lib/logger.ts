@@ -50,6 +50,17 @@ function normalizeMeta(
   return result;
 }
 
+function formatValue(value: unknown): string {
+  if (typeof value === "object" && value !== null) {
+    try {
+      return JSON.stringify(value) ?? String(value);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
+}
+
 function render(
   level: Level,
   message: string,
@@ -71,7 +82,7 @@ function render(
 
   const metaText = normalizedMeta
     ? Object.entries(normalizedMeta)
-        .map(([key, value]) => `${key}=${value}`)
+        .map(([key, value]) => `${key}=${formatValue(value)}`)
         .join(" ")
     : "";
   const line = `${timestamp} [${level.toUpperCase()}] ${message}`;

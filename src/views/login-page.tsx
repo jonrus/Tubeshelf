@@ -48,13 +48,21 @@ export const LoginPage: FC<{
               <input
                 type="text"
                 name="username"
+                autocomplete="username"
+                required
                 autofocus
                 class={INPUT_CLASS}
               />
             </label>
             <label class="flex flex-col gap-1 text-sm text-text-muted">
               Password
-              <input type="password" name="password" class={INPUT_CLASS} />
+              <input
+                type="password"
+                name="password"
+                autocomplete="current-password"
+                required
+                class={INPUT_CLASS}
+              />
             </label>
             <button type="submit" class={`mt-2 ${PRIMARY_BUTTON_CLASS}`}>
               Log in
