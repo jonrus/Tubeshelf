@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, lt, sql } from "drizzle-orm";
 import type { Context, MiddlewareHandler } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { csrf } from "hono/csrf";
@@ -40,14 +40,50 @@ export async function applyRecoveryPasswordFromEnv(): Promise<void> {
   const recoveryPassword = process.env.AUTH_RECOVERY_PASSWORD;
   if (!recoveryPassword) return;
 
-  const passwordHash = await hashPassword(recoveryPassword);
-  db.update(users)
-    .set({ passwordHash })
+  const admin = db
+    .select({ passwordHash: users.passwordHash })
+    .from(users)
     .where(eq(users.username, "admin"))
-    .run();
+    .get();
+  if (
+    admin?.passwordHash &&
+    (await verifyPassword(recoveryPassword, admin.passwordHash))
+  ) {
+    // Restart with the variable still set: nothing changes, so don't re-salt
+    // the hash or log everyone out on every boot.
+    logger.warn(
+      "AUTH_RECOVERY_PASSWORD is still set and matches the default user's password. Unset this environment variable.",
+    );
+    return;
+  }
+
+  const passwordHash = await hashPassword(recoveryPassword);
+  // bun-sqlite transaction callbacks must be synchronous, so hash first.
+  const updated = db.transaction((tx) => {
+    const rows = tx
+      .update(users)
+      .set({ passwordHash })
+      .where(eq(users.username, "admin"))
+      .returning({ id: users.id })
+      .all();
+    if (rows.length > 0) tx.delete(sessions).run();
+    return rows;
+  });
+  if (updated.length === 0) return;
   logger.warn(
-    "AUTH_RECOVERY_PASSWORD was applied to the default user's password. Unset this environment variable after use.",
+    "AUTH_RECOVERY_PASSWORD was applied to the default user's password and all sessions were signed out. Unset this environment variable after use.",
   );
+}
+
+export function purgeIdleSessions(now: Date = new Date()): void {
+  db.delete(sessions)
+    .where(
+      lt(
+        sessions.lastSeenAt,
+        new Date(now.getTime() - SESSION_IDLE_TIMEOUT_MS),
+      ),
+    )
+    .run();
 }
 
 export async function ensureAdminPassword(): Promise<void> {

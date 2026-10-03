@@ -10,7 +10,7 @@ process.env.TRUSTED_ORIGINS = "http://test.local";
 
 const { db } = await import("../../src/db/client");
 const { migrate } = await import("drizzle-orm/bun-sqlite/migrator");
-const { users } = await import("../../src/db/schema");
+const { sessions, users } = await import("../../src/db/schema");
 const { seed } = await import("../../src/db/seed");
 const {
   applyRecoveryPasswordFromEnv,
@@ -18,6 +18,7 @@ const {
   createSession,
   ensureAdminPassword,
   hashPassword,
+  purgeIdleSessions,
   requireAuth,
   resolveCookieSecure,
   setSessionCookie,
@@ -136,6 +137,107 @@ test("ensureAdminPassword is a silent no-op when there is no admin row", async (
       .where(eq(users.username, "admin-renamed-for-test"))
       .run();
     setAdminHash(original);
+  }
+});
+
+function adminId(): number {
+  const row = db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.username, "admin"))
+    .get();
+  return row?.id as number;
+}
+
+function sessionCount(): number {
+  return db.select().from(sessions).all().length;
+}
+
+test("purgeIdleSessions deletes only sessions idle past the timeout", () => {
+  db.delete(sessions).run();
+  const stale = createSession(adminId());
+  const fresh = createSession(adminId());
+  expect(stale.token).not.toBe(fresh.token);
+  const rows = db.select().from(sessions).all();
+  const staleRow = rows[0];
+  db.update(sessions)
+    .set({ lastSeenAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000) })
+    .where(eq(sessions.id, staleRow?.id as number))
+    .run();
+
+  purgeIdleSessions();
+
+  const remaining = db.select().from(sessions).all();
+  expect(remaining).toHaveLength(1);
+  expect(remaining[0]?.id).not.toBe(staleRow?.id);
+  db.delete(sessions).run();
+});
+
+async function recoveryScenario(
+  initialHash: string | null,
+  envPassword: string,
+): Promise<{ before: string | null; after: string | null; kept: number }> {
+  const original = adminHash() ?? null;
+  setAdminHash(initialHash);
+  db.delete(sessions).run();
+  createSession(adminId());
+  savedRecovery = process.env.AUTH_RECOVERY_PASSWORD;
+  process.env.AUTH_RECOVERY_PASSWORD = envPassword;
+  errorSpy = spyOn(console, "error").mockImplementation(() => {});
+  try {
+    await applyRecoveryPasswordFromEnv();
+    return {
+      before: initialHash,
+      after: adminHash() ?? null,
+      kept: sessionCount(),
+    };
+  } finally {
+    setAdminHash(original);
+    db.delete(sessions).run();
+  }
+}
+
+test("recovery purge deletes all sessions when the stored hash is null", async () => {
+  const result = await recoveryScenario(null, "recovery-pw");
+  expect(result.after).toBeTruthy();
+  expect(result.kept).toBe(0);
+});
+
+test("recovery purge deletes all sessions when the stored hash differs", async () => {
+  const result = await recoveryScenario(
+    await hashPassword("some-other-password"),
+    "recovery-pw",
+  );
+  expect(result.after).not.toBe(result.before);
+  expect(result.kept).toBe(0);
+});
+
+test("recovery keeps the hash and sessions when the env password already verifies", async () => {
+  const existing = await hashPassword("recovery-pw");
+  const result = await recoveryScenario(existing, "recovery-pw");
+  expect(result.after).toBe(existing);
+  expect(result.kept).toBe(1);
+});
+
+test("recovery with no admin row neither updates nor purges", async () => {
+  db.delete(sessions).run();
+  createSession(adminId());
+  savedRecovery = process.env.AUTH_RECOVERY_PASSWORD;
+  process.env.AUTH_RECOVERY_PASSWORD = "recovery-pw";
+  errorSpy = spyOn(console, "error").mockImplementation(() => {});
+  db.update(users)
+    .set({ username: "admin-renamed-for-test" })
+    .where(eq(users.username, "admin"))
+    .run();
+  try {
+    await applyRecoveryPasswordFromEnv();
+    expect(sessionCount()).toBe(1);
+  } finally {
+    db.update(users)
+      .set({ username: "admin" })
+      .where(eq(users.username, "admin-renamed-for-test"))
+      .run();
+    db.delete(sessions).run();
   }
 });
 

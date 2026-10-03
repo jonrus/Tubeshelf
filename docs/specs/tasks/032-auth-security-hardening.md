@@ -67,7 +67,7 @@ No schema change anywhere in this spec.
   locked also shows it (401), and unknown user / wrong password still show the generic message.
   — done when: tests pass, existing lockout tests updated if they relied on the old shape.
 
-- [ ] 5. #12 — `purgeIdleSessions` + recovery purge in `src/lib/auth.ts` — add exported
+- [x] 5. #12 — `purgeIdleSessions` + recovery purge in `src/lib/auth.ts` — add exported
   `purgeIdleSessions(now = new Date())` deleting `sessions` where `last_seen_at <
   now - SESSION_IDLE_TIMEOUT_MS` (reuse the same constant as `findValidSession`). Change
   `applyRecoveryPasswordFromEnv`: if env unset return; read the admin row; if it exists and
