@@ -124,7 +124,7 @@ test("reconcileIgnoreRules auto-ignores an unwatched video that newly matches a 
   expect(row.ignoreMethod).toBe("auto");
 });
 
-test("reconcileIgnoreRules auto-ignores a watching video that newly matches a just-added rule", () => {
+test("reconcileIgnoreRules does not auto-ignore a watching video that newly matches a rule", () => {
   const video = makeVideo({
     title: "Video about newly-added-watching-keyword",
     status: "watching",
@@ -134,8 +134,50 @@ test("reconcileIgnoreRules auto-ignores a watching video that newly matches a ju
   reconcileIgnoreRules();
 
   const row = videoRow(video.id);
+  expect(row.status).toBe("watching");
+  expect(row.ignoreMethod).toBeNull();
+});
+
+test("reconcileIgnoreRules skips an exempt unwatched video but still auto-ignores a non-exempt one", () => {
+  const exempt = makeVideo({
+    title: "Exempt video about exempt-keyword",
+    status: "unwatched",
+  });
+  db.update(videos)
+    .set({ autoIgnoreExempt: true })
+    .where(eq(videos.id, exempt.id))
+    .run();
+  const nonExempt = makeVideo({
+    title: "Non-exempt video about exempt-keyword",
+    status: "unwatched",
+  });
+
+  makeRule("exempt-keyword");
+  reconcileIgnoreRules();
+
+  expect(videoRow(exempt.id).status).toBe("unwatched");
+  expect(videoRow(exempt.id).ignoreMethod).toBeNull();
+  expect(videoRow(nonExempt.id).status).toBe("ignored");
+  expect(videoRow(nonExempt.id).ignoreMethod).toBe("auto");
+});
+
+test("reconcileIgnoreRules leaves an exempt ignored+manual video untouched", () => {
+  const video = makeVideo({
+    title: "Manual exempt video about exempt-manual-keyword",
+    status: "ignored",
+    ignoreMethod: "manual",
+  });
+  db.update(videos)
+    .set({ autoIgnoreExempt: true })
+    .where(eq(videos.id, video.id))
+    .run();
+
+  makeRule("exempt-manual-keyword");
+  reconcileIgnoreRules();
+
+  const row = videoRow(video.id);
   expect(row.status).toBe("ignored");
-  expect(row.ignoreMethod).toBe("auto");
+  expect(row.ignoreMethod).toBe("manual");
 });
 
 test("reconcileIgnoreRules leaves a watched video untouched even if it would match a rule", () => {

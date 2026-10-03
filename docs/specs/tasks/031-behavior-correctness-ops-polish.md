@@ -37,7 +37,7 @@ task 12 only verifies them. Don't touch Round A surfaces (`requireAuth`, CSP, th
   both a manual and an auto ignore; other transition functions (watching/watched/unwatched/
   ignore) leave it unchanged. — done when: `bun test test/lib/watch-status.test.ts` passes.
 
-- [ ] 4. `reconcileIgnoreRules` honors the exemption and skips `watching` — in
+- [x] 4. `reconcileIgnoreRules` honors the exemption and skips `watching` — in
   `src/lib/ignore-rules.ts` change the second-pass candidate predicate from
   `inArray(videos.status, ["unwatched", "watching"])` to
   `and(eq(videos.status, "unwatched"), eq(videos.autoIgnoreExempt, false))`; drop the unused
