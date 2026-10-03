@@ -138,7 +138,7 @@ matching Design subsection before each step.
   test's assertions so `missing` is now stamped +24h. Done when: `bun test
   test/lib/duration-enrichment.test.ts` passes and `bun test` is green.
 
-- [ ] 11. Index check (spec Design §3 "Index"). Run `EXPLAIN QUERY PLAN` (write the script to a
+- [x] 11. Index check (spec Design §3 "Index"). Run `EXPLAIN QUERY PLAN` (write the script to a
   file and run via `devcontainer exec`, per CLAUDE.md — not inline `bun -e`) on the new
   eligibility query against the dev DB (or a test DB seeded with a few hundred rows). Record
   the plan and the decision (add index or not, and why) as a short note appended under this
@@ -146,6 +146,16 @@ matching Design subsection before each step.
   `drizzle-kit generate` command again) **only** if the plan shows a full-table scan that
   matters at this project's scale; otherwise no code change. Done when: note recorded;
   `bun test` and `bunx tsc --noEmit` green.
+
+  **Result (2026-10-03):** `EXPLAIN QUERY PLAN` on the new eligibility query (fresh migrated DB,
+  500 seeded videos, `ANALYZE` run) shows `SCAN videos`, `LIST SUBQUERY` over `SCAN subscriptions`
+  (+ bloom filter), and `USE TEMP B-TREE FOR ORDER BY` — a full table scan plus a sort.
+  **Decision: no index, no code change.** The scan is over a personal-scale table (thousands of
+  rows at most) run once per minute, costing microseconds; no existing index
+  (`status, published_at, id`, etc.) would let SQLite skip both the scan and the sort given the
+  null-duration/recheck predicates, and an extra index would add write cost on every ingest for
+  no measurable gain. Consistent with spec029's posture. Revisit only if the videos table grows
+  by orders of magnitude.
 
 - [ ] 12. spec029 cross-reference pointers in `docs/specs/029-video-duration-enrichment.md`
   (spec030 "Cross-references"; pointers only, no rewrites): (a) at the "stays eligible until it
