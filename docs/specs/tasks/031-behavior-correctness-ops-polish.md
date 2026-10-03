@@ -75,7 +75,7 @@ task 12 only verifies them. Don't touch Round A surfaces (`requireAuth`, CSP, th
   `test/routes/auth.test.ts`: `GET /login` markup contains both autocomplete values and
   `required` on both inputs. — done when: `bun test test/routes/auth.test.ts` passes.
 
-- [ ] 8. `ensureAdminPassword` in `src/lib/auth.ts` + boot wiring — export
+- [x] 8. `ensureAdminPassword` in `src/lib/auth.ts` + boot wiring — export
   `ensureAdminPassword(): Promise<void>`: read the `admin` user's `passwordHash`; no admin row
   → return silently; non-null hash → return; else generate
   `randomBytes(18).toString("base64url")`, `hashPassword` it, conditional update `WHERE

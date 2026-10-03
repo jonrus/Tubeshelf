@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import type { Context, MiddlewareHandler } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { csrf } from "hono/csrf";
@@ -46,6 +46,31 @@ export async function applyRecoveryPasswordFromEnv(): Promise<void> {
     .run();
   logger.warn(
     "AUTH_RECOVERY_PASSWORD was applied to the default user's password. Unset this environment variable after use.",
+  );
+}
+
+export async function ensureAdminPassword(): Promise<void> {
+  const admin = db
+    .select({ passwordHash: users.passwordHash })
+    .from(users)
+    .where(eq(users.username, "admin"))
+    .get();
+  if (!admin || admin.passwordHash !== null) return;
+
+  const generated = randomBytes(18).toString("base64url");
+  const passwordHash = await hashPassword(generated);
+  // Conditional so a hash written between the read above and this write is
+  // never overwritten, and a password that wasn't stored is never logged.
+  const updated = db
+    .update(users)
+    .set({ passwordHash })
+    .where(and(eq(users.username, "admin"), isNull(users.passwordHash)))
+    .returning({ id: users.id })
+    .all();
+  if (updated.length !== 1) return;
+
+  logger.warn(
+    `No password was set for the "admin" user, so one was generated: ${generated} -- this won't be shown again. Set AUTH_RECOVERY_PASSWORD to replace it.`,
   );
 }
 
