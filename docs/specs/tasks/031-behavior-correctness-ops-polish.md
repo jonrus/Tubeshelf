@@ -69,7 +69,7 @@ task 12 only verifies them. Don't touch Round A surfaces (`requireAuth`, CSP, th
   doesn't throw (falls back to `String`), Error and primitive rendering unchanged, JSON mode
   unchanged. — done when: `bun test test/lib/logger.test.ts` passes.
 
-- [ ] 7. Login form attributes — in `src/views/login-page.tsx` add `autocomplete="username"`
+- [x] 7. Login form attributes — in `src/views/login-page.tsx` add `autocomplete="username"`
   and `required` to the username input, and `autocomplete="current-password"` and `required`
   to the password input (`name="password"`). No server change. Add to
   `test/routes/auth.test.ts`: `GET /login` markup contains both autocomplete values and
