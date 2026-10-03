@@ -110,7 +110,7 @@ task 12 only verifies them. Don't touch Round A surfaces (`requireAuth`, CSP, th
   docs read consistently with spec section 4 and no remaining claim that
   `AUTH_RECOVERY_PASSWORD` is the only way to set the password (`grep -n "only" docs/DEPLOYMENT.md`).
 
-- [ ] 11. Manual end-to-end verification (Claude-performed part) — per CLAUDE.md. Using a
+- [x] 11. Manual end-to-end verification (Claude-performed part) — per CLAUDE.md. Using a
   temp `DB_FILE_NAME` and `env -u AUTH_RECOVERY_PASSWORD`: fresh-DB boot logs exactly one WARN
   with a password that `DEV_LOGIN_PASSWORD=<logged> scripts/dev-login.sh` accepts; a second
   boot logs nothing and login still works. `PRAGMA table_info(videos)` on the dev DB shows
