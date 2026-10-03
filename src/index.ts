@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
+import { HTTPException } from "hono/http-exception";
 import { db, sqlite } from "./db/client";
 import { runMigrations } from "./db/migrate";
 import { seed } from "./db/seed";
@@ -32,6 +33,16 @@ logger.info("Seed complete");
 await applyRecoveryPasswordFromEnv();
 
 const app = new Hono();
+
+app.onError((err, c) => {
+  if (err instanceof HTTPException) return err.getResponse();
+  logger.error("Unhandled request error", {
+    err,
+    method: c.req.method,
+    path: c.req.path,
+  });
+  return c.text("Internal Server Error", 500);
+});
 
 app.use("/css/*", serveStatic({ root: "./public" }));
 app.use("/js/*", serveStatic({ root: "./public" }));

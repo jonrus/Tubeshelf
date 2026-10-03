@@ -38,7 +38,7 @@ matching Design subsection before each step.
   the title; IDs too short / too long / bad chars skipped as malformed (other entries kept).
   Done when: `bun test` is fully green (no silently-skipped-entry failures).
 
-- [ ] 3. Add `app.onError` in `src/index.ts` right after `const app = new Hono();` (spec Design
+- [x] 3. Add `app.onError` in `src/index.ts` right after `const app = new Hono();` (spec Design
   §1, second half): import `HTTPException` from `hono/http-exception`; handler first does
   `if (err instanceof HTTPException) return err.getResponse();` then
   `logger.error("Unhandled request error", { err, method: c.req.method, path: c.req.path });
