@@ -31,7 +31,7 @@ task 12 only verifies them. Don't touch Round A surfaces (`requireAuth`, CSP, th
   verified as above, and `bun test` plus `bunx tsc --noEmit` are clean (test DB applies
   migrations).
 
-- [ ] 3. `unignoreVideo` sets the exemption — in `src/lib/watch-status.ts` add
+- [x] 3. `unignoreVideo` sets the exemption — in `src/lib/watch-status.ts` add
   `autoIgnoreExempt: true` to `unignoreVideo`'s `.set(...)` (the only writer; nothing clears
   it). Extend `test/lib/watch-status.test.ts`: `unignoreVideo` sets `autoIgnoreExempt` from
   both a manual and an auto ignore; other transition functions (watching/watched/unwatched/
