@@ -1,5 +1,6 @@
 ---
-status: refined
+status: promoted
+promoted_to: docs/specs/032-auth-security-hardening.md
 created: 2026-10-03
 ---
 
@@ -171,6 +172,9 @@ None remaining.
   `includeIndicatorStyles:false` + `allowEval:false` so `style-src 'self'`/`script-src
   'self'` need no unsafe-inline/eval.** Why: grep found no inline `style=` or
   `hx-indicator`; HSTS is the proxy's job and the app can't reliably detect TLS.
+  *(Corrected during spec writing — see docs/specs/032-auth-security-hardening.md's Design
+  section: hono's `secureHeaders()` enables HSTS by default so it must be explicitly turned off;
+  `.gitignore` needs no change; `Referrer-Policy` is `same-origin`, not hono's `no-referrer`.)*
 - **#10 tests — header assertions plus a static no-inline-script/handler test.** Why: a
   future inline handler would silently break under the CSP only in a browser.
 - **#10 — `pageshow` reload script ships as a separate file loaded only on the watching
