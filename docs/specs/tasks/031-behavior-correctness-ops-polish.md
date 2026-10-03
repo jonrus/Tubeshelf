@@ -127,7 +127,7 @@ task 12 only verifies them. Don't touch Round A surfaces (`requireAuth`, CSP, th
   docs/specs/007*.md docs/specs/012*.md docs/specs/014*.md`). — done when: the user reports
   results back.
 
-- [ ] 13. Final verification, flip spec to implemented, open the PR — run `bun test`,
+- [x] 13. Final verification, flip spec to implemented, open the PR — run `bun test`,
   `bun run lint`, `bunx tsc --noEmit`, and `bun run fallow` clean across the repo; set
   `docs/specs/031-behavior-correctness-ops-polish.md` frontmatter to `status: implemented`.
   Draft the PR (summary + test plan; end with the Claude Code attribution line) per
