@@ -47,3 +47,61 @@ test("a cross-origin POST is still rejected with 403", async () => {
   });
   expect(res.status).toBe(403);
 });
+
+const EXPECTED_CSP = [
+  "default-src 'self'",
+  "img-src 'self' https://i.ytimg.com",
+  "script-src 'self'",
+  "style-src 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "base-uri 'none'",
+  "form-action 'self'",
+].join("; ");
+
+function expectSecurityHeaders(res: Response) {
+  expect(res.headers.get("content-security-policy")).toBe(EXPECTED_CSP);
+  expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+  expect(res.headers.get("referrer-policy")).toBe("same-origin");
+  expect(res.headers.get("x-frame-options")).toBe("DENY");
+  expect(res.headers.has("strict-transport-security")).toBe(false);
+}
+
+test("security headers are present on /login", async () => {
+  const res = await app.request("/login");
+  expect(res.status).toBe(200);
+  expectSecurityHeaders(res);
+});
+
+test("security headers are present on an authenticated page", async () => {
+  const { cookie } = await loginAsAdminUser();
+  const res = await app.request("/ignore-rules", {
+    headers: { Cookie: cookie },
+  });
+  expect(res.status).toBe(200);
+  expectSecurityHeaders(res);
+});
+
+test("security headers are present on /healthz", async () => {
+  const res = await app.request("/healthz");
+  expectSecurityHeaders(res);
+});
+
+test("security headers are present on a static file", async () => {
+  const res = await app.request("/js/app.js");
+  expect(res.status).toBe(200);
+  expectSecurityHeaders(res);
+});
+
+test("security headers are present on a 500 from onError", async () => {
+  const { cookie } = await loginAsAdminUser();
+  const throwingApp = buildApp();
+  throwingApp.get("/boom", () => {
+    throw new Error("boom");
+  });
+  const res = await throwingApp.request("/boom", {
+    headers: { Cookie: cookie },
+  });
+  expect(res.status).toBe(500);
+  expectSecurityHeaders(res);
+});

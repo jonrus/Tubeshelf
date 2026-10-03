@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
 import { HTTPException } from "hono/http-exception";
+import { secureHeaders } from "hono/secure-headers";
 import { logger } from "./lib/logger";
 import { authRoute } from "./routes/auth";
 import { categoriesRoute } from "./routes/categories";
@@ -22,6 +23,24 @@ export function buildApp(): Hono {
     return c.text("Internal Server Error", 500);
   });
 
+  app.use(
+    "*",
+    secureHeaders({
+      contentSecurityPolicy: {
+        defaultSrc: ["'self'"],
+        imgSrc: ["'self'", "https://i.ytimg.com"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+        baseUri: ["'none'"],
+        formAction: ["'self'"],
+      },
+      referrerPolicy: "same-origin",
+      xFrameOptions: "DENY",
+      strictTransportSecurity: false,
+    }),
+  );
   app.use("/css/*", serveStatic({ root: "./public" }));
   app.use("/js/*", serveStatic({ root: "./public" }));
   app.use("/icons/*", serveStatic({ root: "./public" }));

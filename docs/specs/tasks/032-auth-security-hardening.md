@@ -137,7 +137,7 @@ No schema change anywhere in this spec.
   JS files as trackable). — done when: both COPY lines exist and `git check-ignore
   public/js/app.js public/js/pageshow-reload.js` prints nothing.
 
-- [ ] 11. #10 — security headers — in `src/app.ts`, register as the **first**
+- [x] 11. #10 — security headers — in `src/app.ts`, register as the **first**
   `app.use("*", secureHeaders({...}))` (`hono/secure-headers`) before static handlers/routes:
   `contentSecurityPolicy` object with camelCase keys: `defaultSrc ["'self'"]`, `imgSrc
   ["'self'", "https://i.ytimg.com"]`, `scriptSrc ["'self'"]`, `styleSrc ["'self'"]`,
