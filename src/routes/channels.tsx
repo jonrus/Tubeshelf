@@ -12,7 +12,6 @@ import { csrfCheck, requireAuth } from "../lib/auth";
 import { getSystemCategory, listCategoriesWithCounts } from "../lib/categories";
 import { CHANNEL_ID_PATTERN, rssUrlFor } from "../lib/channel-input";
 import { resolveChannelInput } from "../lib/channel-resolve";
-import { getCurrentUser } from "../lib/current-user";
 import { applyFeedToChannel, ingestChannel } from "../lib/ingest";
 import { getNavCounts } from "../lib/nav-counts";
 import { fetchChannelFeed } from "../lib/rss";
@@ -123,13 +122,13 @@ export const channelsRoute = new Hono();
 channelsRoute.use("*", csrfCheck, requireAuth);
 
 channelsRoute.get("/channels", (c) => {
-  const user = getCurrentUser();
+  const userId = c.get("userId");
   return c.html(
     <ChannelsPage
       subscribeCategories={listNonSystemCategories()}
-      categories={listCategoriesWithCounts(user.id)}
-      subscriptions={listActiveSubscriptions(user.id)}
-      navCounts={getNavCounts(user.id)}
+      categories={listCategoriesWithCounts(userId)}
+      subscriptions={listActiveSubscriptions(userId)}
+      navCounts={getNavCounts(userId)}
       currentView="channels"
     />,
   );
@@ -185,7 +184,7 @@ channelsRoute.post("/subscriptions/preview", async (c) => {
 });
 
 channelsRoute.post("/subscriptions", async (c) => {
-  const user = getCurrentUser();
+  const userId = c.get("userId");
   const body = await c.req.parseBody();
   const channelId = typeof body.channelId === "string" ? body.channelId : "";
   const categoryIdRaw =
@@ -216,7 +215,7 @@ channelsRoute.post("/subscriptions", async (c) => {
   }
 
   const subscribeResult = upsertSubscription(
-    user.id,
+    userId,
     channel.id,
     resolvedCategory.categoryId,
   );
@@ -229,14 +228,14 @@ channelsRoute.post("/subscriptions", async (c) => {
   return c.html(
     <>
       <BlankSubscribeForm categories={listNonSystemCategories()} />
-      <SubscriptionList subscriptions={listActiveSubscriptions(user.id)} oob />
+      <SubscriptionList subscriptions={listActiveSubscriptions(userId)} oob />
     </>,
   );
 });
 
 function updateOwnedSubscription(
   c: Context,
-  user: { id: number },
+  userId: number,
   id: number,
   set: Partial<typeof subscriptions.$inferInsert>,
 ) {
@@ -246,7 +245,7 @@ function updateOwnedSubscription(
     .where(
       and(
         eq(subscriptions.id, id),
-        eq(subscriptions.userId, user.id),
+        eq(subscriptions.userId, userId),
         isNull(subscriptions.unsubscribedAt),
       ),
     )
@@ -258,20 +257,20 @@ function updateOwnedSubscription(
   }
 
   return c.html(
-    <SubscriptionList subscriptions={listActiveSubscriptions(user.id)} />,
+    <SubscriptionList subscriptions={listActiveSubscriptions(userId)} />,
   );
 }
 
 channelsRoute.delete("/subscriptions/:id", (c) => {
-  const user = getCurrentUser();
+  const userId = c.get("userId");
   const id = Number(c.req.param("id"));
-  return updateOwnedSubscription(c, user, id, { unsubscribedAt: new Date() });
+  return updateOwnedSubscription(c, userId, id, { unsubscribedAt: new Date() });
 });
 
 channelsRoute.post("/subscriptions/:id/dismiss-missed-videos", (c) => {
-  const user = getCurrentUser();
+  const userId = c.get("userId");
   const id = Number(c.req.param("id"));
-  return updateOwnedSubscription(c, user, id, {
+  return updateOwnedSubscription(c, userId, id, {
     missedVideosDismissedAt: new Date(),
   });
 });

@@ -915,3 +915,54 @@ test("a brand-new subscription to a channel with a pre-existing old gap does not
     .get();
   expect(sub?.missedVideosDismissedAt).not.toBeNull();
 });
+
+test("GET /channels shows the session user's subscriptions, not admin's", async () => {
+  const { createSession } = await import("../../src/lib/auth");
+
+  const otherUser = db
+    .insert(users)
+    .values({ username: "second-user", passwordHash: "unused" })
+    .returning()
+    .get();
+  const adminChannel = db
+    .insert(youtubeChannels)
+    .values({
+      youtubeChannelId: channelId("sessionUserAdmin"),
+      name: "Admin Only Channel",
+      rssUrl: rssUrlFor(channelId("sessionUserAdmin")),
+    })
+    .returning()
+    .get();
+  const otherChannel = db
+    .insert(youtubeChannels)
+    .values({
+      youtubeChannelId: channelId("sessionUserOther"),
+      name: "Second User Channel",
+      rssUrl: rssUrlFor(channelId("sessionUserOther")),
+    })
+    .returning()
+    .get();
+  db.insert(subscriptions)
+    .values({
+      userId: defaultUser.id,
+      youtubeChannelId: adminChannel.id,
+      categoryId: systemCategory.id,
+    })
+    .run();
+  db.insert(subscriptions)
+    .values({
+      userId: otherUser.id,
+      youtubeChannelId: otherChannel.id,
+      categoryId: systemCategory.id,
+    })
+    .run();
+
+  const { token } = createSession(otherUser.id);
+  const res = await channelsRoute.request("/channels", {
+    headers: { Cookie: `session=${token}`, Origin: origin },
+  });
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).toContain("Second User Channel");
+  expect(html).not.toContain("Admin Only Channel");
+});

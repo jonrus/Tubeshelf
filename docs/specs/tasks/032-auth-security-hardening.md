@@ -98,7 +98,7 @@ No schema change anywhere in this spec.
   — done when: `rg getCurrentUser src/routes/queue.tsx` is empty, `bun test test/routes/queue.test.ts`
   and `bunx tsc --noEmit` pass.
 
-- [ ] 8. #6 — session user in `categories.tsx`, `ignore-rules.tsx`, `channels.tsx`; delete
+- [x] 8. #6 — session user in `categories.tsx`, `ignore-rules.tsx`, `channels.tsx`; delete
   `current-user.ts` — same replacement for the 5 / 1 / 4 call sites. In `channels.tsx`
   change `updateOwnedSubscription(c, user, id, …)` to take `userId: number` (verify no call
   site reads another `user` field). Delete `src/lib/current-user.ts`. Add a route test (e.g.

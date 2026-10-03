@@ -9,7 +9,6 @@ import {
 } from "../db/schema";
 import { csrfCheck, requireAuth } from "../lib/auth";
 import { getSystemCategory, listCategoriesWithCounts } from "../lib/categories";
-import { getCurrentUser } from "../lib/current-user";
 import { getNavCounts } from "../lib/nav-counts";
 import { CategoriesList } from "../views/categories-list";
 import { CategoriesPage } from "../views/categories-page";
@@ -82,19 +81,19 @@ function isUniqueConstraintError(err: unknown): boolean {
 }
 
 categoriesRoute.get("/categories", (c) => {
-  const user = getCurrentUser();
+  const userId = c.get("userId");
   return c.html(
     <CategoriesPage
-      categories={listCategoriesWithCounts(user.id)}
-      navCounts={getNavCounts(user.id)}
+      categories={listCategoriesWithCounts(userId)}
+      navCounts={getNavCounts(userId)}
       currentView="categories"
     />,
   );
 });
 
 categoriesRoute.post("/categories", async (c) => {
-  const user = getCurrentUser();
-  const parsed = await parseAndValidateCategoryName(c, user.id);
+  const userId = c.get("userId");
+  const parsed = await parseAndValidateCategoryName(c, userId);
   if ("response" in parsed) return parsed.response;
   const { name } = parsed;
 
@@ -104,46 +103,46 @@ categoriesRoute.post("/categories", async (c) => {
     if (!isUniqueConstraintError(err)) throw err;
     return c.html(
       <CategoriesList
-        categories={listCategoriesWithCounts(user.id)}
+        categories={listCategoriesWithCounts(userId)}
         error="A category with that name already exists."
       />,
     );
   }
 
   return c.html(
-    <CategoriesList categories={listCategoriesWithCounts(user.id)} />,
+    <CategoriesList categories={listCategoriesWithCounts(userId)} />,
   );
 });
 
 categoriesRoute.get("/categories/:id/edit", (c) => {
-  const user = getCurrentUser();
+  const userId = c.get("userId");
   const id = Number(c.req.param("id"));
   const category = getCategoryById(id);
   if (!category || category.isSystem) {
     return c.html(
-      <CategoriesList categories={listCategoriesWithCounts(user.id)} />,
+      <CategoriesList categories={listCategoriesWithCounts(userId)} />,
     );
   }
   return c.html(
     <CategoriesList
-      categories={listCategoriesWithCounts(user.id)}
+      categories={listCategoriesWithCounts(userId)}
       editingId={id}
     />,
   );
 });
 
 categoriesRoute.post("/categories/:id", async (c) => {
-  const user = getCurrentUser();
+  const userId = c.get("userId");
   const id = Number(c.req.param("id"));
   const guard = categoryEditGuard(
     c,
-    user.id,
+    userId,
     id,
     "Cannot rename the system category.",
   );
   if (guard) return guard;
 
-  const parsed = await parseAndValidateCategoryName(c, user.id, {
+  const parsed = await parseAndValidateCategoryName(c, userId, {
     editingId: id,
   });
   if ("response" in parsed) return parsed.response;
@@ -155,7 +154,7 @@ categoriesRoute.post("/categories/:id", async (c) => {
     if (!isUniqueConstraintError(err)) throw err;
     return c.html(
       <CategoriesList
-        categories={listCategoriesWithCounts(user.id)}
+        categories={listCategoriesWithCounts(userId)}
         editingId={id}
         error="A category with that name already exists."
       />,
@@ -163,16 +162,16 @@ categoriesRoute.post("/categories/:id", async (c) => {
   }
 
   return c.html(
-    <CategoriesList categories={listCategoriesWithCounts(user.id)} />,
+    <CategoriesList categories={listCategoriesWithCounts(userId)} />,
   );
 });
 
 categoriesRoute.delete("/categories/:id", (c) => {
-  const user = getCurrentUser();
+  const userId = c.get("userId");
   const id = Number(c.req.param("id"));
   const guard = categoryEditGuard(
     c,
-    user.id,
+    userId,
     id,
     "Cannot delete the system category.",
   );
@@ -189,6 +188,6 @@ categoriesRoute.delete("/categories/:id", (c) => {
   });
 
   return c.html(
-    <CategoriesList categories={listCategoriesWithCounts(user.id)} />,
+    <CategoriesList categories={listCategoriesWithCounts(userId)} />,
   );
 });
