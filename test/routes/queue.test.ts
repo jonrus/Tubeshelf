@@ -616,6 +616,23 @@ test("GET /watching/:id shows Mark Unwatched and hides the auto-timer for a watc
   expect(html).not.toContain('hx-trigger="load delay:10s"');
 });
 
+test("GET /watching/:id hides the auto-timer and shows the Ignored badge for an ignored video", async () => {
+  const channel = makeChannel("Watching Page Ignored Channel");
+  makeSubscription(channel.id);
+  const video = makeVideo(channel.id, {
+    status: "ignored",
+    ignoreMethod: "auto",
+  });
+
+  const res = await queueRoute.request(`/watching/${video.id}`, {
+    headers: authHeaders,
+  });
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).not.toContain('hx-trigger="load delay:10s"');
+  expect(html).toContain("Ignored");
+});
+
 test("GET /watching/:id resolves the return target from from/sort, with fallback for missing/unrecognized from", async () => {
   const channel = makeChannel("Return Target Channel");
   makeSubscription(channel.id);

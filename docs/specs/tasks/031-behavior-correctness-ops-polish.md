@@ -53,7 +53,7 @@ task 12 only verifies them. Don't touch Round A surfaces (`requireAuth`, CSP, th
   another still-matching rule → video stays `unwatched`. — done when: `bun test`,
   `bun run lint`, `bunx tsc --noEmit` clean.
 
-- [ ] 5. Watching page: no auto-timer for ignored videos — in `src/views/watching-page.tsx`
+- [x] 5. Watching page: no auto-timer for ignored videos — in `src/views/watching-page.tsx`
   change `showAutoTimer` to `props.status !== "watched" && props.status !== "ignored"`. No
   route change; leave inline `onerror`/`onsubmit` handlers alone. Add to
   `test/routes/queue.test.ts`: `GET /watching/:id` for an `ignored` video has no
