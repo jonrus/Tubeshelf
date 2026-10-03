@@ -9,8 +9,8 @@ const FEED_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:media="http://search.yahoo.com/mrss/" xmlns="http://www.w3.org/2005/Atom">
   <title>Test Channel</title>
   <entry>
-    <id>yt:video:abc123</id>
-    <yt:videoId>abc123</yt:videoId>
+    <id>yt:video:abc12345678</id>
+    <yt:videoId>abc12345678</yt:videoId>
     <title>First Video</title>
     <published>2026-07-01T12:00:00+00:00</published>
     <media:group>
@@ -18,8 +18,8 @@ const FEED_XML = `<?xml version="1.0" encoding="UTF-8"?>
     </media:group>
   </entry>
   <entry>
-    <id>yt:video:def456</id>
-    <yt:videoId>def456</yt:videoId>
+    <id>yt:video:def45678901</id>
+    <yt:videoId>def45678901</yt:videoId>
     <title>Second Video</title>
     <published>2026-07-10T08:30:00+00:00</published>
     <media:group>
@@ -46,13 +46,13 @@ test("parses title and entries from Atom XML on success", async () => {
   expect(feed?.title).toBe("Test Channel");
   expect(feed?.entries).toEqual([
     {
-      videoId: "abc123",
+      videoId: "abc12345678",
       title: "First Video",
       description: "First video description",
       publishedAt: new Date("2026-07-01T12:00:00+00:00"),
     },
     {
-      videoId: "def456",
+      videoId: "def45678901",
       title: "Second Video",
       description: "Second video description",
       publishedAt: new Date("2026-07-10T08:30:00+00:00"),
@@ -65,7 +65,7 @@ test("skips a malformed entry without failing the whole fetch", async () => {
 <feed xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:media="http://search.yahoo.com/mrss/" xmlns="http://www.w3.org/2005/Atom">
   <title>Test Channel</title>
   <entry>
-    <id>yt:video:abc123</id>
+    <id>yt:video:abc12345678</id>
     <title>First Video</title>
     <published>2026-07-01T12:00:00+00:00</published>
   </entry>
@@ -83,7 +83,7 @@ test("skips a malformed entry without failing the whole fetch", async () => {
   expect(feed?.title).toBe("Test Channel");
   expect(feed?.entries).toEqual([
     {
-      videoId: "abc123",
+      videoId: "abc12345678",
       title: "First Video",
       description: null,
       publishedAt: new Date("2026-07-01T12:00:00+00:00"),
@@ -96,7 +96,7 @@ test("logs a single warn with a count when multiple entries are malformed", asyn
 <feed xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:media="http://search.yahoo.com/mrss/" xmlns="http://www.w3.org/2005/Atom">
   <title>Test Channel</title>
   <entry>
-    <id>yt:video:abc123</id>
+    <id>yt:video:abc12345678</id>
     <title>First Video</title>
     <published>2026-07-01T12:00:00+00:00</published>
   </entry>
@@ -157,4 +157,116 @@ test("returns null when title is missing", async () => {
   );
 
   expect(await fetchChannelFeed(RSS_URL)).toBeNull();
+});
+
+test("returns null (no throw) on a non-XML body", async () => {
+  fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response("hello", { status: 200 }),
+  );
+  warnSpy = spyOn(logger, "warn").mockImplementation(() => {});
+
+  expect(await fetchChannelFeed(RSS_URL)).toBeNull();
+  expect(warnSpy).toHaveBeenCalledWith(
+    "Feed is not valid XML",
+    expect.objectContaining({ url: RSS_URL }),
+  );
+});
+
+test("returns null on well-formed XML that isn't a feed", async () => {
+  fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response("<html><body>hi</body></html>", { status: 200 }),
+  );
+
+  expect(await fetchChannelFeed(RSS_URL)).toBeNull();
+});
+
+test("returns null on an empty <feed/> root", async () => {
+  fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response("<feed/>", { status: 200 }),
+  );
+
+  expect(await fetchChannelFeed(RSS_URL)).toBeNull();
+});
+
+function streamOf(chunks: Uint8Array[]): ReadableStream<Uint8Array> {
+  return new ReadableStream({
+    start(controller) {
+      for (const chunk of chunks) controller.enqueue(chunk);
+      controller.close();
+    },
+  });
+}
+
+test("returns null when Content-Length exceeds the size cap", async () => {
+  fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response(FEED_XML, {
+      status: 200,
+      headers: { "Content-Length": String(3 * 1024 * 1024) },
+    }),
+  );
+  warnSpy = spyOn(logger, "warn").mockImplementation(() => {});
+
+  expect(await fetchChannelFeed(RSS_URL)).toBeNull();
+  expect(warnSpy).toHaveBeenCalledWith("Feed exceeds size cap", {
+    url: RSS_URL,
+    maxBytes: 2 * 1024 * 1024,
+  });
+});
+
+test("returns null when a streamed body without Content-Length exceeds the size cap", async () => {
+  const chunk = new Uint8Array(1024 * 1024).fill(0x20);
+  fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response(streamOf([chunk, chunk, chunk]), { status: 200 }),
+  );
+  warnSpy = spyOn(logger, "warn").mockImplementation(() => {});
+
+  expect(await fetchChannelFeed(RSS_URL)).toBeNull();
+  expect(warnSpy).toHaveBeenCalledWith(
+    "Feed exceeds size cap",
+    expect.objectContaining({ url: RSS_URL }),
+  );
+});
+
+test("decodes a multi-byte character split across chunk boundaries", async () => {
+  const bytes = new TextEncoder().encode(
+    FEED_XML.replace("Test Channel", "Café 🎬 Channel"),
+  );
+  // Split inside both the 2-byte "é" and the 4-byte emoji.
+  const eAcute = bytes.indexOf(0xc3);
+  const emoji = bytes.indexOf(0xf0);
+  const chunks = [
+    bytes.slice(0, eAcute + 1),
+    bytes.slice(eAcute + 1, emoji + 2),
+    bytes.slice(emoji + 2),
+  ];
+  fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response(streamOf(chunks), { status: 200 }),
+  );
+
+  const feed = await fetchChannelFeed(RSS_URL);
+  expect(feed?.title).toBe("Café 🎬 Channel");
+});
+
+test("skips entries whose video ID is too short, too long, or has bad characters", async () => {
+  const entry = (id: string) => `  <entry>
+    <id>yt:video:${id}</id>
+    <title>Video ${id}</title>
+    <published>2026-07-01T12:00:00+00:00</published>
+  </entry>`;
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Test Channel</title>
+${[entry("short"), entry("waytoolongvideoid"), entry("bad!chars!!!"), entry("good_ID-123")].join("\n")}
+</feed>`;
+  fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response(xml, { status: 200 }),
+  );
+  warnSpy = spyOn(logger, "warn").mockImplementation(() => {});
+
+  const feed = await fetchChannelFeed(RSS_URL);
+  expect(feed?.entries.map((e) => e.videoId)).toEqual(["good_ID-123"]);
+  expect(warnSpy).toHaveBeenCalledWith(
+    "Skipped malformed feed entries",
+    expect.objectContaining({ count: 3 }),
+  );
 });

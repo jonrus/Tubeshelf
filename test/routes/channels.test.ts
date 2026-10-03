@@ -363,6 +363,23 @@ test("preview renders the real fetched name and writes nothing to any table", as
   expect(channel).toBeUndefined();
 });
 
+test("preview and confirm render the friendly error (not a 500) for a non-XML feed body", async () => {
+  const id = channelId("nonXmlFeed");
+  fetchSpy = mockFetch("hello");
+
+  const previewRes = await postPreview(id);
+  expect(previewRes.status).toBe(200);
+  expect(await previewRes.text()).toContain(
+    "Couldn&#39;t fetch that channel&#39;s feed.",
+  );
+
+  const confirmRes = await postConfirm({ channelId: id, categoryId: "" });
+  expect(confirmRes.status).toBe(200);
+  expect(await confirmRes.text()).toContain(
+    "Couldn&#39;t fetch that channel&#39;s feed.",
+  );
+});
+
 test("preview resolves a bare @handle via scrape and renders the confirmed channel", async () => {
   const id = channelId("previewHandle");
   fetchSpy = mockScrapeThenFeed(id, "Preview Handle Channel");
@@ -401,12 +418,12 @@ test("confirm creates the subscription and populates videos in one round trip", 
   const id = channelId("confirmVideos");
   const entries = [
     {
-      id: "confirmVideos-vid1",
+      id: "confirmVid1",
       title: "Video One",
       published: "2026-07-01T00:00:00+00:00",
     },
     {
-      id: "confirmVideos-vid2",
+      id: "confirmVid2",
       title: "Video Two",
       published: "2026-07-02T00:00:00+00:00",
     },
@@ -442,8 +459,8 @@ test("confirm creates the subscription and populates videos in one round trip", 
     .where(eq(videos.channelId, channel.id))
     .all();
   expect(channelVideos.map((v) => v.youtubeVideoId).sort()).toEqual([
-    "confirmVideos-vid1",
-    "confirmVideos-vid2",
+    "confirmVid1",
+    "confirmVid2",
   ]);
 });
 
@@ -462,7 +479,7 @@ test("confirming an already-known channel only fetches to ingest, not to learn i
   fetchSpy = mockFetch(
     feedXml("Already Known Channel", [
       {
-        id: "alreadyKnown-vid1",
+        id: "knownVideo1",
         title: "Known Video",
         published: "2026-07-15T00:00:00+00:00",
       },
@@ -480,9 +497,7 @@ test("confirming an already-known channel only fetches to ingest, not to learn i
     .from(videos)
     .where(eq(videos.channelId, channel.id))
     .all();
-  expect(channelVideos.map((v) => v.youtubeVideoId)).toEqual([
-    "alreadyKnown-vid1",
-  ]);
+  expect(channelVideos.map((v) => v.youtubeVideoId)).toEqual(["knownVideo1"]);
 
   const sub = db
     .select()

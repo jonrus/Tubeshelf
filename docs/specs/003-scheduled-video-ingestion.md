@@ -233,6 +233,8 @@ A partial video-upsert batch left behind by a mid-loop failure in `applyFeedToCh
 next attempt -- `onConflictDoUpdate` makes re-applying an already-upserted entry a
 no-op, so no wrapping transaction is needed, consistent with this spec's existing
 no-backoff/no-retry-sophistication posture for fetch failures.
+(superseded in docs/specs/030-ingestion-enrichment-robustness.md -- `applyFeedToChannel` is now
+one transaction)
 
 Confirmed at implementation time (task 6): `.onConflictDoUpdate({ target, set })` as
 sketched above compiles cleanly (`tsc --noEmit`) against the installed

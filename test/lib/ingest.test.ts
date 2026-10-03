@@ -22,7 +22,7 @@ const ONE_ENTRY_FEED_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:media="http://search.yahoo.com/mrss/" xmlns="http://www.w3.org/2005/Atom">
   <title>Test Channel</title>
   <entry>
-    <id>yt:video:live1</id>
+    <id>yt:video:live1234567</id>
     <title>Live Video</title>
     <published>2026-07-10T00:00:00+00:00</published>
   </entry>
@@ -132,7 +132,7 @@ test("re-ingesting an existing video updates title/description/publishedAt witho
 });
 
 test("a feed entry matching an existing IgnoreRule is inserted as ignored/auto on first ingestion", () => {
-  const channel = makeChannel("UCingest0009");
+  const channel = makeChannel("UCingest0099");
   db.insert(ignoreRules).values({ keyword: "spoiler" }).run();
 
   applyFeedToChannel(
@@ -313,13 +313,15 @@ test("ingestChannel catches a DB error thrown from applyFeedToChannel, still adv
   const fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(
     new Response(ONE_ENTRY_FEED_XML, { status: 200 }),
   );
-  const insertSpy = spyOn(db, "insert").mockImplementationOnce(() => {
+  // Writes inside applyFeedToChannel go through the transaction's `tx`, not `db`
+  // directly, so the failure is simulated at the transaction boundary.
+  const transactionSpy = spyOn(db, "transaction").mockImplementationOnce(() => {
     throw new Error("simulated DB failure");
   });
 
   const result = await ingestChannel(channel);
   fetchSpy.mockRestore();
-  insertSpy.mockRestore();
+  transactionSpy.mockRestore();
 
   expect(result).toEqual({ ok: false });
   expect(channelRow(channel.id).nextFetchDueAt).not.toBeNull();
@@ -345,4 +347,37 @@ test("ingestChannel catches a failing reschedule update and still resolves ok:fa
   fetchSpy.mockRestore();
   updateSpy.mockRestore();
   consoleErrorSpy.mockRestore();
+});
+
+test("applyFeedToChannel is atomic: a mid-loop failure leaves no videos and no schedule change", () => {
+  const channel = makeChannel("UCingest0100");
+  const before = channelRow(channel.id);
+
+  const badFeed = feedOf([
+    {
+      videoId: "atomic00001",
+      title: "Valid",
+      description: null,
+      publishedAt: new Date("2026-07-01T00:00:00Z"),
+    },
+    {
+      videoId: "atomic00002",
+      // Violates the NOT NULL constraint on videos.title.
+      title: null as unknown as string,
+      description: null,
+      publishedAt: new Date("2026-07-02T00:00:00Z"),
+    },
+  ]);
+
+  expect(() => applyFeedToChannel(channel.id, badFeed)).toThrow();
+
+  const rows = db
+    .select()
+    .from(videos)
+    .where(eq(videos.channelId, channel.id))
+    .all();
+  expect(rows).toHaveLength(0);
+  const after = channelRow(channel.id);
+  expect(after.lastFetchedAt).toEqual(before.lastFetchedAt);
+  expect(after.nextFetchDueAt).toEqual(before.nextFetchDueAt);
 });
