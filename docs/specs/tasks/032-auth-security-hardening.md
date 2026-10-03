@@ -181,7 +181,7 @@ No schema change anywhere in this spec.
   `grep -n 032 docs/app_idea.md docs/specs/012*.md docs/specs/024*.md`. — done when: the
   user reports results back.
 
-- [ ] 15. Final verification, flip spec to implemented, open the PR — run `bun test`,
+- [x] 15. Final verification, flip spec to implemented, open the PR — run `bun test`,
   `bun run lint`, `bunx tsc --noEmit`, and `bun run fallow` clean across the repo; set
   `docs/specs/032-auth-security-hardening.md` frontmatter to `status: implemented`. Draft the
   PR (summary + test plan; end with the Claude Code attribution line) per CLAUDE.md's git
