@@ -139,7 +139,7 @@ test("listCategoriesWithCounts' channelCount is 1 for a category with one subscr
   expect(found?.channelCount).toBe(1);
 });
 
-test("listCategoriesWithCounts' channelCount counts subscriptions across users and includes unsubscribed rows", () => {
+test("listCategoriesWithCounts' channelCount ignores unsubscribed rows and other users' subscriptions", () => {
   const category = db
     .insert(categories)
     .values({ name: "Lib Channel Count Multi Category" })
@@ -169,5 +169,5 @@ test("listCategoriesWithCounts' channelCount counts subscriptions across users a
   const result = listCategoriesWithCounts(defaultUser.id);
 
   const found = result.find((c) => c.id === category.id);
-  expect(found?.channelCount).toBe(3);
+  expect(found?.channelCount).toBe(1);
 });

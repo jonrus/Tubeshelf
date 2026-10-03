@@ -1,4 +1,4 @@
-import { asc, count, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "../db/client";
 import { categories, subscriptions, videos } from "../db/schema";
 import { countUserVideos } from "./nav-counts";
@@ -27,11 +27,17 @@ function categoryUnwatchedCount(userId: number, categoryId: number): number {
   );
 }
 
-function categoryChannelCount(categoryId: number): number {
+function categoryChannelCount(userId: number, categoryId: number): number {
   const row = db
     .select({ count: count() })
     .from(subscriptions)
-    .where(eq(subscriptions.categoryId, categoryId))
+    .where(
+      and(
+        eq(subscriptions.userId, userId),
+        eq(subscriptions.categoryId, categoryId),
+        isNull(subscriptions.unsubscribedAt),
+      ),
+    )
     .get();
   return row?.count ?? 0;
 }
@@ -45,6 +51,6 @@ export function listCategoriesWithCounts(userId: number): CategoryWithCount[] {
     .map((category) => ({
       ...category,
       unwatchedCount: categoryUnwatchedCount(userId, category.id),
-      channelCount: categoryChannelCount(category.id),
+      channelCount: categoryChannelCount(userId, category.id),
     }));
 }

@@ -7,7 +7,7 @@ Notes for every step: run commands via the devcontainer (CLAUDE.md). The spec's 
 task 12 only verifies them. Don't touch Round A surfaces (`requireAuth`, CSP, the inline
 `onerror=`/`onsubmit=` handlers in `watching-page.tsx`).
 
-- [ ] 1. Scope `categoryChannelCount` to the current user's active subscriptions — in
+- [x] 1. Scope `categoryChannelCount` to the current user's active subscriptions — in
   `src/lib/categories.ts` change `categoryChannelCount(categoryId)` to
   `categoryChannelCount(userId, categoryId)` filtering `eq(subscriptions.userId, userId)`,
   `eq(subscriptions.categoryId, categoryId)` and `isNull(subscriptions.unsubscribedAt)` (use
