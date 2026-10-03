@@ -134,3 +134,48 @@ test("fetchVideoDurations tolerates a malformed details field", async () => {
   expect(result.failure).toEqual({ class: "transient", reason: "badRequest" });
   fetchSpy.mockRestore();
 });
+
+test("fetchVideoDurations returnedIds includes unresolved items but not id-less ones", async () => {
+  const fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        items: [
+          { id: "resolved0001", contentDetails: { duration: "PT1M" } },
+          { id: "zeroDur0001", contentDetails: { duration: "P0D" } },
+          { id: "badDur00001", contentDetails: { duration: "garbage" } },
+          { id: "noDur000001", contentDetails: {} },
+          { id: "noDetails001" },
+          { contentDetails: { duration: "PT5S" } },
+        ],
+      }),
+      { status: 200 },
+    ),
+  );
+
+  const result = await fetchVideoDurations(["x"], "k");
+
+  expect(result.failure).toBeNull();
+  expect([...result.durations.keys()]).toEqual(["resolved0001"]);
+  expect(result.returnedIds).toEqual(
+    new Set([
+      "resolved0001",
+      "zeroDur0001",
+      "badDur00001",
+      "noDur000001",
+      "noDetails001",
+    ]),
+  );
+  fetchSpy.mockRestore();
+});
+
+test("fetchVideoDurations returnedIds is empty on failure", async () => {
+  const fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response("{}", { status: 500 }),
+  );
+
+  const result = await fetchVideoDurations(["abcdefghijk"], "k");
+
+  expect(result.failure?.class).toBe("transient");
+  expect(result.returnedIds.size).toBe(0);
+  fetchSpy.mockRestore();
+});

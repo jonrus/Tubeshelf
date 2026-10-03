@@ -21,6 +21,9 @@ const VIDEOS_LIST_URL = "https://www.googleapis.com/youtube/v3/videos";
 
 export type FetchVideoDurationsResult = {
   durations: Map<string, number>;
+  // Every item id present in a successful response, whether or not its
+  // duration parsed — lets callers tell "returned, unresolved" from "omitted".
+  returnedIds: Set<string>;
   failure: { class: "transient" | "bad-key"; reason: string } | null;
 };
 
@@ -89,6 +92,7 @@ export async function fetchVideoDurations(
   } catch {
     return {
       durations: new Map(),
+      returnedIds: new Set(),
       failure: { class: "transient", reason: "network-error" },
     };
   }
@@ -110,6 +114,7 @@ export async function fetchVideoDurations(
       `http-${res.status}`;
     return {
       durations: new Map(),
+      returnedIds: new Set(),
       failure: { class: failureClass, reason },
     };
   }
@@ -119,12 +124,14 @@ export async function fetchVideoDurations(
   };
 
   const durations = new Map<string, number>();
+  const returnedIds = new Set<string>();
   for (const item of body.items ?? []) {
     if (typeof item.id !== "string") continue;
+    returnedIds.add(item.id);
     const duration = item.contentDetails?.duration;
     if (typeof duration !== "string") continue;
     const seconds = parseIso8601Duration(duration);
     if (seconds !== null) durations.set(item.id, seconds);
   }
-  return { durations, failure: null };
+  return { durations, returnedIds, failure: null };
 }

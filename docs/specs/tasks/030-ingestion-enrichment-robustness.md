@@ -110,7 +110,7 @@ matching Design subsection before each step.
   Done when: migration file exists and is correct, `bunx tsc --noEmit` passes, `bun test` green
   (migrations apply in test DBs).
 
-- [ ] 9. `returnedIds` in `fetchVideoDurations` (`src/lib/youtube-api.ts`, spec Design §3
+- [x] 9. `returnedIds` in `fetchVideoDurations` (`src/lib/youtube-api.ts`, spec Design §3
   "Distinguishing"). Add `returnedIds: Set<string>` to `FetchVideoDurationsResult`; on every
   failure return path it is an empty `Set`; on success, add each item's string `id` to it
   immediately after the `typeof item.id !== "string"` check and **before** the
