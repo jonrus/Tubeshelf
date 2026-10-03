@@ -9,7 +9,8 @@ you're using podman instead of Docker.
 ## 1. Quick start
 
 1. Clone the repo and `cd` into it.
-2. Copy `.env.example` to `.env` and fill in the values you need (see Configuration below):
+2. Optional: copy `.env.example` to `.env` and fill in the values you need (see Configuration
+   below). The stack starts fine without a `.env` file, using defaults:
    ```
    cp .env.example .env
    ```
@@ -22,16 +23,23 @@ you're using podman instead of Docker.
    your host, but leave the container-side (right) `3000` alone — it must match the port the
    app listens on inside the container.
 
+   A missing `.env` file is tolerated via `env_file`'s `required: false`, which needs Docker
+   Compose 2.24 or newer.
+4. Find the generated admin password in the logs (see Initial login below):
+   ```
+   docker compose logs tubeshelf
+   ```
+
 ## 2. Configuration
 
 All configuration is via environment variables, set in `.env` (loaded by `docker-compose.yml`'s
-`env_file:` entry). See `.env.example` for full comments on each — this table is just a
+`env_file:` entry, which is optional). See `.env.example` for full comments on each — this table is just a
 quick reference:
 
 | Variable | Purpose |
 | :--- | :--- |
 | `DB_FILE_NAME` | Path to the SQLite database file. Already set to `/data/tubeshelf.db` in `docker-compose.yml` to match the bind mount — leave unset in `.env`. |
-| `AUTH_RECOVERY_PASSWORD` | If set, forces the admin user's password to this value on every startup. Used only for initial login / password recovery — see below. |
+| `AUTH_RECOVERY_PASSWORD` | If set, forces the admin user's password to this value on every startup. Optional: if unset, a random password is generated and logged once on first boot. Use it to choose your own password or recover a lost one — see below. |
 | `TRUSTED_ORIGINS` | Comma-separated list of origins allowed to make CSRF-protected requests. Must include whatever public origin(s) you access the app through. |
 | `PUID` | User ID the app process runs as inside the container. Defaults to `1000` if unset. |
 | `PGID` | Group ID the app process runs as inside the container. Defaults to `1000` if unset. |
@@ -56,8 +64,22 @@ troubleshooting detail, including full error stack traces that are hidden by def
 ## 3. Initial login
 
 Tubeshelf currently has no signup or password-reset flow (real signup/reset is a v2.0
-feature — see `docs/app_idea.md`'s Future Roadmap). `AUTH_RECOVERY_PASSWORD` is the *only*
-way to set the `admin` user's password:
+feature — see `docs/app_idea.md`'s Future Roadmap). Two ways to get a working `admin` login:
+
+**Generated password (default).** If the `admin` user has no password yet — i.e. a fresh
+database — Tubeshelf generates a random one on first boot and logs it once, at WARN level:
+
+```
+docker compose logs tubeshelf
+```
+
+Look for the line naming the `admin` user and the generated password. Log in as `admin` with
+it. It is shown only that one time; the hash is stored immediately, so later boots don't
+repeat it. If you run with `LOG_LEVEL=error`, the WARN line is hidden and will not be
+re-emitted on the next boot — use the recovery flow below instead.
+
+**Choosing or recovering a password (`AUTH_RECOVERY_PASSWORD`).** To set your own password,
+or replace a generated or lost one:
 
 1. Set `AUTH_RECOVERY_PASSWORD` in `.env` to a password of your choosing.
 2. Start (or restart) the container.

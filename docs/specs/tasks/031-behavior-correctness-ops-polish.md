@@ -99,7 +99,7 @@ task 12 only verifies them. Don't touch Round A surfaces (`requireAuth`, CSP, th
   report states exactly what was and wasn't verified (config vs. runtime). Clean up the
   throwaway directory/containers.
 
-- [ ] 10. Deployment docs and `.env.example` — `docs/DEPLOYMENT.md`: Quick start step 2
+- [x] 10. Deployment docs and `.env.example` — `docs/DEPLOYMENT.md`: Quick start step 2
   (`cp .env.example .env`) becomes optional; §3 "Initial login" documents the generated
   first-boot password (`docker compose logs tubeshelf`), keeps the `AUTH_RECOVERY_PASSWORD`
   flow as the way to replace/recover it (drop "the *only* way to set"), notes the
