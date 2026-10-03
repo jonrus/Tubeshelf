@@ -22,7 +22,7 @@ const ONE_ENTRY_FEED_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:media="http://search.yahoo.com/mrss/" xmlns="http://www.w3.org/2005/Atom">
   <title>Test Channel</title>
   <entry>
-    <id>yt:video:live1</id>
+    <id>yt:video:live1234567</id>
     <title>Live Video</title>
     <published>2026-07-10T00:00:00+00:00</published>
   </entry>

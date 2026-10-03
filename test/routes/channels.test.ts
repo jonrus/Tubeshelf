@@ -418,12 +418,12 @@ test("confirm creates the subscription and populates videos in one round trip", 
   const id = channelId("confirmVideos");
   const entries = [
     {
-      id: "confirmVideos-vid1",
+      id: "confirmVid1",
       title: "Video One",
       published: "2026-07-01T00:00:00+00:00",
     },
     {
-      id: "confirmVideos-vid2",
+      id: "confirmVid2",
       title: "Video Two",
       published: "2026-07-02T00:00:00+00:00",
     },
@@ -459,8 +459,8 @@ test("confirm creates the subscription and populates videos in one round trip", 
     .where(eq(videos.channelId, channel.id))
     .all();
   expect(channelVideos.map((v) => v.youtubeVideoId).sort()).toEqual([
-    "confirmVideos-vid1",
-    "confirmVideos-vid2",
+    "confirmVid1",
+    "confirmVid2",
   ]);
 });
 
@@ -479,7 +479,7 @@ test("confirming an already-known channel only fetches to ingest, not to learn i
   fetchSpy = mockFetch(
     feedXml("Already Known Channel", [
       {
-        id: "alreadyKnown-vid1",
+        id: "knownVideo1",
         title: "Known Video",
         published: "2026-07-15T00:00:00+00:00",
       },
@@ -497,9 +497,7 @@ test("confirming an already-known channel only fetches to ingest, not to learn i
     .from(videos)
     .where(eq(videos.channelId, channel.id))
     .all();
-  expect(channelVideos.map((v) => v.youtubeVideoId)).toEqual([
-    "alreadyKnown-vid1",
-  ]);
+  expect(channelVideos.map((v) => v.youtubeVideoId)).toEqual(["knownVideo1"]);
 
   const sub = db
     .select()

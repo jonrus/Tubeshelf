@@ -1,7 +1,9 @@
 import { logger } from "./logger";
 
 const FETCH_TIMEOUT_MS = 5_000;
+const MAX_FEED_BYTES = 2 * 1024 * 1024;
 const VIDEO_ID_PREFIX = "yt:video:";
+const VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/;
 
 export type FeedEntry = {
   videoId: string;
@@ -16,7 +18,7 @@ function parseVideoId(entry: Record<string, unknown>): string | null {
   const id = entry.id;
   if (typeof id !== "string" || !id.startsWith(VIDEO_ID_PREFIX)) return null;
   const videoId = id.slice(VIDEO_ID_PREFIX.length);
-  return videoId || null;
+  return VIDEO_ID_RE.test(videoId) ? videoId : null;
 }
 
 function parseTitle(entry: Record<string, unknown>): string | null {
@@ -61,20 +63,68 @@ function parseEntry(raw: unknown): FeedEntry | null {
   };
 }
 
+// Reads the body as UTF-8 text, bailing out (null) once it exceeds
+// MAX_FEED_BYTES. Chunks are concatenated and decoded once so multi-byte
+// characters split across chunk boundaries stay intact.
+async function readCappedBody(
+  res: Response,
+  rssUrl: string,
+): Promise<string | null> {
+  const warnTooLarge = () =>
+    logger.warn("Feed exceeds size cap", {
+      url: rssUrl,
+      maxBytes: MAX_FEED_BYTES,
+    });
+
+  if (Number(res.headers.get("content-length")) > MAX_FEED_BYTES) {
+    warnTooLarge();
+    return null;
+  }
+  if (!res.body) return null;
+
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_FEED_BYTES) {
+      try {
+        await reader.cancel();
+      } catch {
+        // a rejecting cancel() must not mask the null return
+      }
+      warnTooLarge();
+      return null;
+    }
+    chunks.push(value);
+  }
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
+
 export async function fetchChannelFeed(
   rssUrl: string,
 ): Promise<ChannelFeed | null> {
-  let res: Response;
+  let xml: string | null;
   try {
-    res = await fetch(rssUrl, {
+    const res = await fetch(rssUrl, {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
+    if (!res.ok) return null;
+    xml = await readCappedBody(res, rssUrl);
   } catch {
-    return null; // network error or timeout
+    return null; // network error, timeout, or read error mid-stream
   }
-  if (!res.ok) return null;
+  if (xml === null) return null;
 
-  const xml = await res.text();
   let parsed: ReturnType<typeof Bun.XML.parse>;
   try {
     parsed = Bun.XML.parse(xml);

@@ -18,7 +18,7 @@ matching Design subsection before each step.
   channel's feed." `ConfirmError` message (not a 500) — follow the file's existing
   fetch-mocking pattern. Done when: those tests pass and `bun test` is green.
 
-- [ ] 2. Bound feed input in `src/lib/rss.ts` (spec Design §6). (a) Add `MAX_FEED_BYTES = 2 *
+- [x] 2. Bound feed input in `src/lib/rss.ts` (spec Design §6). (a) Add `MAX_FEED_BYTES = 2 *
   1024 * 1024`; replace `res.text()` with a streamed read: pre-check `Number(Content-Length) >
   MAX_FEED_BYTES` ⇒ warn + `null` before reading; otherwise read `res.body` via a reader,
   tracking total bytes, and on exceeding the cap `cancel()` the reader inside try/catch,
