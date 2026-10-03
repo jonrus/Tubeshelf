@@ -151,6 +151,21 @@ function badKeyResponse() {
   );
 }
 
+// Google's real invalid-key response: HTTP 400, generic errors[0].reason, the
+// specific reason only in details[].
+function realShapeBadKeyResponse() {
+  return new Response(
+    JSON.stringify({
+      error: {
+        code: 400,
+        errors: [{ reason: "badRequest" }],
+        details: [{ reason: "API_KEY_INVALID" }],
+      },
+    }),
+    { status: 400 },
+  );
+}
+
 function transientResponse() {
   return new Response(JSON.stringify({ error: { errors: [] } }), {
     status: 500,
@@ -391,6 +406,26 @@ test("a bad-key response latches: a second sweep call makes no further fetch cal
   expect(fetchSpy).toHaveBeenCalledTimes(1);
 
   expect(videoRow(video.id).durationSeconds).toBeNull();
+
+  fetchSpy.mockRestore();
+  discard(video.id);
+});
+
+test("Google's real 400 API_KEY_INVALID response latches: a second sweep call makes no further fetch call", async () => {
+  const channel = makeChannel();
+  subscribe(channel.id, true);
+  const video = makeVideo(channel.id);
+
+  const { runDurationEnrichmentSweep } = await loadSweepModule("test-key");
+  const fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(
+    realShapeBadKeyResponse(),
+  );
+
+  await runDurationEnrichmentSweep();
+  expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+  await runDurationEnrichmentSweep();
+  expect(fetchSpy).toHaveBeenCalledTimes(1);
 
   fetchSpy.mockRestore();
   discard(video.id);

@@ -69,7 +69,7 @@ matching Design subsection before each step.
   `P1DT2H` ⇒ 93600, `P1D` ⇒ 86400, `P0D` ⇒ null (existing cases unchanged). Done when: that
   test file passes.
 
-- [ ] 6. Bad-key classifier in `src/lib/youtube-api.ts` (spec Design §4, first part). Change
+- [x] 6. Bad-key classifier in `src/lib/youtube-api.ts` (spec Design §4, first part). Change
   signature to `classifyYoutubeApiError(status: number, reasons: string[])`: bad-key if status
   403 and any reason ∈ {`keyInvalid`, `forbidden`, `accessNotConfigured`}, or status 400 and
   any reason ∈ {`API_KEY_INVALID`, `API_KEY_EXPIRED`, `keyInvalid`, `keyExpired`}; everything

@@ -1,10 +1,19 @@
 const ISO_8601_DURATION_RE =
   /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/;
 
-const BAD_KEY_REASONS = new Set([
+const BAD_KEY_REASONS_403 = new Set([
   "keyInvalid",
   "forbidden",
   "accessNotConfigured",
+]);
+
+// Google's real invalid-key response is HTTP 400 with a generic
+// errors[0].reason ("badRequest") and the specific reason only in details[].
+const BAD_KEY_REASONS_400 = new Set([
+  "API_KEY_INVALID",
+  "API_KEY_EXPIRED",
+  "keyInvalid",
+  "keyExpired",
 ]);
 
 const FETCH_TIMEOUT_MS = 5_000;
@@ -28,14 +37,41 @@ export function parseIso8601Duration(iso: string): number | null {
   return totalSeconds > 0 ? totalSeconds : null;
 }
 
+function badKeyReasons(status: number): Set<string> | null {
+  if (status === 403) return BAD_KEY_REASONS_403;
+  if (status === 400) return BAD_KEY_REASONS_400;
+  return null;
+}
+
 export function classifyYoutubeApiError(
   status: number,
-  reason: string | undefined,
+  reasons: string[],
 ): "transient" | "bad-key" {
-  if (status === 403 && reason !== undefined && BAD_KEY_REASONS.has(reason)) {
+  const keyReasons = badKeyReasons(status);
+  if (keyReasons && reasons.some((reason) => keyReasons.has(reason))) {
     return "bad-key";
   }
   return "transient";
+}
+
+function extractErrorReasons(body: unknown): string[] {
+  const reasons: string[] = [];
+  const error = (body as { error?: unknown } | null)?.error as
+    | { errors?: unknown; details?: unknown }
+    | null
+    | undefined;
+  if (typeof error !== "object" || error === null) return reasons;
+
+  const first = Array.isArray(error.errors) ? error.errors[0] : undefined;
+  const candidates = [
+    first,
+    ...(Array.isArray(error.details) ? error.details : []),
+  ];
+  for (const candidate of candidates) {
+    const reason = (candidate as { reason?: unknown } | null)?.reason;
+    if (typeof reason === "string") reasons.push(reason);
+  }
+  return reasons;
 }
 
 export async function fetchVideoDurations(
@@ -58,21 +94,23 @@ export async function fetchVideoDurations(
   }
 
   if (!res.ok) {
-    let reason: string | undefined;
+    let reasons: string[] = [];
     try {
-      const body = (await res.json()) as {
-        error?: { errors?: { reason?: string }[] };
-      };
-      reason = body.error?.errors?.[0]?.reason;
+      reasons = extractErrorReasons(await res.json());
     } catch {
-      reason = undefined;
+      reasons = [];
     }
+    const failureClass = classifyYoutubeApiError(res.status, reasons);
+    const keyReasons = badKeyReasons(res.status);
+    const reason =
+      (failureClass === "bad-key"
+        ? reasons.find((r) => keyReasons?.has(r))
+        : undefined) ??
+      reasons[0] ??
+      `http-${res.status}`;
     return {
       durations: new Map(),
-      failure: {
-        class: classifyYoutubeApiError(res.status, reason),
-        reason: reason ?? `http-${res.status}`,
-      },
+      failure: { class: failureClass, reason },
     };
   }
 
