@@ -1,5 +1,6 @@
 ---
-status: refined
+status: promoted
+promoted_to: docs/specs/030-ingestion-enrichment-robustness.md
 created: 2026-10-03
 ---
 
@@ -132,3 +133,12 @@ None.
   `badKeyResponse()` helper in `test/lib/duration-enrichment.test.ts` (uses 403 `keyInvalid`;
   add a real-shape 400 `badRequest` + `details` case), and `loadSweepModule` already handles
   the empty-key case via fresh module instances.
+
+### Corrections made while writing the spec
+- The "stamping rule" couldn't be implemented as written: `fetchVideoDurations` returned only
+  resolved durations, so "API returned the item but duration null" vs. "API omitted it" were
+  indistinguishable. Corrected in docs/specs/030-ingestion-enrichment-robustness.md's Design
+  (adds `returnedIds` to the result).
+- Test-fixture impact of strict video IDs is larger than listed above (all `feedXml` callers
+  in `test/routes/channels.test.ts`, plus every `classifyYoutubeApiError` call) — see the
+  spec's Testing section.
