@@ -191,7 +191,7 @@ matching Design subsection before each step.
   invalid — look for the friendly error message swapping in without a full page reload.
   Done when: Claude's checks pass and the user reports the browser check as expected.
 
-- [ ] 15. Mark spec030 `status: implemented` in its frontmatter, then open the PR. **Check
+- [x] 15. Mark spec030 `status: implemented` in its frontmatter, then open the PR. **Check
   this box (and commit the spec status flip + box) BEFORE pushing** — deliberate inversion per
   CLAUDE.md so the pushed branch carries a fully checked-off task file. Ask the user whether
   they are pushing or want Claude to (never push without asking). PR (via `gh pr create`
