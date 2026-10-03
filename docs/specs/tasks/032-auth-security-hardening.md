@@ -56,7 +56,7 @@ No schema change anywhere in this spec.
   attributes. — done when: tests pass, existing auth route tests pass, README/.env.example
   updated.
 
-- [ ] 4. #11 — distinct lockout message — in `src/lib/auth.ts` change `attemptLogin`'s
+- [x] 4. #11 — distinct lockout message — in `src/lib/auth.ts` change `attemptLogin`'s
   failure type to `{ ok: false; reason: "invalid" | "locked" }`: `"locked"` on both locked
   paths (up-front `lockedUntil > now`, which includes correct-password-while-locked, and the
   post-verify `fresh` re-check); `"invalid"` for unknown user / wrong password (including the

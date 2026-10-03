@@ -31,10 +31,11 @@ authRoute.post("/login", async (c) => {
 
   const result = await attemptLogin(username, password);
   if (!result.ok) {
-    return c.html(
-      <LoginPage from={from} error="Invalid username or password." />,
-      401,
-    );
+    const error =
+      result.reason === "locked"
+        ? "Too many attempts, try again later."
+        : "Invalid username or password.";
+    return c.html(<LoginPage from={from} error={error} />, 401);
   }
 
   const { token } = createSession(result.userId);

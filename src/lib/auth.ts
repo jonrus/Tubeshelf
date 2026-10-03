@@ -78,7 +78,9 @@ export async function ensureAdminPassword(): Promise<void> {
 export async function attemptLogin(
   username: string,
   password: string,
-): Promise<{ ok: true; userId: number } | { ok: false }> {
+): Promise<
+  { ok: true; userId: number } | { ok: false; reason: "invalid" | "locked" }
+> {
   const user = db
     .select()
     .from(users)
@@ -86,11 +88,11 @@ export async function attemptLogin(
     .get();
   if (!user) {
     await verifyPassword(password, DUMMY_PASSWORD_HASH);
-    return { ok: false };
+    return { ok: false, reason: "invalid" };
   }
 
   if (user.lockedUntil && user.lockedUntil.getTime() > Date.now()) {
-    return { ok: false };
+    return { ok: false, reason: "locked" };
   }
 
   const passwordOk = user.passwordHash
@@ -107,7 +109,7 @@ export async function attemptLogin(
 
   const fresh = db.select().from(users).where(eq(users.id, user.id)).get();
   if (fresh?.lockedUntil && fresh.lockedUntil.getTime() > Date.now()) {
-    return { ok: false };
+    return { ok: false, reason: "locked" };
   }
 
   const lockedUntilSeconds = Math.floor(
@@ -121,7 +123,7 @@ export async function attemptLogin(
     .where(eq(users.id, user.id))
     .run();
 
-  return { ok: false };
+  return { ok: false, reason: "invalid" };
 }
 
 export function createSession(userId: number): { token: string } {

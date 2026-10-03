@@ -14,6 +14,7 @@ const { users } = await import("../../src/db/schema");
 const { seed } = await import("../../src/db/seed");
 const {
   applyRecoveryPasswordFromEnv,
+  attemptLogin,
   createSession,
   ensureAdminPassword,
   hashPassword,
@@ -230,4 +231,34 @@ test("setSessionCookie sets httpOnly, Lax, path, max-age and the resolved Secure
   } finally {
     process.env.TRUSTED_ORIGINS = saved;
   }
+});
+
+test('attemptLogin reports reason "invalid" for unknown users and wrong passwords, and "locked" once locked (even with the correct password)', async () => {
+  const username = "attempt-login-reason-user";
+  const password = "attempt-login-reason-password";
+  db.insert(users)
+    .values({ username, passwordHash: await hashPassword(password) })
+    .run();
+
+  expect(await attemptLogin("no-such-user", password)).toEqual({
+    ok: false,
+    reason: "invalid",
+  });
+
+  // The 5th wrong attempt trips the lock but still reports "invalid".
+  for (let i = 0; i < 5; i++) {
+    expect(await attemptLogin(username, "wrong")).toEqual({
+      ok: false,
+      reason: "invalid",
+    });
+  }
+
+  expect(await attemptLogin(username, "wrong")).toEqual({
+    ok: false,
+    reason: "locked",
+  });
+  expect(await attemptLogin(username, password)).toEqual({
+    ok: false,
+    reason: "locked",
+  });
 });
