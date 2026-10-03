@@ -30,14 +30,12 @@ export function matchesAnyRule(
 export function reconcileIgnoreRules(): void {
   const rules = listIgnoreRules();
 
-  // Wrapped in one transaction -- unlike applyFeedToChannel's per-channel upserts
-  // (docs/specs/003-scheduled-video-ingestion.md's "no transaction needed" call),
-  // which self-heal automatically on the next hourly scheduled poll regardless of a
-  // mid-run failure, this function only reruns on the next explicit rule add/edit/
-  // delete. A crash partway through the loop below (a genuine DB failure, not a
-  // reachable app-level error) would otherwise leave some videos reconciled and
-  // others not, with no guaranteed retry -- a single transaction makes the whole pass
-  // atomic instead.
+  // Wrapped in one transaction so the whole pass is atomic. Unlike applyFeedToChannel
+  // (also transactional now -- see docs/specs/030-ingestion-enrichment-robustness.md),
+  // which gets retried by the next hourly scheduled poll regardless, this function only
+  // reruns on the next explicit rule add/edit/delete. A crash partway through the loop
+  // below (a genuine DB failure, not a reachable app-level error) would otherwise leave
+  // some videos reconciled and others not, with no guaranteed retry.
   db.transaction((tx) => {
     const autoIgnored = tx
       .select({

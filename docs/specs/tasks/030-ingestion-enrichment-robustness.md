@@ -46,7 +46,7 @@ matching Design subsection before each step.
   verified in the manual section, task 14). Done when: `bunx tsc --noEmit` and `bun run lint`
   pass.
 
-- [ ] 4. Make `applyFeedToChannel` atomic in `src/lib/ingest.ts` (spec Design §5). Keep
+- [x] 4. Make `applyFeedToChannel` atomic in `src/lib/ingest.ts` (spec Design §5). Keep
   `listIgnoreRules()` outside; wrap the `previousNewest` read, the per-entry upserts, and the
   `youtubeChannels` schedule update in one `db.transaction((tx) => { … })` (sync callback; use
   `tx` for all queries inside; mirror the pattern in `src/lib/ignore-rules.ts`). Update the

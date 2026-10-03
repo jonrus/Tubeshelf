@@ -20,71 +20,79 @@ function nextDueAt(now: Date): Date {
 // subscribe-confirm route's "brand new channel" path, which already has the feed
 // in hand from the fetch it needed anyway to learn the channel's name.
 export function applyFeedToChannel(channelId: number, feed: ChannelFeed): void {
-  const previousNewest = db
-    .select()
-    .from(videos)
-    .where(eq(videos.channelId, channelId))
-    .orderBy(desc(videos.publishedAt))
-    .limit(1)
-    .get();
-
+  // Read-only, so it stays outside the transaction below.
   const rules = listIgnoreRules();
 
-  for (const entry of feed.entries) {
-    const ignored = matchesAnyRule(
-      { title: entry.title, description: entry.description },
-      rules,
-    );
-    db.insert(videos)
-      .values({
-        channelId,
-        youtubeVideoId: entry.videoId,
-        title: entry.title,
-        description: entry.description,
-        publishedAt: entry.publishedAt,
-        ...(ignored
-          ? { status: "ignored" as const, ignoreMethod: "auto" as const }
-          : {}),
-      })
-      .onConflictDoUpdate({
-        target: videos.youtubeVideoId,
-        set: {
+  // One transaction for the whole apply (gap-detection read, per-entry upserts, schedule
+  // update): a mid-loop failure rolls everything back, including the schedule update, so
+  // ingestChannel's catch -> safeReschedule path is the only thing that moves
+  // nextFetchDueAt on failure. Reading previousNewest inside also gives gap detection a
+  // consistent snapshot. (refined in docs/specs/030-ingestion-enrichment-robustness.md)
+  db.transaction((tx) => {
+    const previousNewest = tx
+      .select()
+      .from(videos)
+      .where(eq(videos.channelId, channelId))
+      .orderBy(desc(videos.publishedAt))
+      .limit(1)
+      .get();
+
+    for (const entry of feed.entries) {
+      const ignored = matchesAnyRule(
+        { title: entry.title, description: entry.description },
+        rules,
+      );
+      tx.insert(videos)
+        .values({
+          channelId,
+          youtubeVideoId: entry.videoId,
           title: entry.title,
           description: entry.description,
           publishedAt: entry.publishedAt,
-        },
-        // status/ignoreMethod deliberately excluded from the update set: ingestion
-        // never touches watch/ignore state on a video it's seen before.
+          ...(ignored
+            ? { status: "ignored" as const, ignoreMethod: "auto" as const }
+            : {}),
+        })
+        .onConflictDoUpdate({
+          target: videos.youtubeVideoId,
+          set: {
+            title: entry.title,
+            description: entry.description,
+            publishedAt: entry.publishedAt,
+          },
+          // status/ignoreMethod deliberately excluded from the update set: ingestion
+          // never touches watch/ignore state on a video it's seen before.
+        })
+        .run();
+    }
+
+    const oldestInFeed =
+      feed.entries.length > 0
+        ? feed.entries.reduce((a, b) => (a.publishedAt < b.publishedAt ? a : b))
+        : null;
+    // Only meaningful once there's a prior baseline to compare against; a brand-new
+    // channel's first ingest has nothing to have "missed" yet. `publishedAt` is
+    // nullable in the videos table schema (even though every RSS-ingested row populates
+    // it), so an explicit null check guards against relying on `Date > null`'s JS
+    // coercion if a non-RSS insert path (e.g. a test fixture) ever leaves it unset.
+    const gapDetected =
+      previousNewest !== undefined &&
+      previousNewest.publishedAt !== null &&
+      oldestInFeed !== null &&
+      oldestInFeed.publishedAt > previousNewest.publishedAt;
+
+    const now = new Date();
+    tx.update(youtubeChannels)
+      .set({
+        lastFetchedAt: now,
+        nextFetchDueAt: nextDueAt(now),
+        // Never auto-clears an existing detection timestamp -- dismissal is a
+        // per-subscription action that lives on the subscriptions table, not here.
+        ...(gapDetected ? { possibleMissedVideosDetectedAt: now } : {}),
       })
+      .where(eq(youtubeChannels.id, channelId))
       .run();
-  }
-
-  const oldestInFeed =
-    feed.entries.length > 0
-      ? feed.entries.reduce((a, b) => (a.publishedAt < b.publishedAt ? a : b))
-      : null;
-  // Only meaningful once there's a prior baseline to compare against; a brand-new
-  // channel's first ingest has nothing to have "missed" yet. `publishedAt` is
-  // nullable in the videos table schema (even though every RSS-ingested row populates
-  // it), so an explicit null check guards against relying on `Date > null`'s JS
-  // coercion if a non-RSS insert path (e.g. a test fixture) ever leaves it unset.
-  const gapDetected =
-    previousNewest !== undefined &&
-    previousNewest.publishedAt !== null &&
-    oldestInFeed !== null &&
-    oldestInFeed.publishedAt > previousNewest.publishedAt;
-
-  const now = new Date();
-  db.update(youtubeChannels)
-    .set({
-      lastFetchedAt: now,
-      nextFetchDueAt: nextDueAt(now),
-      // Never auto-clears an existing detection timestamp -- dismissal is a
-      // per-subscription action that lives on the subscriptions table, not here.
-      ...(gapDetected ? { possibleMissedVideosDetectedAt: now } : {}),
-    })
-    .where(eq(youtubeChannels.id, channelId))
-    .run();
+  });
 }
 
 // Fetches fresh and applies. Used by the scheduler, and by the subscribe-confirm
