@@ -8,13 +8,16 @@ process.env.DB_FILE_NAME = ":memory:";
 
 const { db } = await import("../../src/db/client");
 const { migrate } = await import("drizzle-orm/bun-sqlite/migrator");
-const { categories, subscriptions, users, youtubeChannels } = await import(
-  "../../src/db/schema"
-);
+const { categories, sessions, subscriptions, users, youtubeChannels } =
+  await import("../../src/db/schema");
 const { seed } = await import("../../src/db/seed");
-const { dueChannels, runGuardedTick, waitForSchedulerIdle } = await import(
-  "../../src/lib/scheduler"
-);
+const {
+  dueChannels,
+  maybePurgeSessions,
+  runGuardedTick,
+  waitForSchedulerIdle,
+} = await import("../../src/lib/scheduler");
+const { createSession } = await import("../../src/lib/auth");
 
 migrate(db, { migrationsFolder: "./drizzle" });
 seed(db);
@@ -252,4 +255,32 @@ test("waitForSchedulerIdle does not resolve until the in-flight tick finishes", 
 
   await tickPromise; // let the tick fully settle so state doesn't leak into later tests
   fetchSpy.mockRestore();
+});
+
+test("maybePurgeSessions purges idle sessions at most once per hour", () => {
+  db.delete(sessions).run();
+  const addIdleSession = () => {
+    const { token } = createSession(user.id);
+    expect(token).toBeString();
+    db.update(sessions)
+      .set({ lastSeenAt: new Date(0) })
+      .run();
+  };
+  const sessionCount = () => db.select().from(sessions).all().length;
+
+  addIdleSession();
+  // Within an hour of module load: throttled, nothing purged.
+  maybePurgeSessions(new Date());
+  expect(sessionCount()).toBe(1);
+
+  // Past an hour: purges the idle session.
+  const later = new Date(Date.now() + 61 * 60 * 1000);
+  maybePurgeSessions(later);
+  expect(sessionCount()).toBe(0);
+
+  // The purge reset the throttle: a new idle session survives a call 1 minute later.
+  addIdleSession();
+  maybePurgeSessions(new Date(later.getTime() + 60 * 1000));
+  expect(sessionCount()).toBe(1);
+  db.delete(sessions).run();
 });

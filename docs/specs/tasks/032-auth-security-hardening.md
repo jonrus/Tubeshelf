@@ -81,7 +81,7 @@ No schema change anywhere in this spec.
   (hash unchanged and sessions kept); missing admin row → no purge. — done when: tests pass,
   tsc clean.
 
-- [ ] 6. #12 — wire purge into startup and scheduler — `src/index.ts`: order becomes
+- [x] 6. #12 — wire purge into startup and scheduler — `src/index.ts`: order becomes
   `await applyRecoveryPasswordFromEnv()` → `purgeIdleSessions()` → `await ensureAdminPassword()`.
   `src/lib/scheduler.ts`: add module-level `lastSessionPurgeAt` initialised at module load
   (`Date.now()`), and exported `maybePurgeSessions(now = new Date())` that calls
