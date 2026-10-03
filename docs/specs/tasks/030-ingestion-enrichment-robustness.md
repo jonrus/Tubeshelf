@@ -121,7 +121,7 @@ matching Design subsection before each step.
   items without a string id; empty on failure. Done when: those tests pass and
   `bunx tsc --noEmit` is clean.
 
-- [ ] 10. Starvation fix in `src/lib/duration-enrichment.ts` (spec Design §3 "Stamping rule" and
+- [x] 10. Starvation fix in `src/lib/duration-enrichment.ts` (spec Design §3 "Stamping rule" and
   "Eligibility"; depends on tasks 8 and 9). (a) `eligibleVideos(now = new Date(), limit =
   BATCH_SIZE)` adds `or(isNull(videos.durationRecheckAt), lte(videos.durationRecheckAt,
   now))` to the `and(...)` (import `or`, `lte`). (b) `runDurationEnrichmentSweep(now = new

@@ -1,10 +1,16 @@
-import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, lte, or } from "drizzle-orm";
 import { db } from "../db/client";
 import { subscriptions, videos } from "../db/schema";
 import { logger } from "./logger";
 import { fetchVideoDurations } from "./youtube-api";
 
 const BATCH_SIZE = 50;
+
+// Recheck windows for videos the API didn't resolve a duration for -- see the spec's
+// "Stamping rule". Returned-but-null (live/upcoming) resolves soon; omitted
+// (deleted/private) rarely comes back.
+const UNRESOLVED_RECHECK_MS = 60 * 60 * 1000;
+const OMITTED_RECHECK_MS = 24 * 60 * 60 * 1000;
 
 const rawKey = process.env.YOUTUBE_API_KEY?.trim();
 const apiKey = rawKey ? rawKey : undefined;
@@ -21,7 +27,7 @@ type VideoRow = typeof videos.$inferSelect;
 // Mirrors scheduler.ts's dueChannels() active-subscription pattern -- a background job
 // with no "current user" context, unlike the user-scoped Queue/Continue Watching route
 // queries. See the spec's Eligibility query section for the multi-user caveat.
-function eligibleVideos(limit = BATCH_SIZE): VideoRow[] {
+function eligibleVideos(now: Date, limit = BATCH_SIZE): VideoRow[] {
   const activelySubscribedChannelIds = db
     .select({ id: subscriptions.youtubeChannelId })
     .from(subscriptions)
@@ -33,6 +39,10 @@ function eligibleVideos(limit = BATCH_SIZE): VideoRow[] {
     .where(
       and(
         isNull(videos.durationSeconds),
+        or(
+          isNull(videos.durationRecheckAt),
+          lte(videos.durationRecheckAt, now),
+        ),
         inArray(videos.status, ["unwatched", "watching"]),
         inArray(videos.channelId, activelySubscribedChannelIds),
       ),
@@ -42,14 +52,16 @@ function eligibleVideos(limit = BATCH_SIZE): VideoRow[] {
     .all();
 }
 
-export async function runDurationEnrichmentSweep(): Promise<void> {
+export async function runDurationEnrichmentSweep(
+  now = new Date(),
+): Promise<void> {
   if (apiKey === undefined || latched) return;
 
   try {
-    const batch = eligibleVideos();
+    const batch = eligibleVideos(now);
     if (batch.length === 0) return;
 
-    const { durations, failure } = await fetchVideoDurations(
+    const { durations, returnedIds, failure } = await fetchVideoDurations(
       batch.map((video) => video.youtubeVideoId),
       apiKey,
     );
@@ -69,14 +81,25 @@ export async function runDurationEnrichmentSweep(): Promise<void> {
       return;
     }
 
-    for (const video of batch) {
-      const durationSeconds = durations.get(video.youtubeVideoId);
-      if (durationSeconds === undefined) continue;
-      db.update(videos)
-        .set({ durationSeconds })
-        .where(eq(videos.id, video.id))
-        .run();
-    }
+    db.transaction((tx) => {
+      for (const video of batch) {
+        const durationSeconds = durations.get(video.youtubeVideoId);
+        if (durationSeconds !== undefined) {
+          tx.update(videos)
+            .set({ durationSeconds })
+            .where(eq(videos.id, video.id))
+            .run();
+          continue;
+        }
+        const windowMs = returnedIds.has(video.youtubeVideoId)
+          ? UNRESOLVED_RECHECK_MS
+          : OMITTED_RECHECK_MS;
+        tx.update(videos)
+          .set({ durationRecheckAt: new Date(now.getTime() + windowMs) })
+          .where(eq(videos.id, video.id))
+          .run();
+      }
+    });
   } catch (err) {
     logger.error("Duration enrichment sweep failed unexpectedly", { err });
   }

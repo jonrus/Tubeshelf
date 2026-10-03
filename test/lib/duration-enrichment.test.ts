@@ -404,9 +404,122 @@ test("writes durationSeconds on a successful response, matched by id field even 
   expect(videoRow(first.id).durationSeconds).toBe(60);
   expect(videoRow(second.id).durationSeconds).toBe(120);
   expect(videoRow(missing.id).durationSeconds).toBeNull();
+  // Omitted from the response (deleted/private) => stamped +24h.
+  expect(videoRow(missing.id).durationRecheckAt).not.toBeNull();
 
   fetchSpy.mockRestore();
   discard(missing.id);
+});
+
+const HOUR_S = 60 * 60;
+const seconds = (d: Date | null) => (d ? Math.floor(d.getTime() / 1000) : null);
+
+test("stamps a returned-but-unresolved (P0D) video +1h and an omitted one +24h; neither is re-requested until its time passes", async () => {
+  const channel = makeChannel();
+  subscribe(channel.id, true);
+  const live = makeVideo(channel.id);
+  const gone = makeVideo(channel.id);
+  const now = new Date();
+  const nowS = Math.floor(now.getTime() / 1000);
+
+  const { runDurationEnrichmentSweep } = await loadSweepModule("test-key");
+  // Fresh Response per call (a Response body can only be read once). Answers
+  // only `live`, with an unresolvable duration; `gone` is always omitted.
+  const fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async () =>
+    okResponse([
+      { id: live.youtubeVideoId, duration: "P0D" },
+    ])) as unknown as typeof fetch);
+
+  await runDurationEnrichmentSweep(now);
+
+  expect(seconds(videoRow(live.id).durationRecheckAt)).toBe(nowS + HOUR_S);
+  expect(seconds(videoRow(gone.id).durationRecheckAt)).toBe(nowS + 24 * HOUR_S);
+
+  const ours = new Set([live.youtubeVideoId, gone.youtubeVideoId]);
+  // [] when the sweep made no fetch call at all (nothing eligible).
+  const requestedOurs = () =>
+    fetchSpy.mock.calls.length === 0
+      ? []
+      : requestedIds(fetchSpy).filter((id) => ours.has(id));
+
+  // Before either window passes: not re-requested.
+  fetchSpy.mockClear();
+  await runDurationEnrichmentSweep(new Date(now.getTime() + 30 * 60 * 1000));
+  expect(requestedOurs()).toEqual([]);
+
+  // After +1h only the live one is back.
+  fetchSpy.mockClear();
+  await runDurationEnrichmentSweep(new Date(now.getTime() + 2 * HOUR_S * 1000));
+  expect(requestedOurs()).toEqual([live.youtubeVideoId]);
+
+  // After +24h both are back.
+  fetchSpy.mockClear();
+  await runDurationEnrichmentSweep(
+    new Date(now.getTime() + 25 * HOUR_S * 1000),
+  );
+  expect(requestedOurs().sort()).toEqual(
+    [live.youtubeVideoId, gone.youtubeVideoId].sort(),
+  );
+
+  fetchSpy.mockRestore();
+  discard(live.id);
+  discard(gone.id);
+});
+
+test("a transient failure stamps nothing", async () => {
+  const channel = makeChannel();
+  subscribe(channel.id, true);
+  const video = makeVideo(channel.id);
+
+  const { runDurationEnrichmentSweep } = await loadSweepModule("test-key");
+  const fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(
+    transientResponse(),
+  );
+
+  await runDurationEnrichmentSweep();
+
+  expect(videoRow(video.id).durationRecheckAt).toBeNull();
+
+  fetchSpy.mockRestore();
+  discard(video.id);
+});
+
+test("50 newer videos with a future recheck stamp don't starve an older resolvable one", async () => {
+  const channel = makeChannel();
+  subscribe(channel.id, true);
+  const now = new Date();
+  const future = new Date(now.getTime() + 12 * HOUR_S * 1000);
+  const stamped = Array.from({ length: 50 }, () =>
+    makeVideo(channel.id, { publishedAt: new Date(now.getTime() - 1000) }),
+  );
+  for (const video of stamped) {
+    db.update(videos)
+      .set({ durationRecheckAt: future })
+      .where(eq(videos.id, video.id))
+      .run();
+  }
+  const older = makeVideo(channel.id, {
+    publishedAt: new Date(now.getTime() - 5 * HOUR_S * 1000),
+  });
+
+  const { runDurationEnrichmentSweep } = await loadSweepModule("test-key");
+  const fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (
+    url: URL,
+  ) => {
+    const requested = (url.searchParams.get("id") ?? "")
+      .split(",")
+      .filter(Boolean);
+    return okResponse(requested.map((id) => ({ id, duration: "PT1M" })));
+  }) as unknown as typeof fetch);
+
+  await runDurationEnrichmentSweep(now);
+
+  expect(requestedIds(fetchSpy)).toContain(older.youtubeVideoId);
+  expect(videoRow(older.id).durationSeconds).toBe(60);
+
+  fetchSpy.mockRestore();
+  for (const video of stamped) discard(video.id);
+  discard(older.id);
 });
 
 test("a bad-key response latches: a second sweep call makes no further fetch call", async () => {
