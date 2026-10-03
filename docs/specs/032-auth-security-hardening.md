@@ -54,7 +54,8 @@ and `loginAsAdminUser`, while a no-op repeat is cheap.
   is currently declared non-optional in `ContextVariableMap`; either make it optional
   (`userId?: number`) and have routes narrow it — see #6 — or keep it required and compare
   against `undefined` anyway. Settled at implementation; whichever is chosen must keep
-  `tsc --noEmit` clean under `noUncheckedIndexedAccess`.)
+  `tsc --noEmit` clean under `noUncheckedIndexedAccess`.) **Resolved (task 2): kept `userId: number`
+  required and compared against `undefined`; `tsc --noEmit` clean.**)
 - `csrfCheck`: today an alias for Hono's `csrf({ origin: getTrustedOrigins() })`, which
   snapshots `TRUSTED_ORIGINS` at module load. **Make that lazy** —
   `csrf({ origin: (o) => getTrustedOrigins().includes(o) })` (Hono accepts an origin function) —

@@ -10,6 +10,7 @@ import { logger } from "./logger";
 declare module "hono" {
   interface ContextVariableMap {
     userId: number;
+    csrfChecked: boolean;
   }
 }
 
@@ -161,7 +162,22 @@ function getTrustedOrigins(): string[] {
   return raw.split(",").map((origin) => origin.trim());
 }
 
-export const csrfCheck = csrf({ origin: getTrustedOrigins() });
+// Origin is checked lazily (per request) so TRUSTED_ORIGINS is never frozen at
+// import time -- bun test shares one module registry across files.
+const csrfInner = csrf({
+  origin: (origin) => getTrustedOrigins().includes(origin),
+});
+
+// Each router does use("*", csrfCheck, requireAuth) and app.route("/", ...)
+// stacks those wildcards, so this must be a no-op on repeats. The flag is set
+// only after the check passes, so a rejected request never reaches it.
+export const csrfCheck: MiddlewareHandler = (c, next) => {
+  if (c.get("csrfChecked")) return next();
+  return csrfInner(c, async () => {
+    c.set("csrfChecked", true);
+    await next();
+  });
+};
 
 export function getSessionFromRequest(
   c: Context,
@@ -178,6 +194,8 @@ function buildLoginRedirect(c: Context): string {
 }
 
 export const requireAuth: MiddlewareHandler = async (c, next) => {
+  if (c.get("userId") !== undefined) return next();
+
   const token = getCookie(c, "session");
   const session = token ? findValidSession(token) : undefined;
   if (!session || !token) {

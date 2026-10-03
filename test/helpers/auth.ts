@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
 
-// authRoute reads getTrustedOrigins() (src/lib/auth.ts) at request time, so
-// this only needs to be set before loginAsAdminUser() is first called, not
-// before src/db/client is loaded — unlike DB_FILE_NAME, which every
-// test/routes/*.test.ts file sets before its own dynamic db/client import.
+// csrfCheck and resolveCookieSecure read getTrustedOrigins() (src/lib/auth.ts)
+// lazily, at request time, so this only needs to be set before the first
+// request, not before src/lib/auth is imported — unlike DB_FILE_NAME, which
+// every test/routes/*.test.ts file sets before its own dynamic db/client import.
 process.env.TRUSTED_ORIGINS = "http://test.local";
 
 const TEST_ORIGIN = "http://test.local";

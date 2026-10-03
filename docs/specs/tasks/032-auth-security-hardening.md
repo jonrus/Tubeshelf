@@ -23,7 +23,7 @@ No schema change anywhere in this spec.
   `bun run src/index.ts` still boots (check `/healthz` via `curl` inside the container, then
   kill it per CLAUDE.md).
 
-- [ ] 2. #1 — csrf + auth run exactly once per request — in `src/lib/auth.ts`: (a) make
+- [x] 2. #1 — csrf + auth run exactly once per request — in `src/lib/auth.ts`: (a) make
   `csrf` origin lazy: `const csrfInner = csrf({ origin: (o) => getTrustedOrigins().includes(o) })`;
   (b) export `csrfCheck` as a wrapper `MiddlewareHandler`: if `c.get("csrfChecked")` call
   `return next()`, else `return csrfInner(c, async () => { c.set("csrfChecked", true); await next(); })`

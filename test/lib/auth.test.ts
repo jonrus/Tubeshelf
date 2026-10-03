@@ -1,22 +1,24 @@
 import { afterEach, expect, spyOn, test } from "bun:test";
 import { eq } from "drizzle-orm";
+import { Hono } from "hono";
 
 // auth.ts operates against the module-level `db` singleton in
 // src/db/client.ts, which reads DB_FILE_NAME at import time -- so it must be
 // set before that module (or anything importing it) is first loaded.
 process.env.DB_FILE_NAME = ":memory:";
-// src/lib/auth.ts builds csrfCheck from TRUSTED_ORIGINS at import time, and
-// bun test shares one module registry across files -- so importing it here
-// first without this would leave test/routes/auth.test.ts with the default
-// origin and 403 its requests.
 process.env.TRUSTED_ORIGINS = "http://test.local";
 
 const { db } = await import("../../src/db/client");
 const { migrate } = await import("drizzle-orm/bun-sqlite/migrator");
 const { users } = await import("../../src/db/schema");
 const { seed } = await import("../../src/db/seed");
-const { applyRecoveryPasswordFromEnv, ensureAdminPassword, hashPassword } =
-  await import("../../src/lib/auth");
+const {
+  applyRecoveryPasswordFromEnv,
+  createSession,
+  ensureAdminPassword,
+  hashPassword,
+  requireAuth,
+} = await import("../../src/lib/auth");
 
 migrate(db, { migrationsFolder: "./drizzle" });
 seed(db);
@@ -131,5 +133,28 @@ test("ensureAdminPassword is a silent no-op when there is no admin row", async (
       .where(eq(users.username, "admin-renamed-for-test"))
       .run();
     setAdminHash(original);
+  }
+});
+
+test("requireAuth is idempotent: running it twice on one request touches the session once", async () => {
+  const admin = db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.username, "admin"))
+    .get();
+  const { token } = createSession(admin?.id as number);
+  const app = new Hono();
+  app.use("*", requireAuth, requireAuth);
+  app.get("/", (c) => c.text("ok"));
+  const updateSpy = spyOn(db, "update");
+  try {
+    const res = await app.request("/", {
+      headers: { Cookie: `session=${token}` },
+    });
+    expect(res.status).toBe(200);
+    expect(updateSpy).toHaveBeenCalledTimes(1);
+    expect(res.headers.getSetCookie()).toHaveLength(1);
+  } finally {
+    updateSpy.mockRestore();
   }
 });
