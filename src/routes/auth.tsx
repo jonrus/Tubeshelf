@@ -1,17 +1,15 @@
 import { Hono } from "hono";
-import { deleteCookie, getCookie, setCookie } from "hono/cookie";
+import { deleteCookie, getCookie } from "hono/cookie";
 import {
   attemptLogin,
   createSession,
   csrfCheck,
   deleteSession,
   getSessionFromRequest,
-  resolveCookieSecure,
   safeRedirectTarget,
+  setSessionCookie,
 } from "../lib/auth";
 import { LoginPage } from "../views/login-page";
-
-const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 
 export const authRoute = new Hono();
 
@@ -33,20 +31,15 @@ authRoute.post("/login", async (c) => {
 
   const result = await attemptLogin(username, password);
   if (!result.ok) {
-    return c.html(
-      <LoginPage from={from} error="Invalid username or password." />,
-      401,
-    );
+    const error =
+      result.reason === "locked"
+        ? "Too many attempts, try again later."
+        : "Invalid username or password.";
+    return c.html(<LoginPage from={from} error={error} />, 401);
   }
 
   const { token } = createSession(result.userId);
-  setCookie(c, "session", token, {
-    httpOnly: true,
-    sameSite: "Lax",
-    secure: resolveCookieSecure(c),
-    maxAge: SESSION_MAX_AGE_SECONDS,
-    path: "/",
-  });
+  setSessionCookie(c, token);
   return c.redirect(safeRedirectTarget(from), 302);
 });
 

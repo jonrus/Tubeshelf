@@ -180,6 +180,8 @@ test("5 consecutive failed logins lock the account; further attempts during the 
     password: "wrong",
   });
   expect(lockingRes.status).toBe(401);
+  // The attempt that trips the lock still gets the generic message.
+  expect(await lockingRes.text()).toContain("Invalid username or password.");
 
   const lockedRow = db
     .select()
@@ -199,6 +201,9 @@ test("5 consecutive failed logins lock the account; further attempts during the 
     password: LOCKOUT_PASSWORD,
   });
   expect(correctWhileLockedRes.status).toBe(401);
+  expect(await correctWhileLockedRes.text()).toContain(
+    "Too many attempts, try again later.",
+  );
 
   setSystemTime(Date.now() + 5 * 60 * 1000);
   try {
@@ -207,6 +212,9 @@ test("5 consecutive failed logins lock the account; further attempts during the 
       password: "wrong",
     });
     expect(stillLockedRes.status).toBe(401);
+    expect(await stillLockedRes.text()).toContain(
+      "Too many attempts, try again later.",
+    );
     const stillLockedRow = db
       .select()
       .from(users)

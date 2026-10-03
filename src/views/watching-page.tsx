@@ -82,7 +82,6 @@ export const WatchingPage: FC<WatchingPageProps> = (props) => {
         <img
           src={youtubeThumbnailUrl(props.youtubeVideoId)}
           alt={props.title}
-          onerror="this.style.visibility='hidden'"
           class="h-full w-full object-cover"
         />
       </div>
@@ -116,7 +115,7 @@ export const WatchingPage: FC<WatchingPageProps> = (props) => {
             props.category,
           )}
           method="post"
-          onsubmit="this.querySelector('button').disabled = true"
+          data-disable-on-submit
         >
           <button
             type="submit"
@@ -132,12 +131,7 @@ export const WatchingPage: FC<WatchingPageProps> = (props) => {
           Return to {props.returnLabel}
         </a>
       </div>
-      <script
-        dangerouslySetInnerHTML={{
-          __html:
-            'window.addEventListener("pageshow", (event) => { if (event.persisted) location.reload(); });',
-        }}
-      />
+      <script src="/js/pageshow-reload.js" defer />
     </Layout>
   );
 };

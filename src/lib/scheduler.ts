@@ -1,12 +1,14 @@
 import { and, asc, inArray, isNull, lte, or } from "drizzle-orm";
 import { db } from "../db/client";
 import { subscriptions, youtubeChannels } from "../db/schema";
+import { purgeIdleSessions } from "./auth";
 import { runDurationEnrichmentSweep } from "./duration-enrichment";
 import { ingestChannel } from "./ingest";
 import { logger } from "./logger";
 
 const TICK_INTERVAL_MS = 60 * 1000; // 1 minute
 const BATCH_SIZE = 5; // cap per tick so a post-downtime backlog drains gradually
+const SESSION_PURGE_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
 type YoutubeChannelRow = typeof youtubeChannels.$inferSelect;
 
@@ -37,6 +39,17 @@ export function dueChannels(
     .all();
 }
 
+// Initialised at module load: index.ts's startup purge has just run (or is about to).
+let lastSessionPurgeAt = Date.now();
+
+// Throttled to once per hour so the 60s tick doesn't sweep sessions every time;
+// `now` is injectable so the throttle is testable without real timers.
+export function maybePurgeSessions(now: Date = new Date()): void {
+  if (now.getTime() - lastSessionPurgeAt < SESSION_PURGE_INTERVAL_MS) return;
+  purgeIdleSessions(now);
+  lastSessionPurgeAt = now.getTime();
+}
+
 async function tick(): Promise<void> {
   for (const channel of dueChannels(new Date())) {
     await ingestChannel(channel); // never throws -- see ingestChannel's try/catch
@@ -48,6 +61,12 @@ async function tick(): Promise<void> {
     await runDurationEnrichmentSweep();
   } catch (err) {
     logger.error("Duration enrichment sweep failed", { err });
+  }
+
+  try {
+    maybePurgeSessions();
+  } catch (err) {
+    logger.error("Session purge failed", { err });
   }
 }
 

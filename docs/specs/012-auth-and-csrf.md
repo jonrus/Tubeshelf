@@ -143,7 +143,7 @@ design).
   initial login. This relies on the assumption — true for the intended NPM/Cloudflare Tunnel
   topology, and worth keeping true if the deployment shape ever changes — that the reverse
   proxy forwards the original `Host` header unmodified and the app is never reachable by a
-  path that bypasses the proxy with an attacker-controlled `Host`.
+  path that bypasses the proxy with an attacker-controlled `Host`. (Amended in docs/specs/032-auth-security-hardening.md — the `Host` fallback is replaced by a fail-secure default derived from `TRUSTED_ORIGINS`.)
 
 ### Lockout
 

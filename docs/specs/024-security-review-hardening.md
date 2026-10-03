@@ -38,7 +38,7 @@ the three that are actionable now. See Scope for what's explicitly deferred and 
   should still model a `User` record now so v2.0 multi-user support doesn't require a
   breaking migration"). Wiring session identity through is real work that belongs with that
   future multi-user spec, not a standalone hardening fix — doing it in isolation here would
-  just be dead code, since `getCurrentUser()`'s caller is the only thing that would change.
+  just be dead code, since `getCurrentUser()`'s caller is the only thing that would change. (Superseded in docs/specs/032-auth-security-hardening.md — the session user is now wired through and `getCurrentUser()` deleted.)
 - **`AUTH_RECOVERY_PASSWORD` overwriting the password on every boot.** Already a documented,
   accepted tradeoff (`docs/specs/012-auth-and-csrf.md`: "at the accepted cost that leaving
   it set overwrites any UI-set password on the next restart"), already mitigated with a

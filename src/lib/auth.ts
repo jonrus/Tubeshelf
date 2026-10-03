@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, lt, sql } from "drizzle-orm";
 import type { Context, MiddlewareHandler } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { csrf } from "hono/csrf";
@@ -10,6 +10,7 @@ import { logger } from "./logger";
 declare module "hono" {
   interface ContextVariableMap {
     userId: number;
+    csrfChecked: boolean;
   }
 }
 
@@ -39,14 +40,50 @@ export async function applyRecoveryPasswordFromEnv(): Promise<void> {
   const recoveryPassword = process.env.AUTH_RECOVERY_PASSWORD;
   if (!recoveryPassword) return;
 
-  const passwordHash = await hashPassword(recoveryPassword);
-  db.update(users)
-    .set({ passwordHash })
+  const admin = db
+    .select({ passwordHash: users.passwordHash })
+    .from(users)
     .where(eq(users.username, "admin"))
-    .run();
+    .get();
+  if (
+    admin?.passwordHash &&
+    (await verifyPassword(recoveryPassword, admin.passwordHash))
+  ) {
+    // Restart with the variable still set: nothing changes, so don't re-salt
+    // the hash or log everyone out on every boot.
+    logger.warn(
+      "AUTH_RECOVERY_PASSWORD is still set and matches the default user's password. Unset this environment variable.",
+    );
+    return;
+  }
+
+  const passwordHash = await hashPassword(recoveryPassword);
+  // bun-sqlite transaction callbacks must be synchronous, so hash first.
+  const updated = db.transaction((tx) => {
+    const rows = tx
+      .update(users)
+      .set({ passwordHash })
+      .where(eq(users.username, "admin"))
+      .returning({ id: users.id })
+      .all();
+    if (rows.length > 0) tx.delete(sessions).run();
+    return rows;
+  });
+  if (updated.length === 0) return;
   logger.warn(
-    "AUTH_RECOVERY_PASSWORD was applied to the default user's password. Unset this environment variable after use.",
+    "AUTH_RECOVERY_PASSWORD was applied to the default user's password and all sessions were signed out. Unset this environment variable after use.",
   );
+}
+
+export function purgeIdleSessions(now: Date = new Date()): void {
+  db.delete(sessions)
+    .where(
+      lt(
+        sessions.lastSeenAt,
+        new Date(now.getTime() - SESSION_IDLE_TIMEOUT_MS),
+      ),
+    )
+    .run();
 }
 
 export async function ensureAdminPassword(): Promise<void> {
@@ -77,7 +114,9 @@ export async function ensureAdminPassword(): Promise<void> {
 export async function attemptLogin(
   username: string,
   password: string,
-): Promise<{ ok: true; userId: number } | { ok: false }> {
+): Promise<
+  { ok: true; userId: number } | { ok: false; reason: "invalid" | "locked" }
+> {
   const user = db
     .select()
     .from(users)
@@ -85,11 +124,11 @@ export async function attemptLogin(
     .get();
   if (!user) {
     await verifyPassword(password, DUMMY_PASSWORD_HASH);
-    return { ok: false };
+    return { ok: false, reason: "invalid" };
   }
 
   if (user.lockedUntil && user.lockedUntil.getTime() > Date.now()) {
-    return { ok: false };
+    return { ok: false, reason: "locked" };
   }
 
   const passwordOk = user.passwordHash
@@ -106,7 +145,7 @@ export async function attemptLogin(
 
   const fresh = db.select().from(users).where(eq(users.id, user.id)).get();
   if (fresh?.lockedUntil && fresh.lockedUntil.getTime() > Date.now()) {
-    return { ok: false };
+    return { ok: false, reason: "locked" };
   }
 
   const lockedUntilSeconds = Math.floor(
@@ -120,7 +159,7 @@ export async function attemptLogin(
     .where(eq(users.id, user.id))
     .run();
 
-  return { ok: false };
+  return { ok: false, reason: "invalid" };
 }
 
 export function createSession(userId: number): { token: string } {
@@ -161,7 +200,22 @@ function getTrustedOrigins(): string[] {
   return raw.split(",").map((origin) => origin.trim());
 }
 
-export const csrfCheck = csrf({ origin: getTrustedOrigins() });
+// Origin is checked lazily (per request) so TRUSTED_ORIGINS is never frozen at
+// import time -- bun test shares one module registry across files.
+const csrfInner = csrf({
+  origin: (origin) => getTrustedOrigins().includes(origin),
+});
+
+// Each router does use("*", csrfCheck, requireAuth) and app.route("/", ...)
+// stacks those wildcards, so this must be a no-op on repeats. The flag is set
+// only after the check passes, so a rejected request never reaches it.
+export const csrfCheck: MiddlewareHandler = (c, next) => {
+  if (c.get("csrfChecked")) return next();
+  return csrfInner(c, async () => {
+    c.set("csrfChecked", true);
+    await next();
+  });
+};
 
 export function getSessionFromRequest(
   c: Context,
@@ -178,6 +232,8 @@ function buildLoginRedirect(c: Context): string {
 }
 
 export const requireAuth: MiddlewareHandler = async (c, next) => {
+  if (c.get("userId") !== undefined) return next();
+
   const token = getCookie(c, "session");
   const session = token ? findValidSession(token) : undefined;
   if (!session || !token) {
@@ -189,13 +245,7 @@ export const requireAuth: MiddlewareHandler = async (c, next) => {
     return c.redirect(location, 302);
   }
 
-  setCookie(c, "session", token, {
-    httpOnly: true,
-    sameSite: "Lax",
-    secure: resolveCookieSecure(c),
-    maxAge: SESSION_MAX_AGE_SECONDS,
-    path: "/",
-  });
+  setSessionCookie(c, token);
   c.set("userId", session.userId);
   await next();
 };
@@ -210,20 +260,36 @@ export function safeRedirectTarget(from: string | undefined): string {
   }
 }
 
+// Fail-secure: Secure iff any TRUSTED_ORIGINS entry is https://, unless the
+// request positively matches an http:// entry (Origin header when present,
+// otherwise Host). No X-Forwarded-* trust.
 export function resolveCookieSecure(c: Context): boolean {
-  const originHeader = c.req.header("Origin");
-  if (originHeader !== undefined) {
-    const match = getTrustedOrigins().find((origin) => origin === originHeader);
-    return match?.startsWith("https://") ?? false;
-  }
+  const origins = getTrustedOrigins();
+  if (!origins.some((origin) => origin.startsWith("https://"))) return false;
 
-  const hostHeader = c.req.header("Host");
-  const match = getTrustedOrigins().find((origin) => {
-    try {
-      return new URL(origin).host === hostHeader;
-    } catch {
-      return false;
-    }
+  const originHeader = c.req.header("Origin");
+  const matchesHttpEntry =
+    originHeader !== undefined
+      ? origins.some(
+          (origin) => origin.startsWith("http://") && origin === originHeader,
+        )
+      : origins.some((origin) => {
+          if (!origin.startsWith("http://")) return false;
+          try {
+            return new URL(origin).host === c.req.header("Host");
+          } catch {
+            return false;
+          }
+        });
+  return !matchesHttpEntry;
+}
+
+export function setSessionCookie(c: Context, token: string): void {
+  setCookie(c, "session", token, {
+    httpOnly: true,
+    sameSite: "Lax",
+    secure: resolveCookieSecure(c),
+    maxAge: SESSION_MAX_AGE_SECONDS,
+    path: "/",
   });
-  return match?.startsWith("https://") ?? false;
 }

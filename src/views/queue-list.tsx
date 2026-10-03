@@ -161,7 +161,6 @@ function videoCardBody(
           src={youtubeThumbnailUrl(row.youtubeVideoId)}
           alt={row.title}
           loading="lazy"
-          onerror="this.style.visibility='hidden'"
           class={THUMBNAIL_IMG_CLASS}
         />
       </div>

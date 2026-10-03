@@ -4,7 +4,6 @@ import { db } from "../db/client";
 import { IGNORE_RULE_KEYWORD_MAX_LENGTH, ignoreRules } from "../db/schema";
 import { csrfCheck, requireAuth } from "../lib/auth";
 import { listCategoriesWithCounts } from "../lib/categories";
-import { getCurrentUser } from "../lib/current-user";
 import { listIgnoreRules, reconcileIgnoreRules } from "../lib/ignore-rules";
 import { getNavCounts } from "../lib/nav-counts";
 import { IgnoreRulesList } from "../views/ignore-rules-list";
@@ -29,12 +28,12 @@ function keywordError(editingId: number | undefined, message: string) {
 }
 
 ignoreRulesRoute.get("/ignore-rules", (c) => {
-  const user = getCurrentUser();
+  const userId = c.get("userId");
   return c.html(
     <IgnoreRulesPage
       rules={listIgnoreRules()}
-      navCounts={getNavCounts(user.id)}
-      categories={listCategoriesWithCounts(user.id)}
+      navCounts={getNavCounts(userId)}
+      categories={listCategoriesWithCounts(userId)}
       currentView="ignore-rules"
     />,
   );

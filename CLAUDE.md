@@ -38,7 +38,14 @@ workflow, only to a Claude Code session using the CLI directly:
 - **No `ps`/`pkill` in the `oven/bun:1` base image.** To stop a dev server started inside
   the container, find its PID by scanning `/proc/[0-9]*/cmdline` for the matching command
   (`grep -l src/index.ts /proc/[0-9]*/cmdline`) and `kill <pid>` directly — `kill` itself is
-  a shell builtin and works fine, it's just `ps`/`pkill` that are missing.
+  a shell builtin and works fine, it's just `ps`/`pkill` that are missing. **Don't run the
+  scan inline via `devcontainer exec … sh -c '… grep -q src/index.ts …'`**: that `sh -c`
+  process's own `/proc/<pid>/cmdline` contains `src/index.ts`, so the scan matches and kills
+  itself partway through (confirmed 2026-10-03, spec032 task 13 — the rest of the command,
+  e.g. cleanup `rm`s, silently never ran). Put the scan in a script file inside the
+  container (the container's `/tmp` is separate from the host's, so write it via
+  `devcontainer exec … sh -c "cat > /tmp/x.sh" < local-file`) and run `sh /tmp/x.sh`, whose
+  cmdline doesn't contain the pattern.
 - **If the container gets into a weird state** (e.g. an orphaned/stuck process left behind
   by a killed `devcontainer exec` — confirmed with a `drizzle-kit generate` process wedged
   waiting on a TTY prompt that would never come, 2026-07-22), don't chase it down inside the

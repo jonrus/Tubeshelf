@@ -8,32 +8,6 @@ import {
   buildWatchedHref,
 } from "../lib/queue-urls";
 
-const WATCH_LINK_CLICK_SCRIPT = `
-function handleWatchLinkClick(e) {
-  const link = e.target.closest(".watch-link");
-  if (!link) return;
-  if (e.type === "auxclick" && e.button !== 1) return;
-  if (e.type === "click" && (e.ctrlKey || e.metaKey || e.shiftKey)) return;
-  window.open(link.dataset.youtubeUrl, "_blank");
-}
-document.addEventListener("click", handleWatchLinkClick);
-document.addEventListener("auxclick", handleWatchLinkClick);
-`;
-
-const SIDEBAR_TOGGLE_SCRIPT = `
-function toggleSidebar() {
-  const aside = document.getElementById("sidebar");
-  const btn = document.getElementById("sidebar-toggle");
-  const backdrop = document.getElementById("sidebar-backdrop");
-  const isOpen = aside.dataset.open === "true";
-  aside.dataset.open = String(!isOpen);
-  backdrop.dataset.open = String(!isOpen);
-  btn.setAttribute("aria-expanded", String(!isOpen));
-}
-document.getElementById("sidebar-toggle").addEventListener("click", toggleSidebar);
-document.getElementById("sidebar-backdrop").addEventListener("click", toggleSidebar);
-`;
-
 const NAV_LINK_CLASS =
   "block rounded px-3 py-2 text-sm font-medium text-text-muted hover:bg-surface-raised hover:text-text data-[active=true]:bg-surface-raised data-[active=true]:text-accent";
 
@@ -118,7 +92,12 @@ export const Layout: FC<{
         />
         <link rel="manifest" href="/manifest.json" />
         <link rel="stylesheet" href="/css/tailwind.css" />
+        <meta
+          name="htmx-config"
+          content='{"includeIndicatorStyles":false,"allowEval":false}'
+        />
         <script src="/js/htmx.min.js" />
+        <script src="/js/app.js" defer />
       </head>
       <body class="bg-bg text-text lg:flex lg:min-h-screen">
         <button
@@ -255,8 +234,6 @@ export const Layout: FC<{
           </nav>
         </aside>
         <main class="min-w-0 flex-1 p-4 pt-20 lg:pt-6">{props.children}</main>
-        <script dangerouslySetInnerHTML={{ __html: WATCH_LINK_CLICK_SCRIPT }} />
-        <script dangerouslySetInnerHTML={{ __html: SIDEBAR_TOGGLE_SCRIPT }} />
       </body>
     </html>
   );
