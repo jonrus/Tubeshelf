@@ -171,7 +171,7 @@ matching Design subsection before each step.
   fallow` across the repo (all via `devcontainer exec`), all clean. Fix anything surfaced
   (fallow: e.g. unused exports). Done when: all four exit 0.
 
-- [ ] 14. Manual end-to-end verification (spec "Final verification").
+- [x] 14. Manual end-to-end verification (spec "Final verification").
   **Claude performs directly** (curl from inside the devcontainer; `scripts/dev-login.sh` for
   the cookie jar; any DB scripts written to a file, not inline `bun -e`; clean up rows/files
   afterward): start `bun run dev` in the container; start a throwaway local stub HTTP server
