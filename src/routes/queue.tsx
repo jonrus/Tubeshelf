@@ -10,7 +10,6 @@ import {
 } from "../db/schema";
 import { csrfCheck, requireAuth } from "../lib/auth";
 import { listCategoriesWithCounts } from "../lib/categories";
-import { getCurrentUser } from "../lib/current-user";
 import { getNavCounts } from "../lib/nav-counts";
 import { buildQueueHref } from "../lib/queue-urls";
 import {
@@ -370,10 +369,10 @@ queueRoute.use("*", csrfCheck, requireAuth);
 queueRoute.get("/", (c) => c.redirect("/queue", 302));
 
 queueRoute.get("/queue", (c) => {
-  const user = getCurrentUser();
+  const userId = c.get("userId");
   const sort = resolveSort(c.req.query("sort"));
   const { category, cursor } = parseQueryFilters(c);
-  const { rows, nextCursor } = queueVideos(user.id, sort, category, cursor);
+  const { rows, nextCursor } = queueVideos(userId, sort, category, cursor);
 
   if (cursor !== undefined) {
     return c.html(
@@ -390,8 +389,8 @@ queueRoute.get("/queue", (c) => {
   return c.html(
     <Layout
       title="Queue"
-      navCounts={getNavCounts(user.id)}
-      categories={listCategoriesWithCounts(user.id)}
+      navCounts={getNavCounts(userId)}
+      categories={listCategoriesWithCounts(userId)}
       currentView="queue"
       currentCategory={category}
       currentSort={sort}
@@ -412,13 +411,9 @@ queueRoute.get("/queue", (c) => {
 });
 
 queueRoute.get("/continue-watching", (c) => {
-  const user = getCurrentUser();
+  const userId = c.get("userId");
   const { category, cursor } = parseQueryFilters(c);
-  const { rows, nextCursor } = continueWatchingVideos(
-    user.id,
-    category,
-    cursor,
-  );
+  const { rows, nextCursor } = continueWatchingVideos(userId, category, cursor);
 
   if (cursor !== undefined) {
     return c.html(
@@ -434,8 +429,8 @@ queueRoute.get("/continue-watching", (c) => {
   return c.html(
     <Layout
       title="Continue Watching"
-      navCounts={getNavCounts(user.id)}
-      categories={listCategoriesWithCounts(user.id)}
+      navCounts={getNavCounts(userId)}
+      categories={listCategoriesWithCounts(userId)}
       currentView="continue-watching"
       currentCategory={category}
     >
@@ -450,9 +445,9 @@ queueRoute.get("/continue-watching", (c) => {
 });
 
 queueRoute.get("/watched", (c) => {
-  const user = getCurrentUser();
+  const userId = c.get("userId");
   const { category, cursor } = parseQueryFilters(c);
-  const { rows, nextCursor } = watchedVideos(user.id, category, cursor);
+  const { rows, nextCursor } = watchedVideos(userId, category, cursor);
 
   if (cursor !== undefined) {
     return c.html(
@@ -468,8 +463,8 @@ queueRoute.get("/watched", (c) => {
   return c.html(
     <Layout
       title="Watched"
-      navCounts={getNavCounts(user.id)}
-      categories={listCategoriesWithCounts(user.id)}
+      navCounts={getNavCounts(userId)}
+      categories={listCategoriesWithCounts(userId)}
       currentView="watched"
       currentCategory={category}
     >
@@ -484,9 +479,9 @@ queueRoute.get("/watched", (c) => {
 });
 
 queueRoute.get("/ignored", (c) => {
-  const user = getCurrentUser();
+  const userId = c.get("userId");
   const { category, cursor } = parseQueryFilters(c);
-  const { rows, nextCursor } = ignoredVideos(user.id, category, cursor);
+  const { rows, nextCursor } = ignoredVideos(userId, category, cursor);
 
   if (cursor !== undefined) {
     return c.html(
@@ -502,8 +497,8 @@ queueRoute.get("/ignored", (c) => {
   return c.html(
     <Layout
       title="Ignored"
-      navCounts={getNavCounts(user.id)}
-      categories={listCategoriesWithCounts(user.id)}
+      navCounts={getNavCounts(userId)}
+      categories={listCategoriesWithCounts(userId)}
       currentView="ignored"
       currentCategory={category}
     >
@@ -519,8 +514,8 @@ queueRoute.get("/ignored", (c) => {
 
 queueRoute.get("/watching/:id", (c) => {
   const id = Number(c.req.param("id"));
-  const user = getCurrentUser();
-  const video = videoForWatchingPage(id, user.id);
+  const userId = c.get("userId");
+  const video = videoForWatchingPage(id, userId);
   if (!video) return c.notFound();
 
   const from = c.req.query("from");
@@ -540,8 +535,8 @@ queueRoute.get("/watching/:id", (c) => {
       category={category}
       returnUrl={returnTarget.url}
       returnLabel={returnTarget.label}
-      navCounts={getNavCounts(user.id)}
-      categories={listCategoriesWithCounts(user.id)}
+      navCounts={getNavCounts(userId)}
+      categories={listCategoriesWithCounts(userId)}
       currentView={undefined}
     />,
   );
@@ -549,8 +544,8 @@ queueRoute.get("/watching/:id", (c) => {
 
 queueRoute.post("/videos/:id/watching", (c) => {
   const id = Number(c.req.param("id"));
-  const user = getCurrentUser();
-  const result = setWatching(id, user.id);
+  const userId = c.get("userId");
+  const result = setWatching(id, userId);
   if (!result) return c.notFound();
 
   return c.html(<WatchStatusBadge status={result.status} oob />);
@@ -558,8 +553,8 @@ queueRoute.post("/videos/:id/watching", (c) => {
 
 queueRoute.post("/videos/:id/watched-toggle", (c) => {
   const id = Number(c.req.param("id"));
-  const user = getCurrentUser();
-  const result = toggleWatchedFromWatchingPage(id, user.id);
+  const userId = c.get("userId");
+  const result = toggleWatchedFromWatchingPage(id, userId);
   if (!result) return c.notFound();
 
   const from = c.req.query("from");
@@ -570,8 +565,8 @@ queueRoute.post("/videos/:id/watched-toggle", (c) => {
 
 queueRoute.post("/videos/:id/toggle", (c) => {
   const id = Number(c.req.param("id"));
-  const user = getCurrentUser();
-  const result = toggleQueueStatus(id, user.id);
+  const userId = c.get("userId");
+  const result = toggleQueueStatus(id, userId);
   if (!result) return c.notFound();
 
   const view = resolveToggleView(c.req.query("view"));
@@ -587,15 +582,15 @@ queueRoute.post("/videos/:id/toggle", (c) => {
 
   const sort = resolveSort(c.req.query("sort"));
   const category = resolveCategoryFilter(c.req.query("category"));
-  const row = queueRowById(id, user.id);
+  const row = queueRowById(id, userId);
   if (!row) return c.notFound();
   return c.html(queueCard(row, "queue", sort, category));
 });
 
 queueRoute.post("/videos/:id/ignore", (c) => {
   const id = Number(c.req.param("id"));
-  const user = getCurrentUser();
-  const result = ignoreVideo(id, user.id);
+  const userId = c.get("userId");
+  const result = ignoreVideo(id, userId);
   if (!result) return c.notFound();
 
   c.header("HX-Reswap", "delete");
@@ -604,8 +599,8 @@ queueRoute.post("/videos/:id/ignore", (c) => {
 
 queueRoute.post("/videos/:id/unignore", (c) => {
   const id = Number(c.req.param("id"));
-  const user = getCurrentUser();
-  const result = unignoreVideo(id, user.id);
+  const userId = c.get("userId");
+  const result = unignoreVideo(id, userId);
   if (!result) return c.notFound();
 
   c.header("HX-Reswap", "delete");

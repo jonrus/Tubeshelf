@@ -92,7 +92,7 @@ No schema change anywhere in this spec.
   later `test/routes/*` (full `bun test` run, since the shared module registry was the spec's
   pass-2 bug). — done when: tests pass in a full `bun test` run.
 
-- [ ] 7. #6 — session user in `src/routes/queue.tsx` — replace all 10 `getCurrentUser()`
+- [x] 7. #6 — session user in `src/routes/queue.tsx` — replace all 10 `getCurrentUser()`
   calls (lines ~373–607) with `const userId = c.get("userId")` and update uses (`user.id` →
   `userId`, any other `user` field read — verify none); remove the `current-user` import.
   — done when: `rg getCurrentUser src/routes/queue.tsx` is empty, `bun test test/routes/queue.test.ts`
