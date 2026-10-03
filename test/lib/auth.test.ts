@@ -18,6 +18,8 @@ const {
   ensureAdminPassword,
   hashPassword,
   requireAuth,
+  resolveCookieSecure,
+  setSessionCookie,
 } = await import("../../src/lib/auth");
 
 migrate(db, { migrationsFolder: "./drizzle" });
@@ -156,5 +158,76 @@ test("requireAuth is idempotent: running it twice on one request touches the ses
     expect(res.headers.getSetCookie()).toHaveLength(1);
   } finally {
     updateSpy.mockRestore();
+  }
+});
+
+async function cookieSecureFor(
+  origins: string,
+  headers: Record<string, string>,
+): Promise<boolean> {
+  const saved = process.env.TRUSTED_ORIGINS;
+  process.env.TRUSTED_ORIGINS = origins;
+  try {
+    const app = new Hono();
+    app.get("/", (c) => c.text(String(resolveCookieSecure(c))));
+    const res = await app.request("/", { headers });
+    return (await res.text()) === "true";
+  } finally {
+    process.env.TRUSTED_ORIGINS = saved;
+  }
+}
+
+test("resolveCookieSecure is never Secure without an https entry", async () => {
+  expect(await cookieSecureFor("http://localhost:3000", {})).toBe(false);
+  expect(
+    await cookieSecureFor("http://localhost:3000", { Host: "evil.example" }),
+  ).toBe(false);
+});
+
+test("resolveCookieSecure is Secure for an https-only list, even with a rewritten Host", async () => {
+  const origins = "https://t.example.com";
+  expect(await cookieSecureFor(origins, { Host: "t.example.com" })).toBe(true);
+  expect(await cookieSecureFor(origins, { Host: "localhost:3000" })).toBe(true);
+  expect(
+    await cookieSecureFor(origins, { Origin: "https://t.example.com" }),
+  ).toBe(true);
+});
+
+test("resolveCookieSecure with a mixed list is not Secure only when an http entry matches", async () => {
+  const origins = "http://localhost:3000,https://t.example.com";
+  expect(await cookieSecureFor(origins, { Host: "localhost:3000" })).toBe(
+    false,
+  );
+  expect(
+    await cookieSecureFor(origins, { Origin: "http://localhost:3000" }),
+  ).toBe(false);
+  expect(await cookieSecureFor(origins, { Host: "192.168.1.5:3000" })).toBe(
+    true,
+  );
+  expect(await cookieSecureFor(origins, { Host: "t.example.com" })).toBe(true);
+  expect(
+    await cookieSecureFor(origins, { Origin: "https://t.example.com" }),
+  ).toBe(true);
+});
+
+test("setSessionCookie sets httpOnly, Lax, path, max-age and the resolved Secure flag", async () => {
+  const saved = process.env.TRUSTED_ORIGINS;
+  process.env.TRUSTED_ORIGINS = "https://t.example.com";
+  try {
+    const app = new Hono();
+    app.get("/", (c) => {
+      setSessionCookie(c, "tok");
+      return c.text("ok");
+    });
+    const res = await app.request("/");
+    const cookie = res.headers.getSetCookie()[0] ?? "";
+    expect(cookie).toContain("session=tok");
+    expect(cookie).toContain("HttpOnly");
+    expect(cookie).toContain("SameSite=Lax");
+    expect(cookie).toContain("Path=/");
+    expect(cookie).toContain("Max-Age=2592000");
+    expect(cookie).toContain("Secure");
+  } finally {
+    process.env.TRUSTED_ORIGINS = saved;
   }
 });

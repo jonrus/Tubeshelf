@@ -40,7 +40,7 @@ quick reference:
 | :--- | :--- |
 | `DB_FILE_NAME` | Path to the SQLite database file. Already set to `/data/tubeshelf.db` in `docker-compose.yml` to match the bind mount — leave unset in `.env`. |
 | `AUTH_RECOVERY_PASSWORD` | If set, forces the admin user's password to this value on every startup. Optional: if unset, a random password is generated and logged once on first boot. Use it to choose your own password or recover a lost one — see below. |
-| `TRUSTED_ORIGINS` | Comma-separated list of origins allowed to make CSRF-protected requests. Must include whatever public origin(s) you access the app through. |
+| `TRUSTED_ORIGINS` | Comma-separated list of origins allowed to make CSRF-protected requests. Must include whatever public origin(s) you access the app through. Also decides the session cookie's `Secure` flag: Secure iff any entry is `https://`, unless the request matches an `http://` entry (`Origin`, else `Host`). An `https://` entry therefore makes `Secure` the default, and plain-http access at a non-listed host (LAN IP, `127.0.0.1`) loses its session because browsers drop the cookie. A mixed http+https list is for local development only — behind a proxy that rewrites `Host` to match an `http://` entry, the cookie would be re-issued without `Secure`; in production list only `https://` origins. |
 | `PUID` | User ID the app process runs as inside the container. Defaults to `1000` if unset. |
 | `PGID` | Group ID the app process runs as inside the container. Defaults to `1000` if unset. |
 | `UMASK` | Permission mask applied to files created under `/data`. Defaults to `022` if unset. |

@@ -207,13 +207,7 @@ export const requireAuth: MiddlewareHandler = async (c, next) => {
     return c.redirect(location, 302);
   }
 
-  setCookie(c, "session", token, {
-    httpOnly: true,
-    sameSite: "Lax",
-    secure: resolveCookieSecure(c),
-    maxAge: SESSION_MAX_AGE_SECONDS,
-    path: "/",
-  });
+  setSessionCookie(c, token);
   c.set("userId", session.userId);
   await next();
 };
@@ -228,20 +222,36 @@ export function safeRedirectTarget(from: string | undefined): string {
   }
 }
 
+// Fail-secure: Secure iff any TRUSTED_ORIGINS entry is https://, unless the
+// request positively matches an http:// entry (Origin header when present,
+// otherwise Host). No X-Forwarded-* trust.
 export function resolveCookieSecure(c: Context): boolean {
-  const originHeader = c.req.header("Origin");
-  if (originHeader !== undefined) {
-    const match = getTrustedOrigins().find((origin) => origin === originHeader);
-    return match?.startsWith("https://") ?? false;
-  }
+  const origins = getTrustedOrigins();
+  if (!origins.some((origin) => origin.startsWith("https://"))) return false;
 
-  const hostHeader = c.req.header("Host");
-  const match = getTrustedOrigins().find((origin) => {
-    try {
-      return new URL(origin).host === hostHeader;
-    } catch {
-      return false;
-    }
+  const originHeader = c.req.header("Origin");
+  const matchesHttpEntry =
+    originHeader !== undefined
+      ? origins.some(
+          (origin) => origin.startsWith("http://") && origin === originHeader,
+        )
+      : origins.some((origin) => {
+          if (!origin.startsWith("http://")) return false;
+          try {
+            return new URL(origin).host === c.req.header("Host");
+          } catch {
+            return false;
+          }
+        });
+  return !matchesHttpEntry;
+}
+
+export function setSessionCookie(c: Context, token: string): void {
+  setCookie(c, "session", token, {
+    httpOnly: true,
+    sameSite: "Lax",
+    secure: resolveCookieSecure(c),
+    maxAge: SESSION_MAX_AGE_SECONDS,
+    path: "/",
   });
-  return match?.startsWith("https://") ?? false;
 }

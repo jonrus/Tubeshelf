@@ -40,7 +40,7 @@ No schema change anywhere in this spec.
   a rejected cross-origin POST still 403s. — done when: new tests pass, all existing tests
   (esp. `test/routes/*`, which depend on lazy `TRUSTED_ORIGINS`) pass, tsc clean.
 
-- [ ] 3. #14 + cookie helper — in `src/lib/auth.ts`: rewrite `resolveCookieSecure` to the
+- [x] 3. #14 + cookie helper — in `src/lib/auth.ts`: rewrite `resolveCookieSecure` to the
   spec's fail-secure rule (Secure iff any `TRUSTED_ORIGINS` entry is `https://`, except when
   the request positively matches an `http://` entry — `Origin` header exact match when
   present, else `Host` header vs each entry's `new URL(entry).host`; no `X-Forwarded-*`);
