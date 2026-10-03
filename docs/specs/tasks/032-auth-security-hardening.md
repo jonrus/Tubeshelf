@@ -159,7 +159,7 @@ No schema change anywhere in this spec.
   attribute. — done when: test passes (and demonstrably fails if you temporarily
   reintroduce an `onerror=`).
 
-- [ ] 13. Manual end-to-end verification (Claude-performed part) — per CLAUDE.md, inside
+- [x] 13. Manual end-to-end verification (Claude-performed part) — per CLAUDE.md, inside
   the devcontainer with `scripts/dev-login.sh` cookies: response headers (CSP, nosniff,
   Referrer-Policy, X-Frame-Options, no HSTS) on `/login`, an authed page, `/healthz`,
   `/js/app.js`, `/js/pageshow-reload.js`, and a forced 500 if practical; exactly one
