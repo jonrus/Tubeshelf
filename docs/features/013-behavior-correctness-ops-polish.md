@@ -1,5 +1,6 @@
 ---
-status: refined
+status: promoted
+promoted_to: docs/specs/031-behavior-correctness-ops-polish.md
 created: 2026-10-03
 ---
 

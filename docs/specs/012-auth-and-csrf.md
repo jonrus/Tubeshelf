@@ -91,7 +91,9 @@ story.
   type) — a null hash means "cannot log in with any password," which is the correct state
   for a freshly-seeded user before the recovery env var has ever been applied. No DB-level
   `NOT NULL` constraint is added, to avoid breaking `src/db/seed.ts:16-19`'s existing
-  no-password seed.
+  no-password seed. (Refined in `docs/specs/031-behavior-correctness-ops-polish.md`: `seed`
+  still inserts null, but `src/index.ts` now generates and logs a random password at boot
+  if the hash is still null after `AUTH_RECOVERY_PASSWORD` is applied.)
 - New `sessions` table: `id` (integer pk, autoincrement), `userId` (fk to `users.id`),
   `tokenHash` (text, not null, unique — SHA-256 of the opaque token, via `node:crypto`'s
   `createHash("sha256")`; the raw token itself is never stored, only its hash, so a DB read
