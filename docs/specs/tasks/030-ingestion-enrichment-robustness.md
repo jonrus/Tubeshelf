@@ -88,7 +88,7 @@ matching Design subsection before each step.
   400 body case to the sweep tests: it latches (next sweep makes no fetch), alongside the
   existing 403 `badKeyResponse()` case. Done when: both test files pass and `bun test` is green.
 
-- [ ] 7. Empty-key handling in `src/lib/duration-enrichment.ts` + `.env.example` (spec Design
+- [x] 7. Empty-key handling in `src/lib/duration-enrichment.ts` + `.env.example` (spec Design
   §4, "Empty key"). Replace the module-load `apiKey` read with: `const rawKey =
   process.env.YOUTUBE_API_KEY?.trim(); const apiKey = rawKey ? rawKey : undefined;` (trimmed
   value is used as the key; `undefined`, empty, or whitespace-only ⇒ disabled and the existing

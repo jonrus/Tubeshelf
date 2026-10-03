@@ -6,7 +6,8 @@ import { fetchVideoDurations } from "./youtube-api";
 
 const BATCH_SIZE = 50;
 
-const apiKey = process.env.YOUTUBE_API_KEY;
+const rawKey = process.env.YOUTUBE_API_KEY?.trim();
+const apiKey = rawKey ? rawKey : undefined;
 if (apiKey === undefined) {
   logger.info("Duration enrichment disabled: YOUTUBE_API_KEY not set");
 }

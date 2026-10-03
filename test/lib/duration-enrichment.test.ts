@@ -218,6 +218,26 @@ test("no-op (no fetch call) when YOUTUBE_API_KEY is unset", async () => {
   discard(video.id);
 });
 
+test.each([
+  ["empty", ""],
+  ["whitespace-only", "   "],
+])("no-op (no fetch call) when YOUTUBE_API_KEY is %s", async (_label, key) => {
+  const channel = makeChannel();
+  subscribe(channel.id, true);
+  const video = makeVideo(channel.id);
+
+  const { runDurationEnrichmentSweep } = await loadSweepModule(key);
+  const fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(
+    transientResponse(),
+  );
+
+  await runDurationEnrichmentSweep();
+
+  expect(fetchSpy).not.toHaveBeenCalled();
+  fetchSpy.mockRestore();
+  discard(video.id);
+});
+
 test("no-op (no fetch call) when the eligibility query is empty", async () => {
   await drainEligiblePool();
 
