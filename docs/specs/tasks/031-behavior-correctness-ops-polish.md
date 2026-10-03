@@ -60,7 +60,7 @@ task 12 only verifies them. Don't touch Round A surfaces (`requireAuth`, CSP, th
   `hx-trigger="load delay:10s"` and shows the "Ignored" badge; for an `unwatched` video it
   still contains the timer. — done when: `bun test test/routes/queue.test.ts` passes.
 
-- [ ] 6. Logger text mode renders object values as JSON — in `src/lib/logger.ts`, in the
+- [x] 6. Logger text mode renders object values as JSON — in `src/lib/logger.ts`, in the
   text-mode formatter (where `key=value` pairs are built; find it near `normalizeMeta`), render
   values with `typeof value === "object" && value !== null` via `JSON.stringify(value)`,
   falling back to `String(value)` if stringify throws or returns `undefined`. Primitives,

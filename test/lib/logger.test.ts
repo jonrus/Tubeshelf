@@ -84,6 +84,59 @@ test("text format is the default and includes level, message, and meta", () => {
   expect(line).toContain("foo=bar");
 });
 
+test("text format renders object and array meta values as JSON", () => {
+  delete process.env.LOG_FORMAT;
+  logSpy = spyOn(console, "log").mockImplementation(() => {});
+
+  logger.info("hello", { meta: { a: 1 }, list: [1, "x"] });
+
+  const line = logSpy.mock.calls[0]?.[0] as string;
+  expect(line).toContain('meta={"a":1}');
+  expect(line).toContain('list=[1,"x"]');
+});
+
+test("text format falls back to String for a circular object without throwing", () => {
+  delete process.env.LOG_FORMAT;
+  logSpy = spyOn(console, "log").mockImplementation(() => {});
+  const circular: Record<string, unknown> = {};
+  circular.self = circular;
+
+  expect(() => logger.info("hello", { circ: circular })).not.toThrow();
+  const line = logSpy.mock.calls[0]?.[0] as string;
+  expect(line).toContain("circ=[object Object]");
+});
+
+test("text format leaves primitives, null, and Error rendering unchanged", () => {
+  delete process.env.LOG_FORMAT;
+  delete process.env.LOG_LEVEL;
+  logSpy = spyOn(console, "log").mockImplementation(() => {});
+
+  logger.info("hello", {
+    n: 5,
+    b: true,
+    z: null,
+    s: "str",
+    err: new Error("boom"),
+  });
+
+  const line = logSpy.mock.calls[0]?.[0] as string;
+  expect(line).toContain("n=5");
+  expect(line).toContain("b=true");
+  expect(line).toContain("z=null");
+  expect(line).toContain("s=str");
+  expect(line).toContain("err=boom");
+});
+
+test("json format keeps nested objects as real JSON", () => {
+  process.env.LOG_FORMAT = "json";
+  logSpy = spyOn(console, "log").mockImplementation(() => {});
+
+  logger.info("hello", { meta: { a: 1 } });
+
+  const parsed = JSON.parse(logSpy.mock.calls[0]?.[0] as string);
+  expect(parsed.meta).toEqual({ a: 1 });
+});
+
 test("timestamp uses an offset-bearing format that reflects a non-UTC TZ", () => {
   process.env.TZ = "America/Chicago";
   logSpy = spyOn(console, "log").mockImplementation(() => {});
