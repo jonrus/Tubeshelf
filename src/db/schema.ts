@@ -109,6 +109,7 @@ export const videos = sqliteTable(
     ignoreMethod: text("ignore_method", { enum: ["manual", "auto"] }),
     watchedAt: integer("watched_at", { mode: "timestamp" }), // null unless status === "watched"
     durationSeconds: integer("duration_seconds"), // nullable; null = not yet enriched or no key configured
+    durationRecheckAt: integer("duration_recheck_at", { mode: "timestamp" }), // nullable; don't re-request duration before this
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`),

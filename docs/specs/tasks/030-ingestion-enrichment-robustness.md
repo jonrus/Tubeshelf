@@ -98,7 +98,7 @@ matching Design subsection before each step.
   helper: empty string and whitespace-only key ⇒ sweep makes no fetch call. Done when: the
   test passes and `bun test` is green.
 
-- [ ] 8. Schema: add nullable `durationRecheckAt: integer("duration_recheck_at", { mode:
+- [x] 8. Schema: add nullable `durationRecheckAt: integer("duration_recheck_at", { mode:
   "timestamp" })` to `videos` in `src/db/schema.ts` (no CHECK, no default; add a short comment:
   "don't re-request before"). Do NOT add it to the ingest upsert's `set` list (it's untouched
   — verify). **Then hand the user the command to run in their own terminal** (needs a TTY;

@@ -1,0 +1,1 @@
+ALTER TABLE `videos` ADD `duration_recheck_at` integer;
