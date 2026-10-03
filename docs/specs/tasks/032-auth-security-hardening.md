@@ -10,7 +10,7 @@ requesting (copy the setup from `test/routes/queue.test.ts`), import `test/helpe
 before making requests, and run from the repo root (`serveStatic` root is cwd-relative).
 No schema change anywhere in this spec.
 
-- [ ] 1. Extract `buildApp()` into `src/app.ts` — create `src/app.ts` exporting
+- [x] 1. Extract `buildApp()` into `src/app.ts` — create `src/app.ts` exporting
   `buildApp(): Hono` that builds the `Hono` instance with the existing `app.onError` (moved
   verbatim from `src/index.ts`), the four static handlers (`/css/*`, `/js/*`, `/icons/*`,
   `/manifest.json`), and the six `app.route("/", …)` calls in the existing order (health,
