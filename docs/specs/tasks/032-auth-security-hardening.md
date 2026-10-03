@@ -130,7 +130,7 @@ No schema change anywhere in this spec.
   `rg "dangerouslySetInnerHTML|onerror=|onsubmit=" src` is empty, `bun run lint`,
   `bun run fallow`, `bun test`, tsc pass.
 
-- [ ] 10. Dockerfile — in the final stage of `Dockerfile` add
+- [x] 10. Dockerfile — in the final stage of `Dockerfile` add
   `COPY public/js/app.js ./public/js/app.js` and
   `COPY public/js/pageshow-reload.js ./public/js/pageshow-reload.js` next to the existing
   `public/` COPY lines. `.gitignore` needs no change (verify `git status` shows the two new
