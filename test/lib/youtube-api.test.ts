@@ -12,6 +12,14 @@ test("parses hours, minutes, and seconds", () => {
   expect(parseIso8601Duration("PT1H2M15S")).toBe(3735);
 });
 
+test("parses a day component with hours", () => {
+  expect(parseIso8601Duration("P1DT2H")).toBe(93600);
+});
+
+test("parses a day-only duration", () => {
+  expect(parseIso8601Duration("P1D")).toBe(86400);
+});
+
 test("treats PT0S as not yet available", () => {
   expect(parseIso8601Duration("PT0S")).toBeNull();
 });

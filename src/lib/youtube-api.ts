@@ -1,5 +1,5 @@
 const ISO_8601_DURATION_RE =
-  /^P(?:\d+D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/;
+  /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/;
 
 const BAD_KEY_REASONS = new Set([
   "keyInvalid",
@@ -19,11 +19,12 @@ export function parseIso8601Duration(iso: string): number | null {
   const match = ISO_8601_DURATION_RE.exec(iso);
   if (!match) return null;
 
-  const hours = match[1] ? parseInt(match[1], 10) : 0;
-  const minutes = match[2] ? parseInt(match[2], 10) : 0;
-  const seconds = match[3] ? parseInt(match[3], 10) : 0;
+  const days = match[1] ? parseInt(match[1], 10) : 0;
+  const hours = match[2] ? parseInt(match[2], 10) : 0;
+  const minutes = match[3] ? parseInt(match[3], 10) : 0;
+  const seconds = match[4] ? parseInt(match[4], 10) : 0;
 
-  const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+  const totalSeconds = days * 86400 + hours * 3600 + minutes * 60 + seconds;
   return totalSeconds > 0 ? totalSeconds : null;
 }
 

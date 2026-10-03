@@ -62,7 +62,7 @@ matching Design subsection before each step.
   failure test still shows a reschedule. Done when: `bun test test/lib/ingest.test.ts` passes
   and `bun test` is green.
 
-- [ ] 5. ISO-8601 day component in `src/lib/youtube-api.ts` (spec Design §2). Change
+- [x] 5. ISO-8601 day component in `src/lib/youtube-api.ts` (spec Design §2). Change
   `ISO_8601_DURATION_RE`'s `(?:\d+D)?` to `(?:(\d+)D)?`, renumber groups (days=1, hours=2,
   minutes=3, seconds=4) in `parseIso8601Duration`, total = `days*86400 + hours*3600 +
   minutes*60 + seconds`; 0 ⇒ null unchanged. Add cases to `test/lib/youtube-api.test.ts`:
