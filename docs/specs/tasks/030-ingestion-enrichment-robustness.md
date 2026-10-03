@@ -6,7 +6,7 @@ All commands run via `devcontainer exec --docker-path podman --workspace-folder 
 CLAUDE.md). Branch: `spec/ingestion-enrichment-robustness` (already exists). Read the spec's
 matching Design subsection before each step.
 
-- [ ] 1. Malformed-feed handling in `src/lib/rss.ts` `fetchChannelFeed` (spec Design §1, first
+- [x] 1. Malformed-feed handling in `src/lib/rss.ts` `fetchChannelFeed` (spec Design §1, first
   half). Wrap `Bun.XML.parse(xml)` in try/catch: on throw,
   `logger.warn("Feed is not valid XML", { url: rssUrl, err })` and `return null`. Replace the
   `typeof feed === "object"` ternaries with a guard right after parsing:

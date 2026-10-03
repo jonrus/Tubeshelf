@@ -158,3 +158,32 @@ test("returns null when title is missing", async () => {
 
   expect(await fetchChannelFeed(RSS_URL)).toBeNull();
 });
+
+test("returns null (no throw) on a non-XML body", async () => {
+  fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response("hello", { status: 200 }),
+  );
+  warnSpy = spyOn(logger, "warn").mockImplementation(() => {});
+
+  expect(await fetchChannelFeed(RSS_URL)).toBeNull();
+  expect(warnSpy).toHaveBeenCalledWith(
+    "Feed is not valid XML",
+    expect.objectContaining({ url: RSS_URL }),
+  );
+});
+
+test("returns null on well-formed XML that isn't a feed", async () => {
+  fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response("<html><body>hi</body></html>", { status: 200 }),
+  );
+
+  expect(await fetchChannelFeed(RSS_URL)).toBeNull();
+});
+
+test("returns null on an empty <feed/> root", async () => {
+  fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response("<feed/>", { status: 200 }),
+  );
+
+  expect(await fetchChannelFeed(RSS_URL)).toBeNull();
+});

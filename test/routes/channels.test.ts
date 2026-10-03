@@ -363,6 +363,23 @@ test("preview renders the real fetched name and writes nothing to any table", as
   expect(channel).toBeUndefined();
 });
 
+test("preview and confirm render the friendly error (not a 500) for a non-XML feed body", async () => {
+  const id = channelId("nonXmlFeed");
+  fetchSpy = mockFetch("hello");
+
+  const previewRes = await postPreview(id);
+  expect(previewRes.status).toBe(200);
+  expect(await previewRes.text()).toContain(
+    "Couldn&#39;t fetch that channel&#39;s feed.",
+  );
+
+  const confirmRes = await postConfirm({ channelId: id, categoryId: "" });
+  expect(confirmRes.status).toBe(200);
+  expect(await confirmRes.text()).toContain(
+    "Couldn&#39;t fetch that channel&#39;s feed.",
+  );
+});
+
 test("preview resolves a bare @handle via scrape and renders the confirmed channel", async () => {
   const id = channelId("previewHandle");
   fetchSpy = mockScrapeThenFeed(id, "Preview Handle Channel");

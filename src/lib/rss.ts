@@ -75,12 +75,20 @@ export async function fetchChannelFeed(
   if (!res.ok) return null;
 
   const xml = await res.text();
-  const parsed = Bun.XML.parse(xml);
+  let parsed: ReturnType<typeof Bun.XML.parse>;
+  try {
+    parsed = Bun.XML.parse(xml);
+  } catch (err) {
+    logger.warn("Feed is not valid XML", { url: rssUrl, err });
+    return null;
+  }
   const feed = parsed.feed;
-  const title = typeof feed === "object" ? feed.title : undefined;
+  if (typeof feed !== "object" || feed === null) return null;
+
+  const title = feed.title;
   if (typeof title !== "string" || title.length === 0) return null;
 
-  const rawEntries = typeof feed === "object" ? feed.entry : undefined;
+  const rawEntries = feed.entry;
   const entryList: unknown[] = Array.isArray(rawEntries)
     ? rawEntries
     : rawEntries
