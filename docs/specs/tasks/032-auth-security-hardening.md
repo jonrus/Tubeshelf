@@ -108,7 +108,7 @@ No schema change anywhere in this spec.
   when: `rg getCurrentUser src` is empty, `src/lib/current-user.ts` gone, all route tests
   and tsc pass.
 
-- [ ] 9. #10 — static JS files + view cleanup — create `public/js/app.js` containing: the
+- [x] 9. #10 — static JS files + view cleanup — create `public/js/app.js` containing: the
   watch-link `click`/`auxclick` handler (port `WATCH_LINK_CLICK_SCRIPT` from
   `src/views/layout.tsx` verbatim in behavior, with `window.open(url, "_blank", "noopener")`
   — #15), the sidebar toggle (port `SIDEBAR_TOGGLE_SCRIPT`, null-guarding
