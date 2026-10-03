@@ -150,7 +150,7 @@ No schema change anywhere in this spec.
   `Referrer-Policy: same-origin`, `X-Frame-Options: DENY`, and have **no**
   `Strict-Transport-Security`. — done when: tests pass, tsc/lint clean.
 
-- [ ] 12. #10 — no-inline guard test — in `test/app.test.ts` (or a new
+- [x] 12. #10 — no-inline guard test — in `test/app.test.ts` (or a new
   `test/no-inline.test.ts`) fetch, on the full app with seeded data (at least one video card
   in the queue, a watching-page video, a channel, category, ignore rule): `/login`, `/queue`,
   `/watching/:id`, `/channels`, `/categories`, `/ignore-rules`, plus an HTMX partial
