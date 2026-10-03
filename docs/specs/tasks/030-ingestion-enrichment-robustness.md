@@ -167,7 +167,7 @@ matching Design subsection before each step.
   file task 11). Use the inline `(refined in docs/specs/030-…md)` style. Done when: all three
   pointers exist.
 
-- [ ] 13. Full verification: run `bun test`, `bun run lint`, `bunx tsc --noEmit`, and `bun run
+- [x] 13. Full verification: run `bun test`, `bun run lint`, `bunx tsc --noEmit`, and `bun run
   fallow` across the repo (all via `devcontainer exec`), all clean. Fix anything surfaced
   (fallow: e.g. unused exports). Done when: all four exit 0.
 

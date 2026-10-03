@@ -110,35 +110,23 @@ async function readCappedBody(
   return new TextDecoder().decode(bytes);
 }
 
-export async function fetchChannelFeed(
-  rssUrl: string,
-): Promise<ChannelFeed | null> {
-  let xml: string | null;
+async function fetchFeedXml(rssUrl: string): Promise<string | null> {
   try {
     const res = await fetch(rssUrl, {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
     if (!res.ok) return null;
-    xml = await readCappedBody(res, rssUrl);
+    return await readCappedBody(res, rssUrl);
   } catch {
     return null; // network error, timeout, or read error mid-stream
   }
-  if (xml === null) return null;
+}
 
-  let parsed: ReturnType<typeof Bun.XML.parse>;
-  try {
-    parsed = Bun.XML.parse(xml);
-  } catch (err) {
-    logger.warn("Feed is not valid XML", { url: rssUrl, err });
-    return null;
-  }
-  const feed = parsed.feed;
-  if (typeof feed !== "object" || feed === null) return null;
-
-  const title = feed.title;
-  if (typeof title !== "string" || title.length === 0) return null;
-
-  const rawEntries = feed.entry;
+function parseEntries(
+  rawEntries: unknown,
+  title: string,
+  rssUrl: string,
+): FeedEntry[] {
   const entryList: unknown[] = Array.isArray(rawEntries)
     ? rawEntries
     : rawEntries
@@ -167,6 +155,27 @@ export async function fetchChannelFeed(
       count: malformedCount,
     });
   }
+  return entries;
+}
 
-  return { title, entries };
+export async function fetchChannelFeed(
+  rssUrl: string,
+): Promise<ChannelFeed | null> {
+  const xml = await fetchFeedXml(rssUrl);
+  if (xml === null) return null;
+
+  let parsed: ReturnType<typeof Bun.XML.parse>;
+  try {
+    parsed = Bun.XML.parse(xml);
+  } catch (err) {
+    logger.warn("Feed is not valid XML", { url: rssUrl, err });
+    return null;
+  }
+  const feed = parsed.feed;
+  if (typeof feed !== "object" || feed === null) return null;
+
+  const title = feed.title;
+  if (typeof title !== "string" || title.length === 0) return null;
+
+  return { title, entries: parseEntries(feed.entry, title, rssUrl) };
 }
