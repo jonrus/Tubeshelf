@@ -119,7 +119,7 @@ task 12 only verifies them. Don't touch Round A surfaces (`requireAuth`, CSP, th
   for an ignored vs. unwatched throwaway video: no timer vs. timer. Delete throwaway rows/
   files after. — done when: each check's result is reported.
 
-- [ ] 12. Manual verification (user-performed in a browser) — give the user exact URLs and
+- [x] 12. Manual verification (user-performed in a browser) — give the user exact URLs and
   what to look for: login form autofill/required behavior (`/login`); category page channel
   count after unsubscribing a channel in that category; un-ignore → rule edit round trip
   (auto-ignored video stays unwatched after editing a still-matching rule). Also verify the
