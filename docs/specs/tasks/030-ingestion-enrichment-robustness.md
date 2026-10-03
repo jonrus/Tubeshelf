@@ -157,7 +157,7 @@ matching Design subsection before each step.
   no measurable gain. Consistent with spec029's posture. Revisit only if the videos table grows
   by orders of magnitude.
 
-- [ ] 12. spec029 cross-reference pointers in `docs/specs/029-video-duration-enrichment.md`
+- [x] 12. spec029 cross-reference pointers in `docs/specs/029-video-duration-enrichment.md`
   (spec030 "Cross-references"; pointers only, no rewrites): (a) at the "stays eligible until it
   succeeds" language (~lines 100–102) and the omitted-item sentence (~lines 187–189): pointer
   to spec030's recheck windows; (b) at the Error handling section: generic 400 stays transient

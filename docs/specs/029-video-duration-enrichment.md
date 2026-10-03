@@ -99,7 +99,9 @@ this file / the promoting conversation) rather than left as a silent feature-fil
   video ingested this minute has no more recently `publishedAt`-dated peer, so it always
   sorts into the next batch) and gets free retry-on-failure as a side effect (a video that
   failed enrichment on a past tick simply stays eligible until it succeeds or leaves the
-  eligible status set).
+  eligible status set). (refined in docs/specs/030-ingestion-enrichment-robustness.md — unresolved videos are now
+  stamped with `duration_recheck_at` so they stop being re-requested every tick: 1h if
+  Google returned the item without a usable duration, 24h if it omitted the item.)
 
 ### Schema
 Add to `videos` (`src/db/schema.ts`):
@@ -137,7 +139,10 @@ composite index, e.g. `index("videos_duration_status_published_idx").on(t.durati
 t.status, t.publishedAt)` — follows the same shape as the table's existing
 `videos_status_published_idx`. Confirm at implementation time whether SQLite's query planner
 actually benefits given the table's expected size (likely modest at this project's scale);
-add only if `EXPLAIN QUERY PLAN` shows a full table scan being used instead.
+add only if `EXPLAIN QUERY PLAN` shows a full table scan being used instead. (refined in
+docs/specs/030-ingestion-enrichment-robustness.md — the eligibility query gained a `duration_recheck_at` predicate; re-evaluated
+there, result recorded in `docs/specs/tasks/030-ingestion-enrichment-robustness.md` task 11:
+no index added.)
 
 ### Eligibility query
 Conceptually (Drizzle, mirroring `scheduler.ts`'s own `dueChannels()` active-subscription
@@ -186,7 +191,9 @@ Response: for each returned item, `contentDetails.duration` is an ISO 8601 durat
 duration isn't known yet). A video ID present in the request but *absent* from the response
 (deleted/private since RSS discovered it) simply isn't updated this pass — it stays eligible
 and is retried on a later tick, same as any other not-yet-successful case, until it either
-succeeds or leaves the eligible status set.
+succeeds or leaves the eligible status set. (refined in docs/specs/030-ingestion-enrichment-robustness.md — the retry is
+now throttled by a 24h `duration_recheck_at` stamp for omitted items, and 1h for items
+returned without a usable duration such as `P0D`.)
 
 **Response items must be matched back to database rows by each item's own `id` field, never
 by array position.** Because a missing ID shifts every subsequent response item's index
@@ -223,7 +230,10 @@ telling anyone that's needed.
   A generic HTTP 400 also falls here — 400 means "malformed request," which can just as
   easily be an app-side bug (bad ID encoding, an API change) as a bad key, and latching off
   the feature for a self-inflicted request bug would misdirect debugging effort toward
-  rotating a key that was never the problem.
+  rotating a key that was never the problem. (refined in docs/specs/030-ingestion-enrichment-robustness.md — a generic 400
+  `badRequest` alone stays transient, but a 400 carrying `API_KEY_INVALID`, `API_KEY_EXPIRED`,
+  `keyInvalid`, or `keyExpired` in `error.details[]`/`errors[]` now latches, since Google's
+  real invalid-key response has a generic `errors[0].reason`.)
 - **Definitively bad key (allowlist only):** 403 with `errors[].reason` of exactly
   `keyInvalid`, `forbidden`, or `accessNotConfigured`. Logged once at `warn`, and an
   in-memory flag latches the enrichment step off for the remainder of that process's uptime
