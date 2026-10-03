@@ -91,7 +91,7 @@ task 12 only verifies them. Don't touch Round A surfaces (`requireAuth`, CSP, th
   `test/routes/auth.test.ts`). — done when: `bun test`, `bun run lint`, `bunx tsc --noEmit`
   clean.
 
-- [ ] 9. Compose tolerates a missing `.env` — in `docker-compose.yml` replace
+- [x] 9. Compose tolerates a missing `.env` — in `docker-compose.yml` replace
   `env_file: - .env` with `env_file: [{ path: .env, required: false }]` (long syntax; needs
   Compose ≥ 2.24). Verify: `podman-compose config` (host has podman-compose 1.6.0, no docker)
   parses with no `.env`, and — beyond `config` — try a runtime `up` in a throwaway directory
