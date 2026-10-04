@@ -6,7 +6,7 @@ Notes for every step: run commands via the devcontainer (CLAUDE.md). No schema o
 changes; the only code change is classes in `src/views/layout.tsx`. No existing test asserts
 the old classes, so none should break.
 
-- [ ] 1. Apply the class changes in `src/views/layout.tsx` and add a regression test — edit
+- [x] 1. Apply the class changes in `src/views/layout.tsx` and add a regression test — edit
   per the spec's Design: `<body>` (line ~102) → `bg-bg text-text`; `<aside id="sidebar">`
   (line ~120) drop `lg:static`, `lg:w-64`, `lg:shrink-0` (keep `fixed inset-y-0 left-0 z-40
   w-64 -translate-x-full overflow-y-auto … lg:z-auto lg:translate-x-0`); `<nav>` (line ~122)
