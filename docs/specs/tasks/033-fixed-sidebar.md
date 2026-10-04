@@ -17,7 +17,7 @@ the old classes, so none should break.
   done when: the diff touches only those four class strings plus the new test, and
   `bun test` passes.
 
-- [ ] 2. Manual verification, Claude-performed — run `bun run css:build`, start the dev
+- [x] 2. Manual verification, Claude-performed — run `bun run css:build`, start the dev
   server in the devcontainer, `scripts/dev-login.sh`, then `curl -b
   /tmp/tubeshelf-dev-cookies.txt http://localhost:3000/queue` from inside the container and
   confirm: `<main>` has `lg:ml-64`, aside has no `lg:static`, body has no `lg:flex`, nav has
