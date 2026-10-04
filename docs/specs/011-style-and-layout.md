@@ -491,6 +491,8 @@ A semi-transparent backdrop (`<div id="sidebar-backdrop">`, shown only while `da
 tap-outside-to-close drawer behavior. At `lg` and above, the `<aside>` is unconditionally
 docked (`lg:translate-x-0 lg:static`) regardless of `data-open`, and the hamburger button/
 backdrop are hidden (`lg:hidden`) — the JS toggle only has any visible effect below `lg`.
+(Docked-via-`lg:static`/flex-body layout superseded in docs/specs/033-fixed-sidebar.md — the
+sidebar is now `fixed` at `lg:` with `lg:ml-64` on `<main>`.)
 
 ### Video-card grid (`src/views/queue-list.tsx`)
 
