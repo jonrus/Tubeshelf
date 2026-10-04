@@ -33,7 +33,7 @@ the old classes, so none should break.
   (1024px): the Menu button opens/closes the drawer and backdrop as before, and content
   isn't pushed right. — done when: the user reports results back.
 
-- [ ] 4. Final verification, flip spec to implemented, open the PR — run `bun test`,
+- [x] 4. Final verification, flip spec to implemented, open the PR — run `bun test`,
   `bun run lint`, `bunx tsc --noEmit`, and `bun run fallow` clean across the repo; set
   `docs/specs/033-fixed-sidebar.md` frontmatter to `status: implemented`. Draft the PR
   (summary + test plan; end with the Claude Code attribution line) per CLAUDE.md's git
