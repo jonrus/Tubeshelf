@@ -123,6 +123,20 @@ test("GET / redirects to /queue", async () => {
   expect(res.headers.get("location")).toBe("/queue");
 });
 
+test("layout keeps the desktop sidebar fixed and offsets <main> instead of using a flex body", async () => {
+  const res = await queueRoute.request("/queue", { headers: authHeaders });
+  const html = await res.text();
+  const classOf = (tag: string) =>
+    html
+      .match(new RegExp(`<${tag}\\b[^>]*?class="([^"]*)"`))?.[1]
+      ?.split(" ") ?? [];
+  expect(classOf("body")).not.toContain("lg:flex");
+  const aside = html.match(/<aside\b[^>]*>/)?.[0] ?? "";
+  expect(aside).toContain("fixed");
+  expect(aside).not.toContain("lg:static");
+  expect(classOf("main")).toContain("lg:ml-64");
+});
+
 test("GET /queue returns unwatched/watching videos for active subscriptions, newest-first by default", async () => {
   const channel = makeChannel("Queue Channel A");
   makeSubscription(channel.id);

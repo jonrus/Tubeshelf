@@ -99,7 +99,7 @@ export const Layout: FC<{
         <script src="/js/htmx.min.js" />
         <script src="/js/app.js" defer />
       </head>
-      <body class="bg-bg text-text lg:flex lg:min-h-screen">
+      <body class="bg-bg text-text">
         <button
           type="button"
           id="sidebar-toggle"
@@ -117,9 +117,9 @@ export const Layout: FC<{
         <aside
           id="sidebar"
           data-open="false"
-          class="fixed inset-y-0 left-0 z-40 w-64 -translate-x-full overflow-y-auto border-r border-border bg-surface transition-transform data-[open=true]:translate-x-0 lg:z-auto lg:w-64 lg:shrink-0 lg:translate-x-0 lg:static"
+          class="fixed inset-y-0 left-0 z-40 w-64 -translate-x-full overflow-y-auto border-r border-border bg-surface transition-transform data-[open=true]:translate-x-0 lg:z-auto lg:translate-x-0"
         >
-          <nav class="flex h-full flex-col gap-1 p-4 pt-16 lg:pt-4">
+          <nav class="flex min-h-full flex-col gap-1 p-4 pt-16 lg:pt-4">
             <a
               href={buildQueueHref(props.currentSort ?? "newest")}
               data-active={props.currentView === "queue"}
@@ -233,7 +233,7 @@ export const Layout: FC<{
             </form>
           </nav>
         </aside>
-        <main class="min-w-0 flex-1 p-4 pt-20 lg:pt-6">{props.children}</main>
+        <main class="min-w-0 p-4 pt-20 lg:ml-64 lg:pt-6">{props.children}</main>
       </body>
     </html>
   );
