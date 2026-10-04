@@ -24,7 +24,7 @@ the old classes, so none should break.
   `min-h-full`; also grep `public/css/tailwind.css` for the `lg:ml-64` rule. Stop the dev
   server via a `/proc` scan script file (CLAUDE.md gotcha). — done when: results reported.
 
-- [ ] 3. Manual verification, user-performed in a browser — give the user exact URLs and what
+- [x] 3. Manual verification, user-performed in a browser — give the user exact URLs and what
   to look for: (a) at desktop width, scroll `/queue` (and one other page, e.g. the Ignored
   page): the sidebar stays in view and content isn't hidden under it (left edge of `<main>`
   clears the sidebar); (b) shrink the window height until the nav is taller than the
