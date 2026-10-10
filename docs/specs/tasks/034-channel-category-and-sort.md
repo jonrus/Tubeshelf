@@ -44,7 +44,7 @@ the code before editing. Steps are ordered so each leaves `bun test` green.
   no longer referenced anywhere (`grep`). — done when: `bun test` passes and `bunx tsc
   --noEmit` is clean.
 
-- [ ] 3. Part B schema + migration — in `src/db/schema.ts` add to `categories`:
+- [x] 3. Part B schema + migration — in `src/db/schema.ts` add to `categories`:
   `defaultSort: text("default_sort", { enum: ["newest", "oldest"] }).notNull().default("newest")`
   (no `CHECK`, and don't touch the table's existing `name_length_check`). Run `bun run
   db:generate` in the devcontainer (if it prompts and needs a TTY, hand the user the exact
