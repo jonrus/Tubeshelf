@@ -59,7 +59,7 @@ the code before editing. Steps are ordered so each leaves `bun test` green.
   populated-DB check passed, `bun test` and `bunx tsc --noEmit` are clean, and existing
   categories tests still pass without sending `defaultSort`.
 
-- [ ] 4. Part B: sort resolution and explicit-sort links (backend) — (a) `src/routes/queue.tsx`:
+- [x] 4. Part B: sort resolution and explicit-sort links (backend) — (a) `src/routes/queue.tsx`:
   extend `resolveCategoryFilter` (or add a sibling) to also yield the category's `defaultSort`;
   replace `resolveSort(sort)` with `resolveSort(rawSort, categoryDefault)` = raw `sort` if
   exactly `newest`/`oldest`, else the category default, else `newest` (invalid values fall

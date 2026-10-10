@@ -271,26 +271,35 @@ function ignoredVideos(
   return finalizePage(fetched, (row) => row.createdAt);
 }
 
-function resolveCategoryFilter(raw: string | undefined): number | undefined {
+function resolveCategoryFilter(
+  raw: string | undefined,
+): { id: number; defaultSort: "newest" | "oldest" } | undefined {
   if (raw === undefined) return undefined;
   const id = Number(raw);
   if (!Number.isInteger(id)) return undefined;
-  const exists = db
-    .select({ id: categories.id })
+  return db
+    .select({ id: categories.id, defaultSort: categories.defaultSort })
     .from(categories)
     .where(eq(categories.id, id))
     .get();
-  return exists ? id : undefined;
 }
 
 // Shared by the /continue-watching, /watched, and /ignored handlers (and the sort-
 // aware /queue handler, which reads `category`/`cursor` off the same result and adds
 // `sort` separately) -- all four parse category/cursor query params identically.
 function parseQueryFilters(c: Context) {
+  const category = resolveCategoryFilter(c.req.query("category"));
   return {
-    category: resolveCategoryFilter(c.req.query("category")),
+    category: category?.id,
+    categoryDefaultSort: category?.defaultSort,
     cursor: parseCursor(c.req.query("cursor"), c.req.query("cursorId")),
   };
+}
+
+// Plain validator for the watching routes, which only need to echo a valid `sort` back
+// into their return link -- anything but exactly newest/oldest is dropped, never echoed.
+function parseSort(raw: string | undefined): "newest" | "oldest" | undefined {
+  return raw === "newest" || raw === "oldest" ? raw : undefined;
 }
 
 function resolveToggleView(
@@ -310,7 +319,7 @@ function buildReturnPath(
   category?: string,
 ): string {
   const params = new URLSearchParams();
-  if (sort === "oldest") params.set("sort", "oldest");
+  if (sort !== undefined) params.set("sort", sort);
   if (category !== undefined) params.set("category", category);
   const qs = params.toString();
   return `${base}${qs ? `?${qs}` : ""}`;
@@ -354,8 +363,13 @@ function resolveReturnTarget(
   return { url: entry.path(sort, category), label: entry.label };
 }
 
-function resolveSort(sort: string | undefined): "newest" | "oldest" {
-  return sort === "oldest" ? "oldest" : "newest";
+// An explicit, valid `sort` wins; anything else (absent or garbage) falls through to the
+// filtered category's default, then newest.
+function resolveSort(
+  rawSort: string | undefined,
+  categoryDefault: "newest" | "oldest" | undefined,
+): "newest" | "oldest" {
+  return parseSort(rawSort) ?? categoryDefault ?? "newest";
 }
 
 function videoForWatchingPage(videoId: number, userId: number) {
@@ -370,8 +384,10 @@ queueRoute.get("/", (c) => c.redirect("/queue", 302));
 
 queueRoute.get("/queue", (c) => {
   const userId = c.get("userId");
-  const sort = resolveSort(c.req.query("sort"));
-  const { category, cursor } = parseQueryFilters(c);
+  const { category, categoryDefaultSort, cursor } = parseQueryFilters(c);
+  // Resolved before the cursor branch so a stale sentinel URL without `sort` still
+  // lands on the category's default instead of newest.
+  const sort = resolveSort(c.req.query("sort"), categoryDefaultSort);
   const { rows, nextCursor } = queueVideos(userId, sort, category, cursor);
 
   if (cursor !== undefined) {
@@ -393,7 +409,6 @@ queueRoute.get("/queue", (c) => {
       categories={listCategoriesWithCounts(userId)}
       currentView="queue"
       currentCategory={category}
-      currentSort={sort}
     >
       <p>
         <a href={buildQueueHref("newest", category)}>Newest first</a> ·{" "}
@@ -519,7 +534,7 @@ queueRoute.get("/watching/:id", (c) => {
   if (!video) return c.notFound();
 
   const from = c.req.query("from");
-  const sort = c.req.query("sort");
+  const sort = parseSort(c.req.query("sort"));
   const category = c.req.query("category");
   const returnTarget = resolveReturnTarget(from, sort, category);
 
@@ -558,7 +573,7 @@ queueRoute.post("/videos/:id/watched-toggle", (c) => {
   if (!result) return c.notFound();
 
   const from = c.req.query("from");
-  const sort = c.req.query("sort");
+  const sort = parseSort(c.req.query("sort"));
   const category = c.req.query("category");
   return c.redirect(resolveReturnTarget(from, sort, category).url, 303);
 });
@@ -580,11 +595,11 @@ queueRoute.post("/videos/:id/toggle", (c) => {
     return c.body(null);
   }
 
-  const sort = resolveSort(c.req.query("sort"));
   const category = resolveCategoryFilter(c.req.query("category"));
+  const sort = resolveSort(c.req.query("sort"), category?.defaultSort);
   const row = queueRowById(id, userId);
   if (!row) return c.notFound();
-  return c.html(queueCard(row, "queue", sort, category));
+  return c.html(queueCard(row, "queue", sort, category?.id));
 });
 
 queueRoute.post("/videos/:id/ignore", (c) => {
