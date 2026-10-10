@@ -124,7 +124,7 @@ the code before editing. Steps are ordered so each leaves `bun test` green.
   edit row renders the select with the current value selected, and the list label appears only
   for `oldest`. — done when: `bun test`, `bunx tsc --noEmit`, and `bun run lint` pass.
 
-- [ ] 7. Manual verification, Claude-performed — in the devcontainer: `bun run css:build` if
+- [x] 7. Manual verification, Claude-performed — in the devcontainer: `bun run css:build` if
   needed, start the dev server, `scripts/dev-login.sh`, then via `curl -b
   /tmp/tubeshelf-dev-cookies.txt http://localhost:3000/...` from inside the container (write any
   `bun:sqlite` throwaway-row script to a file first; delete rows/files afterward): (a)
