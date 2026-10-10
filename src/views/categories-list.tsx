@@ -51,6 +51,24 @@ export const CategoriesList: FC<{
                     value={category.name}
                     class={`flex-1 ${INPUT_CLASS}`}
                   />
+                  <select
+                    name="defaultSort"
+                    aria-label={`Default sort for ${category.name}`}
+                    class={INPUT_CLASS}
+                  >
+                    <option
+                      value="newest"
+                      selected={category.defaultSort === "newest"}
+                    >
+                      Newest first
+                    </option>
+                    <option
+                      value="oldest"
+                      selected={category.defaultSort === "oldest"}
+                    >
+                      Oldest first
+                    </option>
+                  </select>
                   <button type="submit" class={PRIMARY_BUTTON_CLASS}>
                     Save
                   </button>
@@ -76,6 +94,9 @@ export const CategoriesList: FC<{
                 </a>
                 <span class="flex items-center gap-2 text-sm text-text-muted">
                   {category.isSystem ? "[system]" : null}
+                  {category.defaultSort === "oldest" ? (
+                    <span>oldest first</span>
+                  ) : null}
                   {category.isSystem ? null : (
                     <>
                       <button

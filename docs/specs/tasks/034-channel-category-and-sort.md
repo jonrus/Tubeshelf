@@ -107,7 +107,7 @@ the code before editing. Steps are ordered so each leaves `bun test` green.
   `Layout.currentSort`). — done when: `bun test`, `bunx tsc --noEmit`, and `bun run fallow`
   pass.
 
-- [ ] 6. Part B: setting the default sort — (a) `src/routes/categories.tsx`:
+- [x] 6. Part B: setting the default sort — (a) `src/routes/categories.tsx`:
   `parseAndValidateCategoryName` stays name-only for `POST /categories`; for `POST
   /categories/:id` (edit) additionally parse `defaultSort` from the same single `parseBody()`
   call (e.g. an opt-in parameter or small wrapper) — missing, non-string, or not

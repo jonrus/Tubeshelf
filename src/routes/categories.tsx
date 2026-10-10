@@ -56,23 +56,30 @@ function validateCategoryName(name: string): string | null {
 async function parseAndValidateCategoryName(
   c: Context,
   userId: number,
-  opts?: { editingId?: number },
+  opts?: { editingId?: number; requireDefaultSort?: boolean },
 ) {
   const body = await c.req.parseBody();
   const name = typeof body.name === "string" ? body.name.trim() : "";
-  const nameError = validateCategoryName(name);
-  if (nameError) {
+  const defaultSort = body.defaultSort;
+  const error =
+    validateCategoryName(name) ??
+    (opts?.requireDefaultSort &&
+    defaultSort !== "newest" &&
+    defaultSort !== "oldest"
+      ? "Default sort must be newest or oldest."
+      : null);
+  if (error) {
     return {
       response: c.html(
         <CategoriesList
           categories={listCategoriesWithCounts(userId)}
           editingId={opts?.editingId}
-          error={nameError}
+          error={error}
         />,
       ),
     };
   }
-  return { name };
+  return { name, defaultSort };
 }
 
 function isUniqueConstraintError(err: unknown): boolean {
@@ -144,12 +151,19 @@ categoriesRoute.post("/categories/:id", async (c) => {
 
   const parsed = await parseAndValidateCategoryName(c, userId, {
     editingId: id,
+    requireDefaultSort: true,
   });
   if ("response" in parsed) return parsed.response;
-  const { name } = parsed;
+  const { name, defaultSort } = parsed;
+  if (defaultSort !== "newest" && defaultSort !== "oldest") {
+    throw new Error("unreachable: defaultSort validated above");
+  }
 
   try {
-    db.update(categories).set({ name }).where(eq(categories.id, id)).run();
+    db.update(categories)
+      .set({ name, defaultSort })
+      .where(eq(categories.id, id))
+      .run();
   } catch (err) {
     if (!isUniqueConstraintError(err)) throw err;
     return c.html(
