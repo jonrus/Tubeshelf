@@ -1,5 +1,5 @@
 ---
-status: draft
+status: in-progress
 created: 2026-10-10
 ---
 
@@ -223,9 +223,11 @@ so channel names containing quotes are safe in the attribute.
 
 ## Open Questions
 
-- **Decided here, worth a glance:** the top-level sidebar **Queue** link no longer
-  preserves the current sort (see Part B). Say so if you'd rather keep carrying an explicit
-  URL `sort` through that one link.
+- **Resolved (user, 2026-10-10):** the top-level sidebar **Queue** link no longer preserves
+  the current sort (see Part B) — it always opens newest-first. Rejected alternative: carry
+  `sort` through that link only when it was explicit in the URL; it needs an
+  explicit-vs-defaulted flag plumbed through `Layout` for one link, and makes the all-
+  categories link behave differently from the category links.
 - Migration generation: `drizzle-kit generate` for an additive `NOT NULL DEFAULT` column
   shouldn't prompt, but if it does need a TTY (see CLAUDE.md), the task file hands the exact
   command to the user.
