@@ -411,8 +411,17 @@ queueRoute.get("/queue", (c) => {
       currentCategory={category}
     >
       <p>
-        <a href={buildQueueHref("newest", category)}>Newest first</a> ·{" "}
-        <a href={buildQueueHref("oldest", category)}>Oldest first</a>
+        {sort === "newest" ? (
+          <strong>Newest first</strong>
+        ) : (
+          <a href={buildQueueHref("newest", category)}>Newest first</a>
+        )}{" "}
+        ·{" "}
+        {sort === "oldest" ? (
+          <strong>Oldest first</strong>
+        ) : (
+          <a href={buildQueueHref("oldest", category)}>Oldest first</a>
+        )}
       </p>
       <QueueList
         view="queue"

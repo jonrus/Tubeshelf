@@ -96,7 +96,7 @@ the code before editing. Steps are ordered so each leaves `bun test` green.
   `sort=newest`/`sort=oldest` round-trip. — done when: `bun test` and `bunx tsc --noEmit`
   pass.
 
-- [ ] 5. Part B: toggle active-order indicator — in `GET /queue` (`src/routes/queue.tsx`), render
+- [x] 5. Part B: toggle active-order indicator — in `GET /queue` (`src/routes/queue.tsx`), render
   the resolved order's toggle label as bold non-link text and the other order as a link with
   explicit `sort`, preserving `category`. Add a test: on an oldest-default category with no
   `sort` in the URL, "Oldest first" is not a link and "Newest first" links to

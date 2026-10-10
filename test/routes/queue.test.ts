@@ -581,7 +581,13 @@ test("GET /queue's sidebar category links carry no sort, the Queue link is plain
   expect(filteredHtml).toContain(
     `href="/queue?sort=oldest&amp;category=${category.id}"`,
   );
-  expect(filteredHtml).toContain(
+  expect(filteredHtml).toContain("<strong>Newest first</strong>");
+
+  const filteredOldestRes = await queueRoute.request(
+    `/queue?category=${category.id}&sort=oldest`,
+    { headers: authHeaders },
+  );
+  expect(await filteredOldestRes.text()).toContain(
     `href="/queue?sort=newest&amp;category=${category.id}"`,
   );
 });
@@ -667,13 +673,38 @@ test("GET /queue renders explicit sort in toggle links, sentinel URL, and card l
   });
   const html = await res.text();
   expect(html).toContain(`href="/queue?sort=newest&amp;category=${cat.id}"`);
-  expect(html).toContain(`href="/queue?sort=oldest&amp;category=${cat.id}"`);
+  expect(html).not.toContain(
+    `href="/queue?sort=oldest&amp;category=${cat.id}"`,
+  );
   expect(html).toMatch(
     /hx-get="\/queue\?sort=oldest&amp;category=\d+&amp;cursor=/,
   );
   expect(html).toContain("sort=oldest");
   expect(html).toMatch(/\/watching\/\d+\?from=queue&amp;sort=oldest/);
   expect(html).toMatch(/hx-post="\/videos\/\d+\/toggle\?[^"]*sort=oldest/);
+});
+
+test("GET /queue marks the active order as bold text and links the other order", async () => {
+  const cat = makeSortCategory("Sort Indicator", "oldest");
+  seedSortedVideos(cat.id, "Sort Indicator Chan");
+
+  const oldestHtml = await (
+    await queueRoute.request(`/queue?category=${cat.id}`, {
+      headers: authHeaders,
+    })
+  ).text();
+  expect(oldestHtml).toContain("<strong>Oldest first</strong>");
+  expect(oldestHtml).not.toContain(">Oldest first</a>");
+  expect(oldestHtml).toContain(
+    `<a href="/queue?sort=newest&amp;category=${cat.id}">Newest first</a>`,
+  );
+
+  const newestHtml = await (
+    await queueRoute.request("/queue", { headers: authHeaders })
+  ).text();
+  expect(newestHtml).toContain("<strong>Newest first</strong>");
+  expect(newestHtml).not.toContain(">Newest first</a>");
+  expect(newestHtml).toContain('<a href="/queue?sort=oldest">Oldest first</a>');
 });
 
 test("GET /queue page 2 via the sentinel URL continues in the same order as page 1 (oldest-default category)", async () => {
