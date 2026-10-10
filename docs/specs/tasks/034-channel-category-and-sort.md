@@ -139,7 +139,7 @@ the code before editing. Steps are ordered so each leaves `bun test` green.
   continues the order. Stop the dev server via a `/proc` scan script file (CLAUDE.md gotcha).
   — done when: results are reported.
 
-- [ ] 8. Manual verification, user-performed in a browser — give the user exact URLs and what to
+- [x] 8. Manual verification, user-performed in a browser — give the user exact URLs and what to
   look for: (a) on `/channels`, changing a channel's category dropdown swaps the list in place
   with no full page reload and the new category sticks after reload; Unsubscribe shows a
   browser confirm naming the channel, Cancel leaves it subscribed, OK unsubscribes; (b) on
