@@ -150,7 +150,7 @@ the code before editing. Steps are ordered so each leaves `bun test` green.
   Queue link — each opens in its own default (newest for Queue). — done when: the user reports
   results back.
 
-- [ ] 9. Final verification, flip spec to implemented, open the PR — run `bun test`, `bun run
+- [x] 9. Final verification, flip spec to implemented, open the PR — run `bun test`, `bun run
   lint`, `bunx tsc --noEmit`, and `bun run fallow` clean across the repo; set
   `docs/specs/034-channel-category-and-sort.md` frontmatter to `status: implemented`. Draft the
   PR (summary + test plan; end with the Claude Code attribution line) per CLAUDE.md's git
