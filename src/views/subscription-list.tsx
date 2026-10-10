@@ -59,6 +59,7 @@ export const SubscriptionList: FC<{
                 <button
                   type="button"
                   hx-delete={`/subscriptions/${subscription.id}`}
+                  hx-confirm={`Unsubscribe from "${subscription.channelName}"?`}
                   hx-target="#subscription-list"
                   hx-swap="outerHTML"
                   class={SECONDARY_BUTTON_CLASS}

@@ -655,6 +655,42 @@ test("a subscription to a channel with a detected gap and no dismissal shows the
   expect(row).toContain("Possible missed videos");
 });
 
+test("the Unsubscribe button confirms with the escaped channel name; Dismiss does not confirm", async () => {
+  const channel = db
+    .insert(youtubeChannels)
+    .values({
+      youtubeChannelId: "UCconfirmQuoteAAAAAAAAAA",
+      name: 'The "Best" Channel',
+      rssUrl:
+        "https://www.youtube.com/feeds/videos.xml?channel_id=UCconfirmQuoteAAAAAAAAAA",
+      possibleMissedVideosDetectedAt: new Date("2026-01-01T00:00:00Z"),
+    })
+    .returning()
+    .get();
+
+  db.insert(subscriptions)
+    .values({
+      userId: defaultUser.id,
+      youtubeChannelId: channel.id,
+      categoryId: systemCategory.id,
+      missedVideosDismissedAt: null,
+    })
+    .run();
+
+  const res = await channelsRoute.request("/channels", {
+    headers: authHeaders,
+  });
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  const row = extractSubscriptionRow(html, "The &quot;Best&quot; Channel");
+  expect(row).toContain(
+    'hx-confirm="Unsubscribe from &quot;The &quot;Best&quot; Channel&quot;?"',
+  );
+  const dismissButton = row.match(/<button[^>]*dismiss-missed-videos[^>]*>/);
+  expect(dismissButton).not.toBeNull();
+  expect(dismissButton?.[0]).not.toContain("hx-confirm");
+});
+
 test("dismissing a missed-videos notice removes the badge and re-renders the list", async () => {
   const channel = db
     .insert(youtubeChannels)

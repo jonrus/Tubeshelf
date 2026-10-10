@@ -8,7 +8,7 @@ quoted below are approximate (from spec-writing time) — re-locate by searching
 described assertion, and re-verify the spec's "Existing tests that must change" list against
 the code before editing. Steps are ordered so each leaves `bun test` green.
 
-- [ ] 1. Part C: confirm before unsubscribing — in `src/views/subscription-list.tsx`, add
+- [x] 1. Part C: confirm before unsubscribing — in `src/views/subscription-list.tsx`, add
   `hx-confirm={`Unsubscribe from "${subscription.channelName}"?`}` to the Unsubscribe button
   (mirror category Delete's `hx-confirm` in `src/views/categories-list.tsx`). Add a test in
   `test/routes/channels.test.ts` that renders `/channels` with a subscription whose channel
