@@ -12,16 +12,17 @@ function buildParams(
 }
 
 // Shared by both the sort-toggle links and the sidebar's category links (layout.tsx) --
-// one place that knows how to assemble a /queue URL from its two optional params, so
+// one place that knows how to assemble a /queue URL from its optional params, so
 // there's exactly one `?` vs. no-`?` decision instead of two ad hoc ones that could
-// drift.
+// drift. `sort` is omitted only when `undefined` ("use the category's default"); a given
+// sort -- newest included -- is always written, since absence no longer means newest.
 export function buildQueueHref(
-  sort: "newest" | "oldest",
+  sort: "newest" | "oldest" | undefined,
   category?: number,
   cursor?: { at: Date; id: number },
 ): string {
   const params = new URLSearchParams();
-  if (sort === "oldest") params.set("sort", "oldest");
+  if (sort !== undefined) params.set("sort", sort);
   const qs = buildParams(params, category, cursor).toString();
   return `/queue${qs ? `?${qs}` : ""}`;
 }

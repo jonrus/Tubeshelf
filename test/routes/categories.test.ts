@@ -103,14 +103,25 @@ function findCategory(name: string) {
   return db.select().from(categories).where(eq(categories.name, name)).get();
 }
 
-function postRename(id: number, name: string) {
+function postRename(id: number, name: string, defaultSort = "newest") {
+  return postEditFields(id, { name, defaultSort });
+}
+
+function postEditFields(
+  id: number,
+  fields: Record<string, string | undefined>,
+) {
   return categoriesRoute.request(`/categories/${id}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
       ...authHeaders,
     },
-    body: new URLSearchParams({ name }),
+    body: new URLSearchParams(
+      Object.entries(fields).filter(
+        (entry): entry is [string, string] => entry[1] !== undefined,
+      ),
+    ),
   });
 }
 
@@ -283,6 +294,89 @@ test("attempting to edit the system category via GET /categories/:id/edit no-ops
   expect(res.status).toBe(200);
   const html = await res.text();
   expect(html).not.toContain(`hx-post="/categories/${systemCategory.id}"`);
+});
+
+test("editing a category persists defaultSort together with the name", async () => {
+  await postCategory("Sort Edit");
+  const category = findCategory("Sort Edit");
+  if (!category) throw new Error("setup: category not created");
+  expect(category.defaultSort).toBe("newest");
+
+  const res = await postRename(category.id, "Sort Edited", "oldest");
+  expect(res.status).toBe(200);
+  const updated = findCategory("Sort Edited");
+  expect(updated?.id).toBe(category.id);
+  expect(updated?.defaultSort).toBe("oldest");
+});
+
+test("editing a category with a missing or invalid defaultSort re-renders the edit row with an error and changes nothing", async () => {
+  await postCategory("Sort Invalid");
+  const category = findCategory("Sort Invalid");
+  if (!category) throw new Error("setup: category not created");
+
+  for (const fields of [
+    { name: "Sort Invalid Renamed" },
+    { name: "Sort Invalid Renamed", defaultSort: "sideways" },
+  ]) {
+    const res = await postEditFields(category.id, fields);
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("Default sort must be newest or oldest.");
+    expect(html).toContain(`hx-post="/categories/${category.id}"`);
+    const unchanged = findCategory("Sort Invalid");
+    expect(unchanged?.id).toBe(category.id);
+    expect(unchanged?.defaultSort).toBe("newest");
+    expect(findCategory("Sort Invalid Renamed")).toBeUndefined();
+  }
+});
+
+test("the system category's defaultSort cannot be edited", async () => {
+  const res = await postRename(systemCategory.id, "Uncategorized", "oldest");
+  expect(res.status).toBe(200);
+  const stillThere = db
+    .select()
+    .from(categories)
+    .where(eq(categories.id, systemCategory.id))
+    .get();
+  expect(stillThere?.defaultSort).toBe("newest");
+});
+
+test("the edit row renders a defaultSort select with the current value selected", async () => {
+  await postCategory("Sort Select");
+  const category = findCategory("Sort Select");
+  if (!category) throw new Error("setup: category not created");
+
+  const newestHtml = await (await getEdit(category.id)).text();
+  expect(newestHtml).toContain('name="defaultSort"');
+  expect(newestHtml).toMatch(/<option[^>]*value="newest"[^>]*selected/);
+  expect(newestHtml).not.toMatch(/<option[^>]*value="oldest"[^>]*selected/);
+
+  db.update(categories)
+    .set({ defaultSort: "oldest" })
+    .where(eq(categories.id, category.id))
+    .run();
+  const oldestHtml = await (await getEdit(category.id)).text();
+  expect(oldestHtml).toMatch(/<option[^>]*value="oldest"[^>]*selected/);
+  expect(oldestHtml).not.toMatch(/<option[^>]*value="newest"[^>]*selected/);
+});
+
+test("the list shows an 'oldest first' label only for oldest-default categories", async () => {
+  await postCategory("Label Newest");
+  await postCategory("Label Oldest");
+  const oldest = findCategory("Label Oldest");
+  if (!oldest) throw new Error("setup: category not created");
+  db.update(categories)
+    .set({ defaultSort: "oldest" })
+    .where(eq(categories.id, oldest.id))
+    .run();
+
+  const html = await (
+    await categoriesRoute.request("/categories", { headers: authHeaders })
+  ).text();
+  const rows = html.slice(html.indexOf('id="category-list"')).split("<li");
+  const rowFor = (name: string) => rows.find((row) => row.includes(name)) ?? "";
+  expect(rowFor("Label Oldest")).toContain("oldest first");
+  expect(rowFor("Label Newest")).not.toContain("oldest first");
 });
 
 test("renaming a nonexistent id 404s", async () => {

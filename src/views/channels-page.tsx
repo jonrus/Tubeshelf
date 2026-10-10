@@ -12,6 +12,7 @@ export const ChannelsPage: FC<{
   subscribeCategories: Category[];
   categories: CategoryWithCount[];
   subscriptions: Subscription[];
+  systemCategoryId: number;
   navCounts: NavCounts;
   currentView: "channels";
 }> = (props) => {
@@ -23,7 +24,11 @@ export const ChannelsPage: FC<{
       currentView={props.currentView}
     >
       <BlankSubscribeForm categories={props.subscribeCategories} />
-      <SubscriptionList subscriptions={props.subscriptions} />
+      <SubscriptionList
+        subscriptions={props.subscriptions}
+        categories={props.subscribeCategories}
+        systemCategoryId={props.systemCategoryId}
+      />
     </Layout>
   );
 };

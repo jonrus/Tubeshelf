@@ -1,10 +1,13 @@
 import type { FC } from "hono/jsx";
+import type { categories } from "../db/schema";
 import { EmptyState } from "./empty-state";
+
+type Category = typeof categories.$inferSelect;
 
 export type Subscription = {
   id: number;
   channelName: string;
-  categoryName: string;
+  categoryId: number;
   unwatchedCount: number;
   showMissedVideosBadge: boolean;
 };
@@ -14,6 +17,8 @@ const SECONDARY_BUTTON_CLASS =
 
 export const SubscriptionList: FC<{
   subscriptions: Subscription[];
+  categories: Category[];
+  systemCategoryId: number;
   error?: string;
   oob?: boolean;
 }> = (props) => {
@@ -34,9 +39,34 @@ export const SubscriptionList: FC<{
             >
               <span class="flex flex-wrap items-center gap-2">
                 {subscription.channelName} ({subscription.unwatchedCount})
-                <span class="rounded-full bg-surface-raised px-2 py-0.5 text-xs text-text-muted">
-                  {subscription.categoryName}
-                </span>
+                <select
+                  name="categoryId"
+                  aria-label={`Category for ${subscription.channelName}`}
+                  hx-post={`/subscriptions/${subscription.id}/category`}
+                  hx-trigger="change"
+                  hx-target="#subscription-list"
+                  hx-swap="outerHTML"
+                  hx-disabled-elt="this"
+                  class="rounded border border-border bg-surface px-2 py-0.5 text-xs text-text-muted"
+                >
+                  <option
+                    value=""
+                    selected={
+                      subscription.categoryId === props.systemCategoryId
+                    }
+                  >
+                    Uncategorized
+                  </option>
+                  {props.categories.map((category) => (
+                    <option
+                      key={category.id}
+                      value={String(category.id)}
+                      selected={subscription.categoryId === category.id}
+                    >
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
                 {subscription.showMissedVideosBadge ? (
                   <>
                     {" "}
@@ -59,6 +89,7 @@ export const SubscriptionList: FC<{
                 <button
                   type="button"
                   hx-delete={`/subscriptions/${subscription.id}`}
+                  hx-confirm={`Unsubscribe from "${subscription.channelName}"?`}
                   hx-target="#subscription-list"
                   hx-swap="outerHTML"
                   class={SECONDARY_BUTTON_CLASS}

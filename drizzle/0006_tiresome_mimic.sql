@@ -1,0 +1,1 @@
+ALTER TABLE `categories` ADD `default_sort` text DEFAULT 'newest' NOT NULL;

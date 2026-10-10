@@ -33,6 +33,9 @@ export const categories = sqliteTable(
     isSystem: integer("is_system", { mode: "boolean" })
       .notNull()
       .default(false),
+    defaultSort: text("default_sort", { enum: ["newest", "oldest"] })
+      .notNull()
+      .default("newest"),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`),

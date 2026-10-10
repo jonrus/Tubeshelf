@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { afterEach, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { loginAsAdminUser } from "../helpers/auth";
 
@@ -193,7 +193,7 @@ test("GET /queue?sort=oldest inverts the order", async () => {
   const html = await res.text();
   expect(html.indexOf(older.title)).toBeLessThan(html.indexOf(newer.title));
   expect(html).toContain(`/watching/${older.id}?from=queue&amp;sort=oldest`);
-  expect(html).toContain('href="/queue"');
+  expect(html).toContain('href="/queue?sort=newest"');
 });
 
 test("GET /continue-watching returns only watching videos for active subscriptions", async () => {
@@ -562,14 +562,16 @@ test("A sidebar category link on /ignored?category=<id> stays view-aware, pointi
   expect(html).not.toContain(`href="/queue?category=${otherCategory.id}"`);
 });
 
-test("GET /queue's category links preserve sort, and sort links preserve category", async () => {
+test("GET /queue's sidebar category links carry no sort, the Queue link is plain /queue, and sort links preserve category", async () => {
   const sortedRes = await queueRoute.request("/queue?sort=oldest", {
     headers: authHeaders,
   });
   const sortedHtml = await sortedRes.text();
-  expect(sortedHtml).toContain(
+  expect(sortedHtml).toContain(`href="/queue?category=${category.id}"`);
+  expect(sortedHtml).not.toContain(
     `href="/queue?sort=oldest&amp;category=${category.id}"`,
   );
+  expect(sortedHtml).toContain('href="/queue" data-active="true"');
 
   const filteredRes = await queueRoute.request(
     `/queue?category=${category.id}`,
@@ -579,6 +581,232 @@ test("GET /queue's category links preserve sort, and sort links preserve categor
   expect(filteredHtml).toContain(
     `href="/queue?sort=oldest&amp;category=${category.id}"`,
   );
+  expect(filteredHtml).toContain("<strong>Newest first</strong>");
+
+  const filteredOldestRes = await queueRoute.request(
+    `/queue?category=${category.id}&sort=oldest`,
+    { headers: authHeaders },
+  );
+  expect(await filteredOldestRes.text()).toContain(
+    `href="/queue?sort=newest&amp;category=${category.id}"`,
+  );
+});
+
+function makeSortCategory(name: string, defaultSort: "newest" | "oldest") {
+  return db.insert(categories).values({ name, defaultSort }).returning().get();
+}
+
+// Three videos in a fresh category, published oldest -> newest in id order.
+function seedSortedVideos(categoryId: number, channelName: string, count = 3) {
+  const channel = makeChannel(channelName);
+  makeSubscription(channel.id, { categoryId });
+  const rows = Array.from({ length: count }, (_, i) =>
+    makeVideo(channel.id, {
+      status: "unwatched",
+      publishedAt: new Date(Date.UTC(2026, 0, 1 + i)),
+    }),
+  );
+  sortSeededVideos.push(...rows);
+  return rows;
+}
+
+// Dated sort-test videos would otherwise outrank later tests' undated videos in the
+// shared in-memory queue (and the 21/22-video ones push them onto page 2), so every
+// test that seeds them cleans up afterward.
+const sortSeededVideos: { id: number }[] = [];
+afterEach(() => {
+  for (const row of sortSeededVideos.splice(0)) {
+    db.delete(videos).where(eq(videos.id, row.id)).run();
+  }
+});
+
+function expectOrder(html: string, first: string, second: string) {
+  expect(html.indexOf(first)).toBeGreaterThanOrEqual(0);
+  expect(html.indexOf(first)).toBeLessThan(html.indexOf(second));
+}
+
+test("GET /queue?category=N uses the category's default_sort when no sort is given; explicit sort overrides either default", async () => {
+  const oldestCat = makeSortCategory("Sort Default Oldest", "oldest");
+  const [oldest, , newest] = seedSortedVideos(oldestCat.id, "Sort Oldest Chan");
+  if (!oldest || !newest) throw new Error("seed failed");
+
+  const get = async (qs: string) =>
+    (
+      await queueRoute.request(`/queue?category=${oldestCat.id}${qs}`, {
+        headers: authHeaders,
+      })
+    ).text();
+
+  expectOrder(await get(""), oldest.title, newest.title);
+  expectOrder(await get("&sort=newest"), newest.title, oldest.title);
+  expectOrder(await get("&sort=oldest"), oldest.title, newest.title);
+  // garbage falls through to the category default, not newest
+  expectOrder(await get("&sort=garbage"), oldest.title, newest.title);
+
+  const newestCat = makeSortCategory("Sort Default Newest", "newest");
+  const [n1, , n3] = seedSortedVideos(newestCat.id, "Sort Newest Chan");
+  if (!n1 || !n3) throw new Error("seed failed");
+  const res = await queueRoute.request(
+    `/queue?category=${newestCat.id}&sort=oldest`,
+    { headers: authHeaders },
+  );
+  expectOrder(await res.text(), n1.title, n3.title);
+});
+
+test("GET /queue with an unknown category resolves to newest", async () => {
+  const cat = makeSortCategory("Sort Unknown Cat Source", "oldest");
+  const [older, , newer] = seedSortedVideos(cat.id, "Sort Unknown Chan");
+  if (!older || !newer) throw new Error("seed failed");
+  const res = await queueRoute.request("/queue?category=999999", {
+    headers: authHeaders,
+  });
+  // Unknown category = no filter, so every queue video shows, ordered newest-first.
+  expectOrder(await res.text(), newer.title, older.title);
+});
+
+test("GET /queue renders explicit sort in toggle links, sentinel URL, and card links on an oldest-default category", async () => {
+  const cat = makeSortCategory("Sort Explicit Links", "oldest");
+  seedSortedVideos(cat.id, "Sort Explicit Chan", 21);
+
+  const res = await queueRoute.request(`/queue?category=${cat.id}`, {
+    headers: authHeaders,
+  });
+  const html = await res.text();
+  expect(html).toContain(`href="/queue?sort=newest&amp;category=${cat.id}"`);
+  expect(html).not.toContain(
+    `href="/queue?sort=oldest&amp;category=${cat.id}"`,
+  );
+  expect(html).toMatch(
+    /hx-get="\/queue\?sort=oldest&amp;category=\d+&amp;cursor=/,
+  );
+  expect(html).toContain("sort=oldest");
+  expect(html).toMatch(/\/watching\/\d+\?from=queue&amp;sort=oldest/);
+  expect(html).toMatch(/hx-post="\/videos\/\d+\/toggle\?[^"]*sort=oldest/);
+});
+
+test("GET /queue marks the active order as bold text and links the other order", async () => {
+  const cat = makeSortCategory("Sort Indicator", "oldest");
+  seedSortedVideos(cat.id, "Sort Indicator Chan");
+
+  const oldestHtml = await (
+    await queueRoute.request(`/queue?category=${cat.id}`, {
+      headers: authHeaders,
+    })
+  ).text();
+  expect(oldestHtml).toContain("<strong>Oldest first</strong>");
+  expect(oldestHtml).not.toContain(">Oldest first</a>");
+  expect(oldestHtml).toContain(
+    `<a href="/queue?sort=newest&amp;category=${cat.id}">Newest first</a>`,
+  );
+
+  const newestHtml = await (
+    await queueRoute.request("/queue", { headers: authHeaders })
+  ).text();
+  expect(newestHtml).toContain("<strong>Newest first</strong>");
+  expect(newestHtml).not.toContain(">Newest first</a>");
+  expect(newestHtml).toContain('<a href="/queue?sort=oldest">Oldest first</a>');
+});
+
+test("GET /queue page 2 via the sentinel URL continues in the same order as page 1 (oldest-default category)", async () => {
+  const cat = makeSortCategory("Sort Pagination", "oldest");
+  const videosInOrder = seedSortedVideos(cat.id, "Sort Pagination Chan", 22);
+
+  const firstRes = await queueRoute.request(`/queue?category=${cat.id}`, {
+    headers: authHeaders,
+  });
+  const firstHtml = await firstRes.text();
+  const sentinelHref = firstHtml
+    .match(/hx-get="(\/queue\?[^"]*cursor=[^"]*)"/)?.[1]
+    ?.replace(/&amp;/g, "&");
+  if (sentinelHref === undefined) throw new Error("expected a sentinel");
+
+  const secondRes = await queueRoute.request(sentinelHref, {
+    headers: authHeaders,
+  });
+  const secondHtml = await secondRes.text();
+
+  const first20 = videosInOrder.slice(0, 20);
+  const rest = videosInOrder.slice(20);
+  for (const v of first20) expect(firstHtml).toContain(v.title);
+  for (const v of rest) {
+    expect(firstHtml).not.toContain(v.title);
+    expect(secondHtml).toContain(v.title);
+  }
+});
+
+test("GET /queue cursor request without sort resolves to the category default", async () => {
+  const cat = makeSortCategory("Sort Cursor Default", "oldest");
+  const [v1, v2, v3] = seedSortedVideos(cat.id, "Sort Cursor Chan");
+  if (!v1 || !v2 || !v3) throw new Error("seed failed");
+
+  // Cursor just after v1 in oldest order; with no sort the oldest default continues
+  // forward (v2, v3) rather than newest-order's backwards walk (nothing before v1).
+  const res = await queueRoute.request(
+    `/queue?category=${cat.id}&cursor=${v1.publishedAt?.getTime()}&cursorId=${v1.id}`,
+    { headers: authHeaders },
+  );
+  const html = await res.text();
+  expect(html).toContain(v2.title);
+  expect(html).toContain(v3.title);
+  expect(html).not.toContain(v1.title);
+});
+
+test("POST /videos/:id/toggle without sort re-renders the card with the category default", async () => {
+  const cat = makeSortCategory("Sort Toggle Default", "oldest");
+  const channel = makeChannel("Sort Toggle Chan");
+  makeSubscription(channel.id, { categoryId: cat.id });
+  // watching -> unwatched re-renders the card; unwatched -> watched would delete it.
+  const video = makeVideo(channel.id, { status: "watching" });
+
+  const res = await queueRoute.request(
+    `/videos/${video.id}/toggle?category=${cat.id}`,
+    { method: "POST", headers: authHeaders },
+  );
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).toContain("sort=oldest");
+});
+
+test("/watching/:id and watched-toggle drop a garbage sort but round-trip newest/oldest", async () => {
+  const channel = makeChannel("Sort Watching Chan");
+  makeSubscription(channel.id, { categoryId: category.id });
+  const video = makeVideo(channel.id, { status: "unwatched" });
+
+  const garbageRes = await queueRoute.request(
+    `/watching/${video.id}?from=queue&sort=garbage%22%3E&category=${category.id}`,
+    { headers: authHeaders },
+  );
+  const garbageHtml = await garbageRes.text();
+  expect(garbageHtml).not.toContain("garbage");
+  expect(garbageHtml).toContain(`href="/queue?category=${category.id}"`);
+
+  const garbageToggle = await queueRoute.request(
+    `/videos/${video.id}/watched-toggle?from=queue&sort=garbage&category=${category.id}`,
+    { method: "POST", headers: authHeaders },
+  );
+  expect(garbageToggle.headers.get("location")).toBe(
+    `/queue?category=${category.id}`,
+  );
+
+  for (const sort of ["newest", "oldest"] as const) {
+    const res = await queueRoute.request(
+      `/watching/${video.id}?from=queue&sort=${sort}&category=${category.id}`,
+      { headers: authHeaders },
+    );
+    const html = await res.text();
+    expect(html).toContain(
+      `href="/queue?sort=${sort}&amp;category=${category.id}"`,
+    );
+    expect(html).toContain(`sort=${sort}`);
+
+    const toggle = await queueRoute.request(
+      `/videos/${video.id}/watched-toggle?from=queue&sort=${sort}&category=${category.id}`,
+      { method: "POST", headers: authHeaders },
+    );
+    expect(toggle.headers.get("location")).toBe(
+      `/queue?sort=${sort}&category=${category.id}`,
+    );
+  }
 });
 
 test("GET /watching/:id 404s for a nonexistent video", async () => {
@@ -1033,7 +1261,9 @@ test("End-to-end: a queue row's link round-trips through /watching/:id back to t
     headers: authHeaders,
   });
   const watchingHtml = await watchingRes.text();
-  expect(watchingHtml).toContain(`href="/queue?category=${category.id}"`);
+  expect(watchingHtml).toContain(
+    `href="/queue?sort=newest&amp;category=${category.id}"`,
+  );
 
   const actionMatch = watchingHtml.match(/action="([^"]*watched-toggle[^"]*)"/);
   const rawAction = actionMatch?.[1];
@@ -1048,7 +1278,7 @@ test("End-to-end: a queue row's link round-trips through /watching/:id back to t
   });
   expect(toggleRes.status).toBe(303);
   expect(toggleRes.headers.get("location")).toBe(
-    `/queue?category=${category.id}`,
+    `/queue?sort=newest&category=${category.id}`,
   );
 });
 

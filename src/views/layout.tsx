@@ -41,14 +41,13 @@ function isFilterableView(
 
 function sidebarCategoryHref(
   currentView: SidebarView | undefined,
-  currentSort: "newest" | "oldest" | undefined,
   categoryId?: number,
 ): string {
   const view = isFilterableView(currentView) ? currentView : "queue";
-  const sort = view === "queue" ? currentSort : undefined;
   switch (view) {
     case "queue":
-      return buildQueueHref(sort ?? "newest", categoryId);
+      // No `sort`: a category link means "this category's default order".
+      return buildQueueHref(undefined, categoryId);
     case "continue-watching":
       return buildContinueWatchingHref(categoryId);
     case "watched":
@@ -64,7 +63,6 @@ export const Layout: FC<{
   categories: CategoryWithCount[];
   currentView?: SidebarView;
   currentCategory?: number;
-  currentSort?: "newest" | "oldest";
   children?: Child;
 }> = (props) => {
   return (
@@ -121,7 +119,7 @@ export const Layout: FC<{
         >
           <nav class="flex min-h-full flex-col gap-1 p-4 pt-16 lg:pt-4">
             <a
-              href={buildQueueHref(props.currentSort ?? "newest")}
+              href={buildQueueHref(undefined)}
               data-active={props.currentView === "queue"}
               class={NAV_LINK_CLASS}
             >
@@ -153,11 +151,7 @@ export const Layout: FC<{
               {props.categories.map((cat) => (
                 <li key={cat.id}>
                   <a
-                    href={sidebarCategoryHref(
-                      props.currentView,
-                      props.currentSort,
-                      cat.id,
-                    )}
+                    href={sidebarCategoryHref(props.currentView, cat.id)}
                     data-active={
                       isFilterableView(props.currentView) &&
                       props.currentCategory === cat.id

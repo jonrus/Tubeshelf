@@ -80,7 +80,7 @@ function listActiveSubscriptions(userId: number) {
     .select({
       id: subscriptions.id,
       channelName: youtubeChannels.name,
-      categoryName: categories.name,
+      categoryId: subscriptions.categoryId,
       youtubeChannelId: youtubeChannels.id,
       possibleMissedVideosDetectedAt:
         youtubeChannels.possibleMissedVideosDetectedAt,
@@ -91,7 +91,6 @@ function listActiveSubscriptions(userId: number) {
       youtubeChannels,
       eq(subscriptions.youtubeChannelId, youtubeChannels.id),
     )
-    .innerJoin(categories, eq(subscriptions.categoryId, categories.id))
     .where(
       and(
         eq(subscriptions.userId, userId),
@@ -117,6 +116,21 @@ function listActiveSubscriptions(userId: number) {
     );
 }
 
+function renderSubscriptionList(
+  userId: number,
+  opts: { error?: string; oob?: boolean } = {},
+) {
+  return (
+    <SubscriptionList
+      subscriptions={listActiveSubscriptions(userId)}
+      categories={listNonSystemCategories()}
+      systemCategoryId={getSystemCategory().id}
+      error={opts.error}
+      oob={opts.oob}
+    />
+  );
+}
+
 export const channelsRoute = new Hono();
 
 channelsRoute.use("*", csrfCheck, requireAuth);
@@ -128,6 +142,7 @@ channelsRoute.get("/channels", (c) => {
       subscribeCategories={listNonSystemCategories()}
       categories={listCategoriesWithCounts(userId)}
       subscriptions={listActiveSubscriptions(userId)}
+      systemCategoryId={getSystemCategory().id}
       navCounts={getNavCounts(userId)}
       currentView="channels"
     />,
@@ -228,7 +243,7 @@ channelsRoute.post("/subscriptions", async (c) => {
   return c.html(
     <>
       <BlankSubscribeForm categories={listNonSystemCategories()} />
-      <SubscriptionList subscriptions={listActiveSubscriptions(userId)} oob />
+      {renderSubscriptionList(userId, { oob: true })}
     </>,
   );
 });
@@ -256,9 +271,7 @@ function updateOwnedSubscription(
     return c.notFound();
   }
 
-  return c.html(
-    <SubscriptionList subscriptions={listActiveSubscriptions(userId)} />,
-  );
+  return c.html(renderSubscriptionList(userId));
 }
 
 channelsRoute.delete("/subscriptions/:id", (c) => {
@@ -272,5 +285,21 @@ channelsRoute.post("/subscriptions/:id/dismiss-missed-videos", (c) => {
   const id = Number(c.req.param("id"));
   return updateOwnedSubscription(c, userId, id, {
     missedVideosDismissedAt: new Date(),
+  });
+});
+
+channelsRoute.post("/subscriptions/:id/category", async (c) => {
+  const userId = c.get("userId");
+  const id = Number(c.req.param("id"));
+  const body = await c.req.parseBody();
+  const categoryIdRaw =
+    typeof body.categoryId === "string" ? body.categoryId : "";
+
+  const resolved = resolveCategoryId(categoryIdRaw);
+  if (!resolved.ok) {
+    return c.html(renderSubscriptionList(userId, { error: resolved.error }));
+  }
+  return updateOwnedSubscription(c, userId, id, {
+    categoryId: resolved.categoryId,
   });
 });
