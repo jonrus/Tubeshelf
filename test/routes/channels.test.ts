@@ -127,6 +127,17 @@ function dismissMissedVideos(id: number) {
   });
 }
 
+function postSubscriptionCategory(id: number, categoryId: string) {
+  return channelsRoute.request(`/subscriptions/${id}/category`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      ...authHeaders,
+    },
+    body: new URLSearchParams({ categoryId }),
+  });
+}
+
 // Extracts the categoryId hidden field's value out of a preview response's
 // HTML, so tests round-trip through the real rendered value instead of
 // hardcoding a guess at what preview would have produced.
@@ -891,12 +902,12 @@ test("a channel's row shows its unwatched video count", async () => {
   expect(html).not.toContain("No subscriptions yet — add a channel above.");
 });
 
-test("a subscription's category name renders in a pill, not a bare parenthetical", async () => {
+test("a subscription's category renders as a select with the current category selected", async () => {
   const channel = db
     .insert(youtubeChannels)
     .values({
       youtubeChannelId: "UCcategoryPillAAAAAAAAA",
-      name: "Category Pill Channel",
+      name: "Category Select Channel",
       rssUrl:
         "https://www.youtube.com/feeds/videos.xml?channel_id=UCcategoryPillAAAAAAAAA",
     })
@@ -916,11 +927,152 @@ test("a subscription's category name renders in a pill, not a bare parenthetical
   });
   expect(res.status).toBe(200);
   const html = await res.text();
-  const row = extractSubscriptionRow(html, "Category Pill Channel");
-  expect(row).toContain(
-    `<span class="rounded-full bg-surface-raised px-2 py-0.5 text-xs text-text-muted">Tech</span>`,
+  const row = extractSubscriptionRow(html, "Category Select Channel");
+  expect(row).toContain('aria-label="Category for Category Select Channel"');
+  expect(row).toMatch(/<option value="\d+" selected[^>]*>Tech<\/option>/);
+  expect(row).not.toMatch(/<option value="" selected/);
+  expect(row).toContain("Uncategorized");
+});
+
+test("a subscription in Uncategorized renders the empty-value option selected", async () => {
+  const channel = db
+    .insert(youtubeChannels)
+    .values({
+      youtubeChannelId: "UCuncatSelectAAAAAAAAAA",
+      name: "Uncat Select Channel",
+      rssUrl: rssUrlFor("UCuncatSelectAAAAAAAAAA"),
+    })
+    .returning()
+    .get();
+  db.insert(subscriptions)
+    .values({
+      userId: defaultUser.id,
+      youtubeChannelId: channel.id,
+      categoryId: systemCategory.id,
+    })
+    .run();
+
+  const res = await channelsRoute.request("/channels", {
+    headers: authHeaders,
+  });
+  const row = extractSubscriptionRow(await res.text(), "Uncat Select Channel");
+  expect(row).toMatch(/<option value="" selected[^>]*>Uncategorized<\/option>/);
+});
+
+const defaultUserId = defaultUser.id;
+
+function insertSubscription(name: string, label: string, categoryId: number) {
+  const id = channelId(label);
+  const channel = db
+    .insert(youtubeChannels)
+    .values({ youtubeChannelId: id, name, rssUrl: rssUrlFor(id) })
+    .returning()
+    .get();
+  return db
+    .insert(subscriptions)
+    .values({
+      userId: defaultUserId,
+      youtubeChannelId: channel.id,
+      categoryId,
+    })
+    .returning()
+    .get();
+}
+
+function subscriptionCategoryId(id: number) {
+  return db.select().from(subscriptions).where(eq(subscriptions.id, id)).get()
+    ?.categoryId;
+}
+
+test("POST /subscriptions/:id/category moves a subscription and the list shows it selected", async () => {
+  const sub = insertSubscription(
+    "Move Me Channel",
+    "moveMe",
+    systemCategory.id,
   );
-  expect(row).not.toContain("(Tech)");
+
+  const res = await postSubscriptionCategory(sub.id, String(realCategory.id));
+  expect(res.status).toBe(200);
+  expect(subscriptionCategoryId(sub.id)).toBe(realCategory.id);
+  const row = extractSubscriptionRow(await res.text(), "Move Me Channel");
+  expect(row).toMatch(/<option value="\d+" selected[^>]*>Tech<\/option>/);
+});
+
+test("POST /subscriptions/:id/category with an empty value moves back to Uncategorized", async () => {
+  const sub = insertSubscription(
+    "Move Back Channel",
+    "moveBack",
+    realCategory.id,
+  );
+
+  const res = await postSubscriptionCategory(sub.id, "");
+  expect(res.status).toBe(200);
+  expect(subscriptionCategoryId(sub.id)).toBe(systemCategory.id);
+  const row = extractSubscriptionRow(await res.text(), "Move Back Channel");
+  expect(row).toMatch(/<option value="" selected[^>]*>Uncategorized<\/option>/);
+});
+
+test("POST /subscriptions/:id/category rejects the system category id and unknown ids", async () => {
+  const sub = insertSubscription(
+    "Reject Cat Channel",
+    "rejectCat",
+    realCategory.id,
+  );
+
+  for (const bad of [String(systemCategory.id), "999999", "abc"]) {
+    const res = await postSubscriptionCategory(sub.id, bad);
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("Invalid category.");
+    expect(html).toContain('id="subscription-list"');
+    expect(subscriptionCategoryId(sub.id)).toBe(realCategory.id);
+  }
+});
+
+test("POST /subscriptions/:id/category 404s for another user's or an unsubscribed subscription", async () => {
+  const otherUser = db
+    .insert(users)
+    .values({ username: "category-other-user", passwordHash: "unused" })
+    .returning()
+    .get();
+  const otherChannel = db
+    .insert(youtubeChannels)
+    .values({
+      youtubeChannelId: channelId("catOther"),
+      name: "Category Other Channel",
+      rssUrl: rssUrlFor(channelId("catOther")),
+    })
+    .returning()
+    .get();
+  const othersSub = db
+    .insert(subscriptions)
+    .values({
+      userId: otherUser.id,
+      youtubeChannelId: otherChannel.id,
+      categoryId: systemCategory.id,
+    })
+    .returning()
+    .get();
+
+  const res = await postSubscriptionCategory(
+    othersSub.id,
+    String(realCategory.id),
+  );
+  expect(res.status).toBe(404);
+  expect(subscriptionCategoryId(othersSub.id)).toBe(systemCategory.id);
+
+  const mine = insertSubscription(
+    "Cat Unsubbed Channel",
+    "catUnsub",
+    systemCategory.id,
+  );
+  db.update(subscriptions)
+    .set({ unsubscribedAt: new Date() })
+    .where(eq(subscriptions.id, mine.id))
+    .run();
+  const res2 = await postSubscriptionCategory(mine.id, String(realCategory.id));
+  expect(res2.status).toBe(404);
+  expect(subscriptionCategoryId(mine.id)).toBe(systemCategory.id);
 });
 
 test("a brand-new subscription to a channel with a pre-existing old gap does not show the badge", async () => {

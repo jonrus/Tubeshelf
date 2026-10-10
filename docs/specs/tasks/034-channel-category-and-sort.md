@@ -17,7 +17,7 @@ the code before editing. Steps are ordered so each leaves `bun test` green.
   whatever Hono actually emits; check the real output) and that Dismiss has no `hx-confirm`.
   — done when: `bun test` passes and the new test fails if `hx-confirm` is removed.
 
-- [ ] 2. Part A: change a channel's category — (a) `src/routes/channels.tsx`:
+- [x] 2. Part A: change a channel's category — (a) `src/routes/channels.tsx`:
   `listActiveSubscriptions` selects `subscriptions.categoryId` (type `categoryId`), and drops
   `categoryName` and its `innerJoin(categories…)`; (b) `src/views/subscription-list.tsx`:
   `Subscription` type gets `categoryId: number` and loses `categoryName`; `SubscriptionList`
