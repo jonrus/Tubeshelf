@@ -34,7 +34,7 @@
   },
   "dependencies": {
     "drizzle-orm": "^0.45.4",
-    "hono": "^4.12.31"
+    "hono": "^4.13.13"
   },
   "trustedDependencies": [
     "@parcel/watcher"
