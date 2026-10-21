@@ -3,230 +3,135 @@
 ## Product spec
 
 `docs/app_idea.md` is the source of truth for the product itself — problem statement,
-feature scope, architecture, data model. It changes rarely. When a spec below refines or
+feature scope, architecture, data model. It changes rarely. When a spec refines or
 supersedes something in it, that gets a small inline pointer there (e.g.
-`(refined in docs/specs/003-ignore-rules-v2.md)`) rather than rewriting its content.
+`(refined in docs/specs/003-ignore-rules-v2.md)`) rather than a rewrite.
 
 ## Running commands
 
-Claude Code runs on the host, not inside the editor-integrated devcontainer, and `bun`
-isn't installed on the host — every `bun`/project command (`bun test`, `bun run lint`,
-`bun run db:generate`, etc.) must go through the devcontainer via podman:
+Claude Code runs on the host, not inside the editor's devcontainer, and `bun` isn't
+installed on the host. Every `bun`/project command (`bun test`, `bun run lint`,
+`bun run db:generate`, etc.) goes through the devcontainer via podman:
 
 ```
 devcontainer up --docker-path podman --workspace-folder .    # idempotent, safe to rerun
 devcontainer exec --docker-path podman --workspace-folder . <command>
 ```
 
-`up` exits non-zero if `postCreateCommand` fails (e.g. before `package.json` exists) but
-the container keeps running regardless, so `exec` still works. This applies in every
-session, including `/work-task` — task files list bare commands (`bun test`, etc.) for
-readability, but they mean "run via `devcontainer exec` as above," not "run directly on
-host." See `.devcontainer/devcontainer.json` and `README.md` for the container setup
-itself.
+`up` exits non-zero if `postCreateCommand` fails (e.g. before `package.json` exists), but
+the container keeps running, so `exec` still works. Task files list bare commands
+(`bun test`, etc.) for readability; they always mean "via `devcontainer exec`".
 
-Two more gotchas specific to driving the container this way (confirmed still true
-2026-07-22), neither of which apply to the human's normal editor-integrated Dev Containers
-workflow, only to a Claude Code session using the CLI directly:
+Gotchas that only apply to driving the container from the CLI (not the editor workflow):
 
-- **No port forwarding.** `forwardPorts`/`portsAttributes` in `devcontainer.json` only take
-  effect through an editor's Dev Containers extension proxy — there's no such proxy here.
-  `curl http://localhost:3000` from the host hangs/fails even while `bun run dev` is
-  running fine inside the container. To check the running app, `curl` (or similar) from
-  *inside* the container: `devcontainer exec --docker-path podman --workspace-folder . curl
+- **No port forwarding.** `forwardPorts` only works through an editor's Dev Containers
+  proxy, so `curl http://localhost:3000` from the host fails even while the dev server
+  runs. Curl from inside: `devcontainer exec --docker-path podman --workspace-folder . curl
   http://localhost:3000/...`.
-- **No `ps`/`pkill` in the `oven/bun:1` base image.** To stop a dev server started inside
-  the container, find its PID by scanning `/proc/[0-9]*/cmdline` for the matching command
-  (`grep -l src/index.ts /proc/[0-9]*/cmdline`) and `kill <pid>` directly — `kill` itself is
-  a shell builtin and works fine, it's just `ps`/`pkill` that are missing. **Don't run the
-  scan inline via `devcontainer exec … sh -c '… grep -q src/index.ts …'`**: that `sh -c`
-  process's own `/proc/<pid>/cmdline` contains `src/index.ts`, so the scan matches and kills
-  itself partway through (confirmed 2026-10-03, spec032 task 13 — the rest of the command,
-  e.g. cleanup `rm`s, silently never ran). Put the scan in a script file inside the
-  container (the container's `/tmp` is separate from the host's, so write it via
-  `devcontainer exec … sh -c "cat > /tmp/x.sh" < local-file`) and run `sh /tmp/x.sh`, whose
-  cmdline doesn't contain the pattern.
-- **If the container gets into a weird state** (e.g. an orphaned/stuck process left behind
-  by a killed `devcontainer exec` — confirmed with a `drizzle-kit generate` process wedged
-  waiting on a TTY prompt that would never come, 2026-07-22), don't chase it down inside the
-  container. It's disposable: `podman stop <container-id>` (find it with `podman ps`) then
-  rerun `devcontainer up --docker-path podman --workspace-folder .`, which restarts the same
-  container cleanly. No data-loss concern — this is the dev environment, not a data volume.
-- **Some commands need a real interactive TTY** (confirmed with `drizzle-kit generate`,
-  which prompts to disambiguate "renamed table" vs. "new table" when the schema diff is
-  ambiguous — e.g. spec002's `channels` → `youtube_channels` split). `devcontainer exec`
-  run from a Claude Code session has no TTY to answer that with, and piping input doesn't
-  substitute for one (the prompt library checks `stdin.isTTY` directly). Don't try to work
-  around this with `script`, a pty wrapper, etc. — that risks leaving an orphaned process
-  waiting on a pty nothing is attached to (see the gotcha above). Instead, hand the user the
-  exact command to run in their own terminal and wait for them to report the result back.
-- **`fallow`'s type-aware analysis (`typeAware.enabled: true` in `.fallowrc.json`) hangs
-  forever inside the devcontainer** (confirmed 2026-08-20) — any command that triggers it
-  spawns a `fallow-type-aware` sidecar that shells out to what it expects is real Node.js
-  to run `tsc --api`. The `oven/bun:1` base image has no real Node.js; its `node` on `PATH`
-  is a symlink straight to `bun`
-  (`/usr/local/bun-node-fallback-bin/node -> /usr/local/bin/bun`), and the sidecar calls a
-  Node-internal API (`stdout._handle.fd`) that Bun doesn't implement, throwing inside a
-  context whose rejection never surfaces — the parent just hangs (confirmed reproducing
-  identically after a full container destroy/recreate, and confirmed *not* a TTY issue: it
-  hangs the same way in the user's own interactive terminal, only revealing the real error,
-  `stdout._handle.fd` on `undefined`, once force-killed with Ctrl+C). **This project's
-  `.fallowrc.json` deliberately leaves `typeAware` off** (per
-  `docs/specs/026-fallow-adoption.md`'s Design → `typeAware` subsection: enabling it didn't
-  measurably improve this repo's findings, so paying an ongoing devcontainer exception for
-  it wasn't worth it) — so plain `bun run fallow`/`bunx fallow` don't hit this hang and run
-  fine inside the devcontainer like any other project command; no exception needed for
-  routine use. If `typeAware` is ever turned back on for some reason, run that command
-  directly on the host instead of via `devcontainer exec` (the host has real Node.js and the
-  repo's `node_modules` is bind-mounted from the container, so `node_modules/.bin/fallow`
-  works as-is); this is also not a CI risk either way, since GitHub's `ubuntu-latest` runner
-  ships real Node.js regardless of `oven-sh/setup-bun@v2`.
+- **No `ps`/`pkill` in the `oven/bun:1` image.** To stop a dev server, find its PID by
+  scanning `/proc/[0-9]*/cmdline` for the command (`grep -l src/index.ts /proc/[0-9]*/cmdline`)
+  and `kill <pid>` (`kill` is a shell builtin). Don't run the scan inline via
+  `sh -c '… grep … src/index.ts …'` — that `sh`'s own cmdline matches, so it kills itself
+  and the rest of the command silently never runs. Put the scan in a script file in the
+  container (`devcontainer exec … sh -c "cat > /tmp/x.sh" < local-file`, since the
+  container's `/tmp` is separate from the host's) and run `sh /tmp/x.sh`.
+- **Weird container state** (e.g. an orphaned process left by a killed `devcontainer
+  exec`): don't debug inside it. `podman stop <container-id>` (find it with `podman ps`),
+  then rerun `devcontainer up …`. The container is disposable; no data volume.
+- **Commands needing a real TTY** (e.g. `drizzle-kit generate` prompting "renamed vs. new
+  table" on an ambiguous schema diff) can't be answered from `devcontainer exec`. Don't
+  work around it with `script`/pty wrappers — that leaves orphaned processes. Hand the
+  user the exact command to run in their own terminal and wait for the result.
+- **`fallow` type-aware analysis hangs in the container** (the image's `node` is a symlink
+  to `bun`, which lacks an API the sidecar needs). `.fallowrc.json` deliberately leaves
+  `typeAware` off (`docs/specs/026-fallow-adoption.md`), so `bun run fallow` works
+  normally. If it's ever turned on, run fallow directly on the host instead (it has real
+  Node, and `node_modules` is bind-mounted).
 
 ## Development pattern: Spec-Driven Development
 
 This project does not vibe-code. Every scoped piece of work gets a spec before
-implementation, and decisions live in tracked files instead of conversation history:
+implementation; decisions live in tracked files, not conversation history. The skills are
+personal (`~/.claude/skills/`: `new-feature`, `new-spec`, `spec-tasks`, `work-task`,
+plus `work-loop` to run a task file hands-off via per-step subagents); this file pins the
+project-specific paths.
 
 1. `/new-feature` (optional, for larger or ambiguous asks) — copy
-   `docs/features/000-feature_template.md` to `docs/features/NNN-slug.md` and fill in what
-   you can yourself first. The skill reads that file, researches the current codebase, asks
-   batched clarifying questions grounded in what it finds, and edits the file in place (a
-   `Resolved Decisions` section grows, `status: draft` → `refined`) until scope is fully
-   settled — durable and resumable across sessions/machines, same as a task file. Skip this
-   step entirely for smaller/obvious work; `/new-spec` below works exactly as it always has
-   when invoked directly, with no feature file involved.
-2. `/new-spec` — write a spec to `docs/specs/NNN-name.md` (committed, versioned, the single
-   source of truth for that scope of work). When pointed at a `refined` feature file
-   (`/new-spec docs/features/NNN-slug.md`), it starts from that file's resolved scope
-   instead of interviewing from scratch, reuses its slug for the spec's title, and — once
-   the spec is written — updates the feature file to `status: promoted` with a pointer to
-   the new spec. `docs/features/` and `docs/specs/` are numbered **independently**; a
-   feature can split into multiple specs, get deferred, or never be promoted, so don't
-   expect their numbers to match. Promoted feature files are kept in the repo permanently,
-   same rationale as task files below.
-3. `/spec-tasks` — derive an execution checklist at `docs/specs/tasks/name.md`. Committed
-   while the spec is `in-progress` — that's what makes it possible to resume work from a
-   different machine, not just a different session. Kept in the repo once every step is
-   checked off and the spec reaches `implemented`; the spec is the durable record of what
-   and why, but the task file remains as a record of how the work was broken down.
-4. `/work-task` — resume the checklist in a **fresh session**, execute only the next
-   unchecked step, check it off, stop. One step per session, deliberately, to avoid context
-   drift across a long-running conversation.
+   `docs/features/000-feature_template.md` to `docs/features/NNN-slug.md`; the skill
+   researches the codebase, asks clarifying questions, and edits the file in place
+   (`Resolved Decisions` grows, `status: draft` → `refined`). Skip for small/obvious work.
+2. `/new-spec` — write `docs/specs/NNN-name.md`, the committed source of truth for that
+   scope. Given a `refined` feature file, it starts from that scope, reuses its slug, and
+   flips the feature file to `status: promoted` with a pointer to the spec.
+   `docs/features/` and `docs/specs/` are numbered **independently** (a feature can split
+   into several specs or never be promoted); don't expect numbers to match. Promoted
+   feature files stay in the repo.
+3. `/spec-tasks` — derive a checklist at `docs/specs/tasks/name.md`, committed while the
+   spec is `in-progress` so work can resume from either machine. Kept after completion as
+   a record of how the work was broken down.
+4. `/work-task` — in a **fresh session**, execute only the next unchecked step, check it
+   off, stop. One step per session, to avoid context drift.
 
-These are personal skills (`~/.claude/skills/`: `new-feature`, `new-spec`, `spec-tasks`,
-`work-task`), so the same pattern carries over to other projects — this file just pins the
-project-specific paths above.
+Spec `status` progresses `draft` → `in-progress` (tasks exist) → `implemented` (last step
+done). Don't hand-write code against a spec without going through a task file.
 
-A spec's frontmatter `status` progresses `draft` → `in-progress` (once tasks exist) →
-`implemented` (once `/work-task` finishes the last step). Don't hand-write code against a
-spec without going through a task file — that's what defeats the point of the pattern.
+### Git workflow
 
-### Git workflow: branches and PRs (post spec015)
+`main` is protected by GitHub Rulesets with an empty bypass list: no direct pushes, not
+even from the owner. One branch and PR per spec.
 
-Since spec015 (`docs/specs/015-github-buildout.md`), `main` is protected by two GitHub
-Rulesets, one of which (`main-checks`) has an **empty bypass list** — direct pushes to
-`main` are blocked for everyone, including the repo owner. All work now goes through one
-branch/PR per spec, layered on top of the four steps above (this isn't part of the shared
-`~/.claude/skills/` themselves, since those are reused across other projects — it's applied
-here as a project-specific pin, the same way the devcontainer paths above are):
-
-- **Branch creation.** Off `main`, named `spec/<slug>` — **no number prefix.** Created at
-  whichever step first produces a file for that unit of work: `/new-feature`, if used (the
-  feature file is the first artifact); otherwise `/new-spec`. Deliberately excludes the
-  `NNN` (from either the feature file's own number or the eventual spec's — see step 2
-  above, they're independent sequences) specifically so the branch never needs renaming
-  later: a feature file's slug is already reused verbatim for its promoted spec's title, so
-  `spec/<slug>` is stable from the moment `/new-feature` first names it, through promotion,
-  through the PR — including across a feature file created on one machine and continued via
-  `/new-spec`/`/work-task` on the other, where a local-only rename wouldn't be visible
-  anyway. The tradeoff: slug uniqueness is no longer backstopped by a filename number, so
-  `/new-feature` and `/new-spec` should check the slug isn't already in use by another
-  branch/spec/feature file before settling on it.
-- **Commits during `/work-task`.** Each session commits its one step to the branch as
-  usual. Never push without asking first — default assumption is the user pushes manually,
-  but confirm explicitly at whatever point a push would actually matter (end of a
-  `/work-task` session, or the branch-push-and-PR step below): ask whether the user is
-  pushing it themselves or wants Claude to, and only push if they say so. This isn't a
-  one-time authorization — ask every time, since which machine the user is about to switch
-  to varies session to session.
-- **Finishing a spec.** Flip the spec's frontmatter to `status: implemented` as part of the
-  same branch (not a separate trailing PR after merge — that split only happened in
-  spec015 itself as a one-time artifact of branch protection not existing yet when it
-  started, not the steady-state pattern going forward). The task file's final step is to
-  open the PR, filled out (summary + test plan) — but check that final step's own box
-  *before* pushing, deliberately inverting `/work-task`'s normal "do the work, then check
-  it off" order (steps 4→6) for this one step only. Otherwise the box-check commit trails
-  the push with nothing to carry it to the remote, leaving a dangling local commit the user
-  has to notice and push separately. Checking it off first means the push — whenever it
-  happens, see above — carries a task file that's already fully checked off, so the pushed
-  branch and the opened PR both reflect a complete state with nothing left uncommitted
-  afterward.
+- **Branch.** Off `main`, named `spec/<slug>` with **no number prefix**, created at the
+  first step that produces a file for the work (`/new-feature` if used, else `/new-spec`).
+  The slug is reused verbatim for the promoted spec, so the branch never needs renaming.
+  Slugs aren't backstopped by a filename number, so check the slug isn't already used by
+  another branch/spec/feature file.
+- **Commits.** Ask before every commit. Write a descriptive message with the
+  Co-Authored-By trailer; no `Claude-Session:` trailer. `/work-task` commits its one step
+  per session.
+- **Pushing.** Never push without asking, every time (which machine the user switches to
+  varies). Ask whether they're pushing themselves or want Claude to.
+- **Finishing a spec.** Set the spec to `status: implemented` on the same branch. The task
+  file's final step opens the PR (summary + test plan). Check that final box *before*
+  pushing — the reverse of `/work-task`'s usual order — so the pushed branch and PR carry
+  a fully checked-off task file with nothing left uncommitted.
 - **CI and merge.** `pr.yml`'s five required checks (`lint`, `test`, `typecheck`,
-  `docker-build-check`, `fallow`) must be green. Merging is always manual — the user reviews and
-  clicks merge in the GitHub UI; Claude never runs `gh pr merge` or otherwise merges a PR
-  itself.
+  `docker-build-check`, `fallow`) must be green. Merging is always manual in the GitHub UI;
+  Claude never runs `gh pr merge`.
+
+### Final verification
+
+Every spec's final task-file step (and its manual-verification section, if any) must run
+all four of `bun test`, `bun run lint`, `bunx tsc --noEmit`, **and `bun run fallow`**
+clean across the repo. `test`/`lint` don't type-check, and `fallow` catches cross-file dead
+code and duplication; skipping any of them lets problems sit unnoticed for several specs.
 
 ### Manual verification sections in task files
 
-When a task file has a "Manual end-to-end verification" section, split it explicitly into
-two labeled parts instead of one blended "confirm in a browser" list — that ambiguity (who
-does which step) has caused rework before.
+Split a "Manual end-to-end verification" section into two labeled parts:
 
-- **Claude performs directly** — anything checkable via `curl` from inside the devcontainer
-  (per the port-forwarding gotcha above) or a direct SQLite read/write against the dev DB
-  file. This covers server-rendered HTML content, response status/error text, and DB state
-  — i.e. everything except how it actually looks/feels live in a browser. Claude runs these
-  itself; no user action needed. For any route behind `requireAuth`, get a session cookie
-  jar first via `scripts/dev-login.sh` (see below) rather than re-deriving the login form
-  fields and CSRF `Origin` requirement from `src/lib/auth.ts`/`src/routes/auth.tsx` each
-  time.
-- **User performs live in a browser** — anything `curl` genuinely can't observe: real HTMX
-  partial-swap behavior (no full-page reload), visual layout/rendering, and the actual
-  click-through experience. Claude gives the exact URL and click/type target for each step
-  and says what to look for; the user drives the browser and reports back what they saw.
+- **Claude performs directly** — anything checkable via `curl` from inside the container
+  or a direct SQLite read/write against the dev DB: server-rendered HTML, status/error
+  text, DB state. For routes behind `requireAuth`, get a cookie jar first with
+  `scripts/dev-login.sh`, which logs in as `admin` / `AUTH_RECOVERY_PASSWORD`
+  (`dev-password-change-me`, from `.devcontainer/devcontainer.json`) and writes
+  `/tmp/tubeshelf-dev-cookies.txt`:
+  `devcontainer exec --docker-path podman --workspace-folder . scripts/dev-login.sh`, then
+  `curl -b /tmp/tubeshelf-dev-cookies.txt http://localhost:3000/queue` (also inside the
+  container). The script isn't in the Docker image (the Dockerfile `COPY`s an explicit
+  allowlist).
+- **User performs live in a browser** — what `curl` can't observe: HTMX partial swaps,
+  visual layout, click-through feel. Give the exact URL and click/type target for each
+  step and what to look for; the user reports back.
 
-See spec008's task file (`docs/specs/tasks/008-mvp-completion-gaps.md`) for a worked example
-of the split.
+Worked example: `docs/specs/tasks/008-mvp-completion-gaps.md`.
 
-`scripts/dev-login.sh` (not copied into the Docker build image — the Dockerfile's final
-stage only `COPY`s an explicit allowlist of paths, `scripts/` isn't one of them) logs into
-a running dev instance and writes a cookie jar to `/tmp/tubeshelf-dev-cookies.txt` by
-default, using the `admin`/`AUTH_RECOVERY_PASSWORD` (`dev-password-change-me`, set in
-`.devcontainer/devcontainer.json`'s `containerEnv`) credentials already available inside
-the devcontainer with no extra setup. Confirmed working (spec028 task 13's manual
-verification): `devcontainer exec --docker-path podman --workspace-folder .
-scripts/dev-login.sh` then `curl -b /tmp/tubeshelf-dev-cookies.txt
-http://localhost:3000/queue`.
-
-When a manual-verification step needs a throwaway DB row (e.g. inserting a video with a
-specific `published_at` to test date rendering), write the `bun:sqlite` query to a script
-file first (e.g. via a `cat > /tmp/foo.mjs <<'EOF' ... EOF` heredoc through `devcontainer
-exec`) rather than passing it inline as a `bun -e "..."` string — quoting a SQL string
-through Bash tool → `sh -c` → `bun -e` nests three layers of shell/JS escaping deep enough
-that a `WHERE` clause silently mangled and the query matched nothing, with no error thrown
-(confirmed during spec028 task 13). A file sidesteps that entirely. Delete the file and any
-inserted rows once the check is done, same as any other manual-verification cleanup.
-
-Every spec's final task-file step (and matching manual-verification section, if the spec
-has one) must run all four of `bun test`, `bun run lint`, `bunx tsc --noEmit`, **and
-`bun run fallow`** clean across the repo — not just the first two or three. `bun test`/
-`bun run lint` don't do a full type-check, so type errors (e.g. ones caused by
-`tsconfig.json`'s `noUncheckedIndexedAccess`) can sit unnoticed for multiple specs' worth
-of commits until someone runs `tsc --noEmit` by hand (confirmed happening in spec006: a
-`match[1]: string | undefined` error introduced by spec005 wasn't caught until spec006's
-final verification pass, several commits later). `bun run fallow` (added in
-`docs/specs/026-fallow-adoption.md`) closes the same class of gap one level further out —
-cross-file dead code and duplication that none of the other three touch — and belongs in
-this list for the same reason: catch it locally before push, not only after CI runs
-`main-checks`.
+For throwaway DB rows, write the `bun:sqlite` query to a script file (e.g. a
+`cat > /tmp/foo.mjs <<'EOF'` heredoc through `devcontainer exec`) instead of `bun -e "…"`;
+inline SQL gets mangled by the nested shell/JS quoting and can silently match nothing.
+Delete the file and rows afterward.
 
 ## Memory vs. version control
 
-This project is developed from two separate machines (see the devcontainer note above).
-Claude Code's cross-session memory is local to whichever machine a session happens to run
-on — it does not sync between them. So for any durable project decision, plan, or
-non-obvious reasoning worth keeping (roadmap sequencing, a design tradeoff, anything a
-future session on *either* machine would want to know), default to writing it into a
-version-controlled repo doc — a spec, `docs/app_idea.md`, a task file — not only into
-assistant memory. Treat memory as a same-machine convenience/pointer at most, never the
-source of truth for something that matters project-wide.
+This project is developed from two machines, and Claude Code memory is local to each. Put
+anything durable and project-wide (decisions, roadmap, non-obvious reasoning) in a
+version-controlled doc — a spec, `docs/app_idea.md`, a task file — not only in memory.
