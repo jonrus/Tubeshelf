@@ -5,7 +5,21 @@ workable in the meantime, not as an open invitation to PR.
 
 ## Dev environment
 
-See `README.md`'s Development section for the devcontainer setup.
+Development happens inside a devcontainer (`.devcontainer/devcontainer.json`, based on the
+`oven/bun:1` image), so `bun` doesn't need to be installed on the host. Podman works as the
+Dev Containers backend as well as Docker.
+
+1. Open the repo in your editor and reopen it in the devcontainer (Dev Containers
+   extension).
+2. Install dependencies:
+   ```
+   bun install
+   ```
+3. Start the dev server (Hono with hot reload + Tailwind watcher):
+   ```
+   bun run dev
+   ```
+   The app listens on [http://localhost:3000](http://localhost:3000).
 
 ## Development pattern
 
@@ -17,14 +31,15 @@ This project uses Spec-Driven Development — see `CLAUDE.md` at the repo root.
 bun test
 bun run lint
 bunx tsc --noEmit
+bun run fallow
 ```
-(Run these inside the devcontainer — see `README.md`'s Development section.)
+(Run these inside the devcontainer.)
 
 ## Building and running from source
 
 Instead of the published `ghcr.io/jonrus/tubeshelf` image:
 ```
-docker build -t ghcr.io/jonrus/tubeshelf:1 .
+docker build -t ghcr.io/jonrus/tubeshelf:latest .
 docker compose up -d
 ```
 `docker compose up` only builds or pulls when no local image already matches

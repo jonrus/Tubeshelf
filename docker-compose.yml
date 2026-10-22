@@ -1,6 +1,6 @@
 services:
   tubeshelf:
-    image: ghcr.io/jonrus/tubeshelf:1
+    image: ghcr.io/jonrus/tubeshelf:latest
     container_name: tubeshelf
     restart: unless-stopped
     ports:

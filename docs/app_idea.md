@@ -3,7 +3,7 @@
 ## 1. Core Concept & Value Proposition
 > A self-hosted YouTube "subscription" tracker - tracks watched and unwatched videos in a queue system with tags and/or categories for improved UX over the real YouTube Subscription page. Videos are still viewed on YouTube itself to allow Brave browser to block ads and full SponsorBlock support
 
-- **Problem Statement:** The YouTube Subscription page is clusmy/busy and does not allow sorting by categories/tags - making it hard to view at a glance what is un-watched
+- **Problem Statement:** The YouTube Subscription page is clumsy/busy and does not allow sorting by categories/tags - making it hard to view at a glance what is un-watched
 - **Target Audience:** Myself - Users with many subscriptions but very different categories (Podcasts (long duration), Let's Plays, Programming Tutorials, Tech Video, Cooking, Fun) that should be split into different views as the 'watch mode' is different for each type of video and time able to view
 - **Key Differentiator:** More control on what videos the user wants to watch as well as being able to filter and reduce noise presented (category filtering on the queue views scoped in docs/specs/006-category-queue-filtering.md)
 
@@ -82,7 +82,8 @@ remaining pre-v1.0 work is:
    (§3). Sequenced before auth deliberately: this project's specs lean on manual
    browser verification heavily, and once login/session middleware exists, every such
    pass requires authenticating first — doing the visual-iteration-heavy work while the
-   app is still auth-free keeps that loop cheap.
+   app is still auth-free keeps that loop cheap. (Refined in
+   docs/specs/011-style-and-layout.md.)
 2. **Auth/CSRF** (§5's requirements) — sequenced right before deployment (below), not
    immediately after MVP features finish, because its urgency comes from the app
    actually being exposed (the tunnel-to-internet posture in §5), not from existing in
@@ -152,7 +153,7 @@ remaining pre-v1.0 work is:
 - **Development Pattern:** Ideally via Spec-Driven Development with an AI agent
 - **Development Workflow:** `.devcontainer` workflow as I develop on two different devices one running Bazzite Fedora 44 and another just Fedora 44
 - **CI/CD Pipeline:** TBD - probably whatever I can get away with for free on GitHub (refined in docs/specs/015-github-buildout.md; static analysis/dead-code checks added in docs/specs/026-fallow-adoption.md)
-- **Environment Variables:** None expected for MVP, but might need adjustment
+- **Environment Variables:** None expected for MVP, but might need adjustment (refined in docs/DEPLOYMENT.md — the actual set: `DB_FILE_NAME`, `AUTH_RECOVERY_PASSWORD`, `TRUSTED_ORIGINS`, `PUID`/`PGID`/`UMASK`, `LOG_LEVEL`/`LOG_FORMAT`, `TZ`, `YOUTUBE_API_KEY`)
 - **Testing Strategy:** 
   - Unit Tests: Bun Test Runner
   - E2E Tests: TBD

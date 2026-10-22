@@ -1,31 +1,28 @@
 # Deploying Tubeshelf
 
-Tubeshelf ships as a prebuilt container image published to GHCR and run via
-`docker-compose.yml`. This guide covers running it as a self-hosted Docker Compose service.
-Examples use `docker compose`; substitute `podman compose` (or `podman-compose`, whichever
-`podman compose version` / `command -v podman-compose` shows is available on your host) if
-you're using podman instead of Docker.
+Tubeshelf ships as a prebuilt image on GHCR, run via `docker-compose.yml`. Examples use
+`docker compose`; with podman, substitute `podman compose` (or `podman-compose`, whichever
+your host has).
 
 ## 1. Quick start
 
 1. Clone the repo and `cd` into it.
 2. Optional: copy `.env.example` to `.env` and fill in the values you need (see Configuration
-   below). The stack starts fine without a `.env` file, using defaults:
+   below). The stack starts without one, using defaults:
    ```
    cp .env.example .env
    ```
+   A missing `.env` is tolerated via `env_file`'s `required: false`, which needs Docker
+   Compose 2.24 or newer.
 3. Start the stack:
    ```
    docker compose up -d
    ```
    The app listens on the host port from `docker-compose.yml`'s `ports:` mapping (`3000` by
-   default). You can change the host-side (left) number freely if `3000` is already taken on
-   your host, but leave the container-side (right) `3000` alone — it must match the port the
-   app listens on inside the container.
-
-   A missing `.env` file is tolerated via `env_file`'s `required: false`, which needs Docker
-   Compose 2.24 or newer.
-4. Find the generated admin password in the logs (see Initial login below):
+   default). Change the host-side (left) number freely if `3000` is taken; leave the
+   container-side (right) `3000` alone — the app always listens on it.
+4. Unless you set `AUTH_RECOVERY_PASSWORD`, find the generated admin password in the logs
+   (see Initial login below):
    ```
    docker compose logs tubeshelf
    ```
@@ -33,38 +30,26 @@ you're using podman instead of Docker.
 ## 2. Configuration
 
 All configuration is via environment variables, set in `.env` (loaded by `docker-compose.yml`'s
-`env_file:` entry, which is optional). See `.env.example` for full comments on each — this table is just a
+optional `env_file:` entry). `.env.example` has the full comments on each; this table is a
 quick reference:
 
 | Variable | Purpose |
 | :--- | :--- |
 | `DB_FILE_NAME` | Path to the SQLite database file. Already set to `/data/tubeshelf.db` in `docker-compose.yml` to match the bind mount — leave unset in `.env`. |
-| `AUTH_RECOVERY_PASSWORD` | If set, forces the admin user's password to this value on every startup. Optional: if unset, a random password is generated and logged once on first boot. Use it to choose your own password or recover a lost one — see below. |
-| `TRUSTED_ORIGINS` | Comma-separated list of origins allowed to make CSRF-protected requests. Must include whatever public origin(s) you access the app through. Also decides the session cookie's `Secure` flag: Secure iff any entry is `https://`, unless the request matches an `http://` entry (`Origin`, else `Host`). An `https://` entry therefore makes `Secure` the default, and plain-http access at a non-listed host (LAN IP, `127.0.0.1`) loses its session because browsers drop the cookie. A mixed http+https list is for local development only — behind a proxy that rewrites `Host` to match an `http://` entry, the cookie would be re-issued without `Secure`; in production list only `https://` origins. |
+| `AUTH_RECOVERY_PASSWORD` | If set, the admin user's password is forced to this value on startup (and all sessions are signed out). If unset, a random password is generated and logged once on first boot. See Initial login. |
+| `TRUSTED_ORIGINS` | Comma-separated list of origins allowed to make CSRF-protected requests. Defaults to `http://localhost:3000`. Must include every public origin you access the app through. Also decides the session cookie's `Secure` flag: Secure iff any entry is `https://`, unless the request matches an `http://` entry (`Origin`, else `Host`). So with an `https://` entry, plain-http access at a non-listed host (LAN IP, `127.0.0.1`) loses its session, because browsers drop the cookie. Mixed http+https lists are for local development only; in production list only `https://` origins. |
 | `PUID` | User ID the app process runs as inside the container. Defaults to `1000` if unset. |
 | `PGID` | Group ID the app process runs as inside the container. Defaults to `1000` if unset. |
 | `UMASK` | Permission mask applied to files created under `/data`. Defaults to `022` if unset. |
-| `LOG_LEVEL` | Minimum log level that prints — `debug`, `info`, `warn`, or `error`. Defaults to `info` if unset. Set to `debug` for verbose troubleshooting detail (includes full error stack traces and raw malformed-feed-entry payloads, both hidden above this level). |
-| `LOG_FORMAT` | Log line format — `text` (human-readable) or `json` (one JSON object per line, for log aggregators). Defaults to `text` if unset. |
-| `TZ` | IANA timezone name (e.g. `America/Chicago`) applied to log timestamps and to the app's own date displays (e.g. the absolute date shown for videos/watches older than 4 weeks). Defaults to UTC if unset. |
-| `YOUTUBE_API_KEY` | Optional. If set, enables background enrichment of video duration via the YouTube Data API v3 (`videos.list`, duration only). Leaving it unset disables the feature entirely — the app behaves exactly as without it. |
-
-### Timezone and log format
-
-`TZ` defaults to UTC if unset. It affects log timestamps and the absolute month/day date
-shown for videos/watches that are 4+ weeks old, but it does **not** affect the relative
-"Xh/Xd/Xw ago" text most queue items show — that text is computed purely from an
-epoch-millisecond difference and is timezone-independent by construction, so most of the UI
-won't visibly change even if you set `TZ`.
-
-`LOG_FORMAT=json` is available if you're feeding logs into an aggregator (Loki, CloudWatch,
-etc.) that expects one JSON object per line. `LOG_LEVEL=debug` turns on verbose
-troubleshooting detail, including full error stack traces that are hidden by default.
+| `LOG_LEVEL` | Minimum level that prints: `debug`, `info`, `warn`, or `error`. Defaults to `info`. `debug` adds troubleshooting detail (full error stack traces, raw malformed-feed-entry payloads). |
+| `LOG_FORMAT` | `text` (human-readable, the default) or `json` (one object per line, for log aggregators such as Loki or CloudWatch). |
+| `TZ` | IANA timezone name (e.g. `America/Chicago`) for log timestamps and the absolute dates shown for videos/watches older than 4 weeks. Defaults to UTC. The relative "Xh/Xd/Xw ago" text is timezone-independent, so most of the UI won't visibly change. |
+| `YOUTUBE_API_KEY` | Optional. Enables background enrichment of video duration via the YouTube Data API v3 (`videos.list`). Unset (or blank) disables the feature entirely. |
 
 ## 3. Initial login
 
-Tubeshelf currently has no signup or password-reset flow (real signup/reset is a v2.0
-feature — see `docs/app_idea.md`'s Future Roadmap). Two ways to get a working `admin` login:
+Tubeshelf has no signup, and no in-app way to change or reset the password. Two ways to get
+a working `admin` login:
 
 **Generated password (default).** If the `admin` user has no password yet — i.e. a fresh
 database — Tubeshelf generates a random one on first boot and logs it once, at WARN level:
@@ -86,8 +71,8 @@ or replace a generated or lost one:
 3. Log in as `admin` with that password.
 4. Remove `AUTH_RECOVERY_PASSWORD` from `.env` and restart the container.
 
-Step 4 matters: as long as `AUTH_RECOVERY_PASSWORD` is set, it overwrites the `admin` user's
-password on *every* startup, silently discarding any password you later set through the UI.
+Step 4 matters: leaving the variable set keeps the password in plaintext in `.env` and logs
+a warning on every boot.
 
 ## 4. File ownership (PUID/PGID)
 
@@ -142,15 +127,17 @@ sitting in the `-wal` file rather than the main file.
 ## 6. Updating
 
 ```
-git pull   # only needed to pick up doc/config changes, not the app itself
 docker compose pull
 docker compose up -d
 ```
 
-`docker compose pull` fetches the latest image matching `docker-compose.yml`'s
-`image: ghcr.io/jonrus/tubeshelf:1` tag — since that's the floating major-version tag,
-this picks up every compatible release without needing to edit the compose file. No
-`docker login` step is needed: the GHCR package is public.
+`docker-compose.yml` uses the `ghcr.io/jonrus/tubeshelf:latest` image, so `docker compose
+pull` fetches the newest release; database migrations run automatically on startup. Check
+the [release notes](https://github.com/jonrus/Tubeshelf/releases) before updating if you
+want to know what's changing. To hold back upgrades, pin a specific tag in the compose file
+instead (`:1` for the major version, `:1.6` or `:1.6.3` for tighter control). Re-download
+`docker-compose.yml` (or `git pull`, if you cloned the repo) only to pick up compose-file
+changes. No `docker login` step is needed: the GHCR package is public.
 
 ## 7. Reverse proxy
 
