@@ -4,3 +4,4 @@
 - [ ] `bun test` passes
 - [ ] `bun run lint` passes
 - [ ] `bunx tsc --noEmit` passes
+- [ ] `bun run fallow` passes
