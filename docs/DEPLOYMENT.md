@@ -35,9 +35,9 @@ quick reference:
 
 | Variable | Purpose |
 | :--- | :--- |
-| `DB_FILE_NAME` | Path to the SQLite database file. Already set to `/data/tubeshelf.db` in `docker-compose.yml` to match the bind mount — leave unset in `.env`. |
+| `DB_FILE_NAME` | Path to the SQLite database file. Already set to `/data/tubeshelf.db` in `docker-compose.yml` to match the mounted `./data` folder — leave unset in `.env`. |
 | `AUTH_RECOVERY_PASSWORD` | If set, the admin user's password is forced to this value on startup (and all sessions are signed out). If unset, a random password is generated and logged once on first boot. See Initial login. |
-| `TRUSTED_ORIGINS` | Comma-separated list of origins allowed to make CSRF-protected requests. Defaults to `http://localhost:3000`. Must include every public origin you access the app through. Also decides the session cookie's `Secure` flag: Secure iff any entry is `https://`, unless the request matches an `http://` entry (`Origin`, else `Host`). So with an `https://` entry, plain-http access at a non-listed host (LAN IP, `127.0.0.1`) loses its session, because browsers drop the cookie. Mixed http+https lists are for local development only; in production list only `https://` origins. |
+| `TRUSTED_ORIGINS` | Comma-separated list of origins allowed to make CSRF-protected requests. Defaults to `http://localhost:3000`. Must include every public origin you access the app through. Also decides the session cookie's `Secure` flag: marked Secure only if at least one entry is `https://`, unless the request matches an `http://` entry (`Origin`, else `Host`). So with an `https://` entry, plain-http access at a non-listed host (LAN IP, `127.0.0.1`) loses its session, because browsers drop the cookie. Mixed http+https lists are for local development only; in production list only `https://` origins. |
 | `PUID` | User ID the app process runs as inside the container. Defaults to `1000` if unset. |
 | `PGID` | Group ID the app process runs as inside the container. Defaults to `1000` if unset. |
 | `UMASK` | Permission mask applied to files created under `/data`. Defaults to `022` if unset. |
@@ -77,10 +77,10 @@ a warning on every boot.
 ## 4. File ownership (PUID/PGID)
 
 The container remaps its runtime user at startup to match the `PUID`/`PGID` environment
-variables, so files under the bind-mounted `./data` directory end up owned by whatever host
-user you choose — no need for `./data` to already be owned by a fixed uid.
+variables, so files in the `./data` folder mounted into the container end up owned by
+whatever host user you choose — no need for `./data` to already be owned by a fixed user ID.
 
-1. Find your host user's uid/gid:
+1. Find your host user's user ID and group ID:
    ```
    id -u   # → PUID
    id -g   # → PGID
@@ -112,7 +112,7 @@ doesn't own.
 
 ## 5. Backups
 
-Tubeshelf runs SQLite in WAL mode (`PRAGMA journal_mode = WAL`), which means a live database
+Tubeshelf runs SQLite in WAL (write-ahead log) mode, which means a live database
 isn't just `tubeshelf.db` — it's that file plus `tubeshelf.db-wal` and `tubeshelf.db-shm`
 alongside it. To back up correctly:
 
