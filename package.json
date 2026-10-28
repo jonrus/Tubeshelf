@@ -21,7 +21,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.15",
+    "@biomejs/biome": "^2.6.3",
     "@tailwindcss/cli": "^4.3.3",
     "bun-types": "^1.4.4",
     "concurrently": "^10.0.6",
