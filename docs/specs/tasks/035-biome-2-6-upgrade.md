@@ -30,7 +30,7 @@ Biome 2.5.15 rejects the `markdown`/`yaml` config keys, so the version bump come
   both exit 0 and `git status --short` shows only `package.json`, `bun.lock`, `biome.json`
   (and this task file).
 
-- [ ] 5. [push] Final verification, flip spec to implemented, open the PR — run `bun test`,
+- [x] 5. [push] Final verification, flip spec to implemented, open the PR — run `bun test`,
   `bun run lint`, `bunx tsc --noEmit`, and `bun run fallow` clean across the repo; set
   `docs/specs/035-biome-2-6-upgrade.md` frontmatter to `status: implemented`. Draft the PR
   (summary + test plan; note it supersedes Dependabot PR #48, which the user closes manually
