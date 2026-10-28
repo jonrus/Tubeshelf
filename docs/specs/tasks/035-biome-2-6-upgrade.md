@@ -17,7 +17,7 @@ Biome 2.5.15 rejects the `markdown`/`yaml` config keys, so the version bump come
   reports no migration needed and `bun run lint` emits no schema-version `info` diagnostic
   (format errors on `*.md`/`docker-compose.yml` are still expected until step 3).
 
-- [ ] 3. Disable the Markdown and YAML formatters — in `biome.json`, add after the `css`
+- [x] 3. Disable the Markdown and YAML formatters — in `biome.json`, add after the `css`
   block (or alongside the other language blocks):
   `"markdown": { "formatter": { "enabled": false } },` and
   `"yaml": { "formatter": { "enabled": false } },`. Do not reformat any Markdown/YAML file
