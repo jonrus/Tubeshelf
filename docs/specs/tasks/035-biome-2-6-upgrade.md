@@ -5,7 +5,7 @@ Generated: 2026-10-28
 All commands run via `devcontainer exec` (see CLAUDE.md). Order matters: the installed
 Biome 2.5.15 rejects the `markdown`/`yaml` config keys, so the version bump comes first.
 
-- [ ] 1. Bump Biome — in `package.json` change `@biomejs/biome` from `^2.5.15` to `^2.6.3`,
+- [x] 1. Bump Biome — in `package.json` change `@biomejs/biome` from `^2.5.15` to `^2.6.3`,
   then run `bun install` in the devcontainer to regenerate `bun.lock` (the added
   `@biomejs/cli-android-*` optional packages are expected). — done when: `bunx biome --version`
   prints `2.6.3` and `git diff --stat` shows only `package.json` and `bun.lock` changed.
