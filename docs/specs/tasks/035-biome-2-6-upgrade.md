@@ -25,7 +25,7 @@ Biome 2.5.15 rejects the `markdown`/`yaml` config keys, so the version bump come
   zero errors and no `info` diagnostics, and `git status` shows no `*.md`/`*.yml` files
   modified.
 
-- [ ] 4. Check the `lint:fix`/`format` side effect — run `bunx biome format .` (no `--write`)
+- [x] 4. Check the `lint:fix`/`format` side effect — run `bunx biome format .` (no `--write`)
   and `bunx biome check .`; confirm neither reports any `.md` or `.yml` file. — done when:
   both exit 0 and `git status --short` shows only `package.json`, `bun.lock`, `biome.json`
   (and this task file).
