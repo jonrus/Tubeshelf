@@ -10,7 +10,7 @@ Biome 2.5.15 rejects the `markdown`/`yaml` config keys, so the version bump come
   `@biomejs/cli-android-*` optional packages are expected). — done when: `bunx biome --version`
   prints `2.6.3` and `git diff --stat` shows only `package.json` and `bun.lock` changed.
 
-- [ ] 2. Point `$schema` at the local package schema — run `bunx biome migrate --write`, read
+- [x] 2. Point `$schema` at the local package schema — run `bunx biome migrate --write`, read
   `git diff biome.json` and confirm the `$schema` URL bump is the only change it makes (stop
   and report if not). Then replace the `$schema` value in `biome.json` with
   `./node_modules/@biomejs/biome/configuration_schema.json`. — done when: `bunx biome migrate`
